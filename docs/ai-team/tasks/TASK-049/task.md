@@ -1,19 +1,19 @@
 # TASK-049 — DbD Game Intelligence / Canonical Game Event Timeline Integration
 
-- Status: `R1-R10A BACKEND IMPLEMENTED / R6B+R9B1 V6 UI LOCAL PASS / R9B2 WINDOWS HARNESS READY / R10B0-R10B5B RECOGNITION+LLM+TRIVIA+HUD-CALIBRATION+MIGRATION BASELINES IMPLEMENTED / REAL-MEDIA ACCURACY + WINDOWS NATIVE GATES PENDING`
+- Status: `R1-R10A BACKEND IMPLEMENTED / R6B+R9B1 V6 UI LOCAL PASS / R9B2 + TRIVIA EDITOR + TRAINING STUDIO WINDOWS PACKAGED PASS / R10B0-R10B5B RECOGNITION+LLM+TRIVIA+HUD-CALIBRATION+MIGRATION BASELINES IMPLEMENTED / REAL-MEDIA ACCURACY + HUMAN GOLD PENDING`
 - Governance: `R1 DEV-3 HIGH ASSURANCE`; later units adaptive `DEV-2/DEV-3`
 - Owner: `開発担当`
 - Product: `BAI VIDEO PRODUCTION`
 - Primary dependency: `TASK-009 DBDProfilePlugin R0`
 - Other direct dependencies: `TASK-003`, `TASK-004`, `TASK-006/TASK-023`, `TASK-008`, `TASK-022`
 - Runtime form: `ONE BAI Video Production product entrypoint`
-- Standalone Game Intelligence product EXE: `NOT PLANNED`; bounded maintenance/training utilities are allowed: `BAI DbD Trivia Editor.exe` and `BAI DbD Training Studio.exe`; both have build definitions and Windows packaged execution remains NOT_EXECUTED
+- Standalone Game Intelligence product EXE: `NOT PLANNED`; bounded maintenance/training utilities are allowed: `BAI DbD Trivia Editor.exe` and `BAI DbD Training Studio.exe`; both passed bounded Windows packaged build/launch/restart read-back on 2026-09-22
 - Analysis-only workflow inside BVP: `REQUIRED`
 - Public release / tag / deploy: `NOT AUTHORIZED`
 - Shared V6 UI/Shell: `OWNER REVALIDATED / TASK-049 ADDITIVE EXTENSION AUTHORIZED 2026-08-18`
 
 
-## Current implementation state — 2026-08-18
+## Current implementation state — 2026-09-22
 
 Implemented and locally verified:
 
@@ -36,6 +36,7 @@ Implemented and locally verified:
 - R10B5 revisioned Commentary Trivia Knowledge, candidate mining, verified-trivia reuse and manual Trivia Editor utility;
 - R10B5A DbD Training Studio: GUI/EXE teacher-data intake for single still samples, CSV one/many, exact-frame video ROI extraction, upper-right OCR video candidates, direct/local-ASR video Trivia mining, and reference/vocabulary build.
 - R10B5B HUD Calibration / Data Migration: GUI video/still ROI drag registration, normalized/versioned HUD Profile, anchor clips, fail-closed auto Profile resolve, bounded anchor correction propagated to child slots, recorded-video recognizer integration, and checksum Backup/Preview/Restore for DbD data migration.
+- Windows Consumer Gate: packaged main BVP Game Intelligence `NEEDS_REVIEW -> Human Confirm -> CONFIRMED` restart read-back, packaged Trivia Editor two-launch canonical `CANDIDATE` read-back, and packaged Training Studio two-launch workspace-template read-back are `PASS`; the bounded fixture is synthetic and rights-safe.
 
 TASK-036 P-UX-2 current-source revalidation proves A0 through D3 bounded
 implementation with `102 PASS`; P-UX-2E packaged-native closure remains open.
@@ -44,9 +45,8 @@ and are excluded from the TASK-036 base mock-parity inventory.
 
 Remaining:
 
-- R9B2 Windows packaged build/restart/read-back harness is implemented; actual Windows execution remains NOT_EXECUTED on the current Linux host;
-- `BAI DbD Trivia Editor.exe` and `BAI DbD Training Studio.exe` build definitions are implemented; Windows packaged execution remains NOT_EXECUTED on the current Linux host;
-- R10B0 native pilot infrastructure and R10B1-R10B5 bounded recognition/knowledge/LLM/trivia baselines are implemented; real DbD media calibration, labeled reference datasets, Human Gold execution and threshold tuning remain pending;
+- R9B2 main BVP and the bounded `BAI DbD Trivia Editor.exe` / `BAI DbD Training Studio.exe` Windows packaged gates passed on 2026-09-22; exact receipts and artifact hashes are recorded in `evidence/windows-consumer-gate-2026-09-22.md`;
+- R10B0 native pilot infrastructure and R10B1-R10B5 bounded recognition/knowledge/LLM/trivia baselines are implemented; real rights-confirmed DbD media calibration, labeled/video-derived slice references, Human Gold execution and threshold tuning remain `NOT_CONFIRMED`;
 - R8B remains parked until a domain-specific existing BVP adoption path is
   selected; no generic Production mutation adapter is authorized.
 

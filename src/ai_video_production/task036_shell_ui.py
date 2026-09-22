@@ -506,6 +506,10 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().export_preflight(args)
 
+    def export_queue_retry_preflight(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_retry_preflight(args)
+
     def export_queue_prepare_dispatch(self, args: Any) -> dict[str, object]:
         with self._nle_operation():
             return self._require_nle_controller().export_prepare_dispatch(args)
@@ -523,6 +527,10 @@ class Task036ShellBridge:
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().export_cancel(args)
+
+    def export_queue_open_destination(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_open_destination(args)
 
     @_meter_write_guarded
     def export_queue_reconcile(self, args: Any) -> dict[str, Any]:

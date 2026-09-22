@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 import json
 from pathlib import Path
 from threading import Barrier
@@ -264,6 +265,70 @@ def test_preflight_revalidates_exact_manifest_and_marks_stale_for_reprepare(tmp_
     assert stale.state is DurableProductJobState.HUMAN_REQUIRED
     assert stale.error_code == "ERR_PRODUCT_JOB_INPUT_STALE"
     assert stale.recovery_actions == ("CANCEL", "MARK_FAILED", "RESUME_PREFLIGHT")
+
+
+def test_retry_preflight_reuses_only_the_recoverable_existing_job(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    queued = app.enqueue(prep)
+    preflight = app.jobs.transition(
+        tmp_path,
+        queued.job_id,
+        DurableProductJobState.PREFLIGHT,
+        expected_state_version=queued.state_version,
+    )
+    human_required = app.jobs.transition(
+        tmp_path,
+        queued.job_id,
+        DurableProductJobState.HUMAN_REQUIRED,
+        expected_state_version=preflight.state_version,
+        error_code="ERR_PRODUCT_JOB_TEST_BLOCKED",
+    )
+
+    retried = app.retry_preflight(job_id=queued.job_id, preparation=prep)
+    assert retried.job_id == queued.job_id
+    assert retried.state is DurableProductJobState.READY
+    assert retried.state_version == human_required.state_version + 2
+    assert retried.attempt == 0
+
+    with pytest.raises(ProductError) as exc:
+        app.retry_preflight(job_id=queued.job_id, preparation=prep)
+    assert exc.value.code == "ERR_EXPORT_RETRY_STATE"
+
+
+def test_retry_preflight_rejects_security_mismatch_without_leaving_human_required(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    queued = app.enqueue(prep)
+    preflight = app.jobs.transition(
+        tmp_path,
+        queued.job_id,
+        DurableProductJobState.PREFLIGHT,
+        expected_state_version=queued.state_version,
+    )
+    human_required = app.jobs.transition(
+        tmp_path,
+        queued.job_id,
+        DurableProductJobState.HUMAN_REQUIRED,
+        expected_state_version=preflight.state_version,
+        error_code="ERR_PRODUCT_JOB_TEST_BLOCKED",
+    )
+
+    with pytest.raises(ProductError) as exc:
+        app.retry_preflight(
+            job_id=queued.job_id,
+            preparation=replace(
+                prep,
+                project_id="project-2",
+                final_approval=replace(prep.final_approval, project_id="project-2"),
+            ),
+        )
+    assert exc.value.code == "ERR_EXPORT_PROJECT_MISMATCH"
+    after = DurableProductJobStore.load(tmp_path).get(queued.job_id)
+    assert after.state is DurableProductJobState.HUMAN_REQUIRED
+    assert after.state_version == human_required.state_version
 
 
 def test_dispatch_writes_dispatching_before_side_effect_and_binds_render_qa(tmp_path: Path) -> None:

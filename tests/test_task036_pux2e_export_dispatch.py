@@ -108,6 +108,7 @@ def shell_for(
     timeline: InteractiveTimeline,
     dispatcher,
     destination: Path,
+    opener=None,
 ) -> Task036ShellBridge:
     service = ShellApplicationService(product_version="0.22.0")
     service.open_project_context(project_id="project-1", display_name="Project 1")
@@ -117,6 +118,7 @@ def shell_for(
         export_preparation_provider=lambda _job_id: preparation,
         export_destination_provider=lambda _job_id, _preparation: destination,
         export_dispatcher=dispatcher,
+        export_destination_opener=opener,
     )
     return Task036ShellBridge(service, nle_controller=controller)
 
@@ -177,6 +179,93 @@ def test_shell_dispatch_cancel_keeps_ready_job_and_consumes_confirmation(tmp_pat
     assert cancelled["cancelled"] is True
     assert DurableProductJobStore.load(tmp_path / "project").get(queued.job_id).state is DurableProductJobState.READY
     assert calls == []
+
+
+def test_shell_retries_recoverable_preflight_without_dispatching(tmp_path: Path) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    first = application.jobs.transition(
+        tmp_path / "project",
+        queued.job_id,
+        DurableProductJobState.PREFLIGHT,
+        expected_state_version=queued.state_version,
+    )
+    application.jobs.transition(
+        tmp_path / "project",
+        queued.job_id,
+        DurableProductJobState.HUMAN_REQUIRED,
+        expected_state_version=first.state_version,
+        error_code="ERR_PRODUCT_JOB_TEST_BLOCKED",
+    )
+    calls = []
+    shell = shell_for(
+        application,
+        preparation,
+        timeline,
+        lambda *_args: calls.append(True) or ExportDispatchResult("RUNNING"),
+        tmp_path / "private-output",
+    )
+
+    result = shell.export_queue_retry_preflight({"job_id": queued.job_id})
+    assert result["state"] == "READY"
+    assert result["automatic_replay_started"] is False
+    assert result["external_mutation_started"] is False
+    assert calls == []
+
+
+def test_success_destination_opens_privately_without_exposing_path(tmp_path: Path) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    destination = tmp_path / "private-output"
+    destination.mkdir()
+    opened: list[Path] = []
+    shell = shell_for(
+        application,
+        preparation,
+        timeline,
+        lambda *_args: ExportDispatchResult(
+            "SUCCEEDED", "render-artifact:" + "d" * 64, h("e"), True,
+        ),
+        destination,
+        opener=opened.append,
+    )
+    shell.export_queue_preflight({"job_id": queued.job_id})
+    prepared = shell.export_queue_prepare_dispatch({"job_id": queued.job_id})
+    shell.export_queue_apply_dispatch({"confirmation_id": prepared["confirmation_id"]})
+
+    result = shell.export_queue_open_destination({"job_id": queued.job_id})
+    stored = DurableProductJobStore.load(tmp_path / "project").get(queued.job_id)
+    assert result == {
+        "job_id": queued.job_id,
+        "state": "SUCCEEDED",
+        "result_ref": stored.result_ref,
+        "opened": True,
+        "host_output_path_exposed": False,
+        "external_mutation_started": False,
+    }
+    assert opened == [destination.resolve(strict=True)]
+    assert str(destination) not in str(result)
+
+
+def test_destination_open_rejects_non_success_and_path_injection(tmp_path: Path) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    destination = tmp_path / "private-output"
+    destination.mkdir()
+    shell = shell_for(
+        application,
+        preparation,
+        timeline,
+        lambda *_args: ExportDispatchResult("RUNNING"),
+        destination,
+        opener=lambda _path: None,
+    )
+    with pytest.raises(ProductError) as not_ready:
+        shell.export_queue_open_destination({"job_id": queued.job_id})
+    assert not_ready.value.code == "ERR_NLE_SHELL_EXPORT_DESTINATION_NOT_READY"
+    with pytest.raises(ProductError) as injected:
+        shell.export_queue_open_destination({
+            "job_id": queued.job_id,
+            "destination": "C:/injected",
+        })
+    assert injected.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
 
 
 def test_private_destination_failure_consumes_both_confirmation_layers(tmp_path: Path) -> None:

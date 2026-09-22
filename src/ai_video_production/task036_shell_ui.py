@@ -24,6 +24,8 @@ from .task036_native_dialog import Task036NativeDialogService
 from .task098_faster_whisper_model_settings import (
     Task098FasterWhisperModelSettingsService,
 )
+from .task098_review_workspace_coordinator import ReviewWorkspaceViewModel
+from .task098_review_workspace_shell_projection import project_review_workspace
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import (
     Task036PreEditRuntime,
@@ -355,6 +357,7 @@ class Task036ShellBridge:
         application: Task036EditingApplication | None = None,
         native_dialog: Task036NativeDialogService | None = None,
         faster_whisper_model_settings: Task098FasterWhisperModelSettingsService | None = None,
+        review_workspace_provider: Callable[[], ReviewWorkspaceViewModel] | None = None,
         pre_edit_runtime: Task036PreEditRuntime | None = None,
         workflow_runtime: Task036WorkflowRuntime | None = None,
         workflow_runtime_factory: Callable[[Task036EditingApplication], Task036WorkflowRuntime] | None = None,
@@ -404,6 +407,9 @@ class Task036ShellBridge:
         self._application = application
         self._native_dialog = native_dialog
         self._faster_whisper_model_settings = faster_whisper_model_settings
+        if review_workspace_provider is not None and not callable(review_workspace_provider):
+            raise ValueError("review workspace provider is invalid")
+        self._review_workspace_provider = review_workspace_provider
         if pre_edit_runtime is not None and pre_edit_runtime.coordinator.shell is not service:
             raise ValueError("pre-edit runtime must use the supplied Shell service")
         self._pre_edit_runtime = pre_edit_runtime
@@ -1515,8 +1521,21 @@ class Task036ShellBridge:
     def view_model(self, _args: Any = None) -> dict[str, Any]:
         application = self._current_application()
         if application is not None:
-            return application.view_model()
-        return Task036DesktopViewModel(self._service.snapshot(), self._projection).to_dict()
+            body = application.view_model()
+        else:
+            body = Task036DesktopViewModel(self._service.snapshot(), self._projection).to_dict()
+        if self._review_workspace_provider is None:
+            return body
+        try:
+            private_view = self._review_workspace_provider()
+            public_projection = project_review_workspace(private_view).to_dict()
+        except Exception:
+            raise ProductError(
+                "ERR_TASK098_REVIEW_WORKSPACE_PROJECTION_INVALID",
+                "Universal WAV Review projection is unavailable",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from None
+        return {**body, "universal_wav_review": public_projection}
 
     def set_workspace(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"workspace"}:

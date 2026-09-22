@@ -27,13 +27,16 @@ from ai_video_production.interactive_timeline import (
     TimelineTrackRole,
 )
 from ai_video_production.integrated_dashboard_operations import (
+    DashboardAlertClassificationReceipt,
     DashboardExecutionReceiptBinding,
+    DashboardIncidentReadModel,
     DashboardOperationProposalRevision,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
 )
 from ai_video_production.task021_operations_dashboard import (
     EFFECT_SURFACE,
+    CanonicalAttentionState,
     CanonicalDashboardReaders,
     CanonicalOperationState,
     CanonicalValidationResult,
@@ -145,6 +148,8 @@ def integrated_snapshot(
     project_id: str = PROJECT_ID,
     snapshot_state: str = "STALE",
     coverage_state: str = "PARTIAL",
+    incident_hashes: tuple[str, ...] = (),
+    alert_hashes: tuple[str, ...] = (),
 ) -> IntegratedDashboardSnapshotRevision:
     return IntegratedDashboardSnapshotRevision.create(
         snapshot_id="task021-integrated-snapshot",
@@ -156,8 +161,8 @@ def integrated_snapshot(
         source_binding_hashes=[H3],
         job_view_hashes=[],
         evidence_view_hashes=[],
-        incident_view_hashes=[],
-        alert_hashes=[],
+        incident_view_hashes=sorted(incident_hashes),
+        alert_hashes=sorted(alert_hashes),
         coverage_state=coverage_state,
         snapshot_state=snapshot_state,
         source_watermark_sha256=H1,
@@ -166,6 +171,66 @@ def integrated_snapshot(
         private_detail_included=False,
         effect_started_by_dashboard=False,
     )
+
+
+def incident_model(
+    *,
+    state: str = "ACTIVE",
+    severity: str = "HIGH",
+    freshness: str = "CURRENT",
+    reason_codes: tuple[str, ...] | None = None,
+    **overrides,
+) -> DashboardIncidentReadModel:
+    default_reasons = {
+        "ACTIVE": ("ACTIVE_INCIDENT",),
+        "RESOLVED_PROVEN": ("INCIDENT_RESOLUTION_PROVEN",),
+        "UNKNOWN": ("INCIDENT_STATE_UNKNOWN",),
+    }
+    fields = dict(
+        view_id="dashboard-incident-view",
+        source_binding_sha256=H3,
+        incident_id="private-incident-id",
+        incident_state=state,
+        severity=severity,
+        observed_at=T0,
+        resolved_receipt_sha256=H2 if state == "RESOLVED_PROVEN" else None,
+        freshness_state=freshness,
+        reason_codes=list(reason_codes or default_reasons[state]),
+        absence_assumed_healthy=False,
+    )
+    fields.update(overrides)
+    return DashboardIncidentReadModel.create(**fields)
+
+
+def alert_receipt(
+    *,
+    incident: DashboardIncidentReadModel | None = None,
+    lifecycle: str = "OPEN",
+    severity: str = "HIGH",
+    reason_codes: tuple[str, ...] | None = None,
+    **overrides,
+) -> DashboardAlertClassificationReceipt:
+    default_reasons = {
+        "OPEN": ("ACTIVE_INCIDENT",),
+        "ACKNOWLEDGED": ("ACTIVE_INCIDENT", "ACKNOWLEDGED_NOT_RESOLVED"),
+        "RESOLVED_PROVEN": ("INCIDENT_RESOLUTION_PROVEN",),
+        "SUPPRESSED_BY_POLICY": ("NO_ALERT_CONDITION_CLASSIFIED",),
+        "UNKNOWN": ("INCIDENT_STATE_UNKNOWN",),
+    }
+    fields = dict(
+        alert_id="private-alert-id",
+        policy_sha256=H1,
+        subject_sha256=incident.record_sha256 if incident else H2,
+        incident_sha256=incident.record_sha256 if incident else None,
+        severity=severity,
+        lifecycle=lifecycle,
+        acknowledgement_receipt_sha256=H2 if lifecycle == "ACKNOWLEDGED" else None,
+        reason_codes=list(reason_codes or default_reasons[lifecycle]),
+        classified_at=T1,
+        effect_started_by_dashboard=False,
+    )
+    fields.update(overrides)
+    return DashboardAlertClassificationReceipt.create(**fields)
 
 
 def operation_proposal(
@@ -836,6 +901,331 @@ def test_operation_gate_snapshot_crossing_and_private_reader_failure_fail_closed
         ),
     ).refresh()
     assert invalid.section("operation-gate").state is DashboardDisplayState.FAILURE
+
+
+def test_attention_state_reads_once_and_keeps_acknowledged_unresolved_without_identity_leak() -> None:
+    incident = incident_model()
+    alert = alert_receipt(incident=incident, lifecycle="ACKNOWLEDGED")
+    canonical = integrated_snapshot(
+        snapshot_state="ACTION_REQUIRED",
+        coverage_state="COMPLETE",
+        incident_hashes=(incident.record_sha256,),
+        alert_hashes=(alert.record_sha256,),
+    )
+    calls = {"snapshot": 0, "attention": 0}
+
+    def read_snapshot() -> IntegratedDashboardSnapshotRevision:
+        calls["snapshot"] += 1
+        return canonical
+
+    def read_attention() -> CanonicalAttentionState:
+        calls["attention"] += 1
+        return CanonicalAttentionState((incident,), (alert,))
+
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_snapshot,
+            read_attention_state=read_attention,
+        ),
+    )
+
+    snapshot = service.refresh()
+    html = render_accessible_dashboard_html(snapshot)
+    assert calls == {"snapshot": 1, "attention": 1}
+    assert snapshot.section("incidents").rows[0].state_ja == "未解決を含む（最高重大度: 高）"
+    assert snapshot.section("alerts").rows[0].state_ja == "確認済み・未解決を含む（最高重大度: 高）"
+    assert snapshot.section("alerts").state is DashboardDisplayState.WARNING
+    assert EFFECT_SURFACE["alert_acknowledgement_or_resolution"] is False
+    assert all(
+        not row.operation_available
+        for section_id in ("incidents", "alerts")
+        for row in snapshot.section(section_id).rows
+    )
+    for private_value in (
+        "private-incident-id",
+        "private-alert-id",
+        incident.record_sha256,
+        alert.record_sha256,
+        H1,
+        H2,
+        H3,
+        T0,
+        T1,
+    ):
+        assert private_value not in html
+
+
+@pytest.mark.parametrize(
+    ("lifecycle", "expected_label"),
+    (
+        ("RESOLVED_PROVEN", "解決証明済みのみ"),
+        ("SUPPRESSED_BY_POLICY", "Policyにより通知対象外のみ"),
+    ),
+)
+def test_attention_state_closed_alerts_are_public_success(
+    lifecycle: str,
+    expected_label: str,
+) -> None:
+    incident = incident_model(state="RESOLVED_PROVEN")
+    alert = alert_receipt(
+        incident=incident if lifecycle == "RESOLVED_PROVEN" else None,
+        lifecycle=lifecycle,
+        severity="INFO",
+    )
+    canonical = integrated_snapshot(
+        snapshot_state="NO_ACTIVE_INCIDENT_PROVEN",
+        coverage_state="COMPLETE",
+        incident_hashes=(incident.record_sha256,),
+        alert_hashes=(alert.record_sha256,),
+    )
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: CanonicalAttentionState((incident,), (alert,)),
+        ),
+    )
+
+    snapshot = service.refresh()
+    assert snapshot.section("incidents").rows[0].state_ja == "解決証明済みのみ"
+    assert snapshot.section("alerts").rows[0].state_ja == expected_label
+    assert snapshot.section("incidents").state is DashboardDisplayState.SUCCESS
+    assert snapshot.section("alerts").state is DashboardDisplayState.SUCCESS
+
+
+def test_empty_attention_state_does_not_claim_health() -> None:
+    canonical = integrated_snapshot(
+        snapshot_state="UNKNOWN",
+        coverage_state="UNKNOWN",
+    )
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: CanonicalAttentionState((), ()),
+        ),
+    )
+
+    snapshot = service.refresh()
+    for section_id in ("incidents", "alerts"):
+        section = snapshot.section(section_id)
+        assert section.state is DashboardDisplayState.EMPTY
+        assert "不在だけを健康証明には使用しません" in section.note_ja
+    assert snapshot.state is DashboardDisplayState.UNKNOWN
+
+
+@pytest.mark.parametrize(
+    ("freshness", "expected_state", "expected_label"),
+    (
+        ("STALE", DashboardDisplayState.WARNING, "現在値として扱えない状態を含む"),
+        ("INVALIDATED", DashboardDisplayState.WARNING, "現在値として扱えない状態を含む"),
+        ("UNKNOWN", DashboardDisplayState.UNKNOWN, "状態不明を含む"),
+    ),
+)
+def test_attention_state_non_current_incident_never_projects_resolved_success(
+    freshness: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    incident = incident_model(state="RESOLVED_PROVEN", freshness=freshness)
+    canonical = integrated_snapshot(
+        snapshot_state="STALE",
+        coverage_state="COMPLETE",
+        incident_hashes=(incident.record_sha256,),
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: CanonicalAttentionState((incident,), ()),
+        ),
+    ).refresh()
+
+    row = snapshot.section("incidents").rows[0]
+    assert row.state is expected_state
+    assert row.state_ja == expected_label
+
+
+def test_attention_state_aggregate_does_not_reveal_exact_low_cardinality() -> None:
+    first = incident_model()
+    second = incident_model(
+        view_id="another-dashboard-incident-view",
+        incident_id="another-private-incident-id",
+        severity="CRITICAL",
+    )
+    first_alert = alert_receipt(incident=first)
+    second_alert = alert_receipt(
+        incident=second,
+        alert_id="another-private-alert-id",
+    )
+    canonical = integrated_snapshot(
+        snapshot_state="ACTION_REQUIRED",
+        coverage_state="COMPLETE",
+        incident_hashes=(first.record_sha256, second.record_sha256),
+        alert_hashes=(first_alert.record_sha256, second_alert.record_sha256),
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: CanonicalAttentionState(
+                (first, second), (first_alert, second_alert)
+            ),
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert len(snapshot.section("incidents").rows) == 1
+    assert len(snapshot.section("alerts").rows) == 1
+    assert snapshot.section("incidents").rows[0].row_id == "incident-public-summary"
+    assert snapshot.section("alerts").rows[0].row_id == "alert-public-summary"
+    assert "件数非開示" in html
+    assert "公開状態 1" not in html and "公開状態 2" not in html
+    assert "another-private" not in html
+
+
+@pytest.mark.parametrize("invalid_alert", ("BOUND_SUPPRESSED", "HIGH_SUPPRESSED"))
+def test_attention_state_inconsistent_suppressed_alert_fails_closed(
+    invalid_alert: str,
+) -> None:
+    incident = incident_model(state="RESOLVED_PROVEN")
+    alert = (
+        alert_receipt(
+            incident=incident,
+            lifecycle="SUPPRESSED_BY_POLICY",
+            severity="INFO",
+        )
+        if invalid_alert == "BOUND_SUPPRESSED"
+        else alert_receipt(
+            lifecycle="SUPPRESSED_BY_POLICY",
+            severity="HIGH",
+        )
+    )
+    canonical = integrated_snapshot(
+        snapshot_state="NO_ACTIVE_INCIDENT_PROVEN",
+        coverage_state="COMPLETE",
+        incident_hashes=(incident.record_sha256,),
+        alert_hashes=(alert.record_sha256,),
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: CanonicalAttentionState((incident,), (alert,)),
+        ),
+    ).refresh()
+
+    assert snapshot.section("incidents").state is DashboardDisplayState.FAILURE
+    assert snapshot.section("alerts").state is DashboardDisplayState.FAILURE
+
+
+def test_attention_state_snapshot_crossing_and_unbound_alert_fail_closed() -> None:
+    incident = incident_model()
+    alert = alert_receipt(incident=incident)
+    canonical = integrated_snapshot(
+        snapshot_state="ACTION_REQUIRED",
+        coverage_state="COMPLETE",
+        incident_hashes=(incident.record_sha256,),
+        alert_hashes=(alert.record_sha256,),
+    )
+
+    def refresh(attention) -> object:
+        return Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_attention_state=lambda: attention,
+            ),
+        ).refresh()
+
+    missing = refresh(CanonicalAttentionState((incident,), ()))
+    absent = refresh(None)
+    assert missing.section("incidents").state is DashboardDisplayState.FAILURE
+    assert missing.section("alerts").state is DashboardDisplayState.FAILURE
+    assert absent.section("incidents").state is DashboardDisplayState.FAILURE
+    assert absent.section("alerts").state is DashboardDisplayState.FAILURE
+
+    foreign_incident = incident_model(
+        view_id="foreign-dashboard-incident-view",
+        incident_id="foreign-private-incident-id",
+    )
+    crossed_snapshot = integrated_snapshot(
+        snapshot_state="ACTION_REQUIRED",
+        coverage_state="COMPLETE",
+        incident_hashes=(foreign_incident.record_sha256,),
+        alert_hashes=(alert.record_sha256,),
+    )
+    crossed = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: crossed_snapshot,
+            read_attention_state=lambda: CanonicalAttentionState(
+                (foreign_incident,), (alert,)
+            ),
+        ),
+    ).refresh()
+    assert crossed.section("incidents").state is DashboardDisplayState.FAILURE
+    assert crossed.section("alerts").state is DashboardDisplayState.FAILURE
+
+
+def test_attention_state_private_failure_and_wrong_member_types_are_redacted() -> None:
+    canonical = integrated_snapshot()
+
+    def private_failure() -> CanonicalAttentionState:
+        raise RuntimeError(r"C:\private\secret-token")
+
+    for reader in (
+        private_failure,
+        lambda: CanonicalAttentionState(("not-an-incident",), ()),  # type: ignore[arg-type]
+    ):
+        snapshot = Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_attention_state=reader,
+            ),
+        ).refresh()
+        html = render_accessible_dashboard_html(snapshot)
+        assert snapshot.section("incidents").state is DashboardDisplayState.FAILURE
+        assert snapshot.section("alerts").state is DashboardDisplayState.FAILURE
+        assert "secret-token" not in html and r"C:\private" not in html
 
 
 def test_static_surface_has_no_store_filesystem_network_or_process_control() -> None:

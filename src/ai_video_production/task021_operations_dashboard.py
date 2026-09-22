@@ -23,10 +23,16 @@ from .durable_product_job import (
 )
 from .interactive_timeline import InteractiveTimeline
 from .integrated_dashboard_operations import (
+    AlertLifecycle,
+    AlertSeverity,
     CoverageState,
+    DashboardAlertClassificationReceipt,
     DashboardExecutionReceiptBinding,
+    DashboardIncidentReadModel,
+    DashboardIncidentState,
     DashboardOperationProposalRevision,
     DashboardSnapshotState,
+    FreshnessState,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
     operation_admission_report,
@@ -178,6 +184,17 @@ OperationStateReader = Callable[[], CanonicalOperationState | None]
 
 
 @dataclass(frozen=True, slots=True)
+class CanonicalAttentionState:
+    """Exact snapshot-bound Incident and Alert records for public display."""
+
+    incidents: tuple[DashboardIncidentReadModel, ...]
+    alerts: tuple[DashboardAlertClassificationReceipt, ...]
+
+
+AttentionStateReader = Callable[[], CanonicalAttentionState | None]
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalDashboardReaders:
     """Injected read ports owned outside TASK-021; no callback may be a writer."""
 
@@ -187,6 +204,7 @@ class CanonicalDashboardReaders:
     read_validation_results: ValidationReader
     read_integrated_snapshot: IntegratedSnapshotReader | None = None
     read_operation_state: OperationStateReader | None = None
+    read_attention_state: AttentionStateReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -279,6 +297,14 @@ _OPERATION_REASON_JAPANESE = MappingProxyType({
     "EXTERNAL_RESULT_UNKNOWN_NO_REPLAY": "外部結果は不明です。自動再実行できません。",
 })
 
+_SEVERITY_JAPANESE = MappingProxyType({
+    AlertSeverity.INFO: "情報",
+    AlertSeverity.WARNING: "警告",
+    AlertSeverity.HIGH: "高",
+    AlertSeverity.CRITICAL: "重大",
+    AlertSeverity.UNKNOWN: "不明",
+})
+
 
 class Task021OperationsDashboard:
     """Refresh a read-only dashboard from canonical in-memory snapshots."""
@@ -305,6 +331,12 @@ class Task021OperationsDashboard:
         if self.readers.read_operation_state is not None:
             operation_state, operation_state_error = self._safe_read(
                 self.readers.read_operation_state
+            )
+        attention_state: object | None = None
+        attention_state_error = False
+        if self.readers.read_attention_state is not None:
+            attention_state, attention_state_error = self._safe_read(
+                self.readers.read_attention_state
             )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
@@ -366,6 +398,65 @@ class Task021OperationsDashboard:
                 except (TypeError, ValueError):
                     operation_state_error = True
 
+        incident_values: tuple[DashboardIncidentReadModel, ...] = ()
+        alert_values: tuple[DashboardAlertClassificationReceipt, ...] = ()
+        if self.readers.read_attention_state is not None:
+            if not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                attention_state_error = True
+            elif attention_state is None:
+                snapshot_data = integrated_snapshot.to_dict()
+                if (
+                    snapshot_data["incident_view_hashes"]
+                    or snapshot_data["alert_hashes"]
+                ):
+                    attention_state_error = True
+            elif not isinstance(attention_state, CanonicalAttentionState):
+                attention_state_error, attention_state = True, None
+            elif (
+                not isinstance(attention_state.incidents, tuple)
+                or not all(
+                    isinstance(item, DashboardIncidentReadModel)
+                    for item in attention_state.incidents
+                )
+                or not isinstance(attention_state.alerts, tuple)
+                or not all(
+                    isinstance(item, DashboardAlertClassificationReceipt)
+                    for item in attention_state.alerts
+                )
+            ):
+                attention_state_error = True
+            else:
+                snapshot_data = integrated_snapshot.to_dict()
+                incident_hashes = sorted(
+                    item.record_sha256 for item in attention_state.incidents
+                )
+                alert_hashes = sorted(
+                    item.record_sha256 for item in attention_state.alerts
+                )
+                exact_snapshot_membership = (
+                    incident_hashes == snapshot_data["incident_view_hashes"]
+                    and alert_hashes == snapshot_data["alert_hashes"]
+                )
+                incident_hash_set = set(incident_hashes)
+                alert_incidents_are_bound = all(
+                    item.to_dict()["incident_sha256"] is None
+                    or item.to_dict()["incident_sha256"] in incident_hash_set
+                    for item in attention_state.alerts
+                )
+                alert_projections_are_consistent = all(
+                    self._alert_projection_is_consistent(item)
+                    for item in attention_state.alerts
+                )
+                if (
+                    not exact_snapshot_membership
+                    or not alert_incidents_are_bound
+                    or not alert_projections_are_consistent
+                ):
+                    attention_state_error = True
+                else:
+                    incident_values = attention_state.incidents
+                    alert_values = attention_state.alerts
+
         sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
             self._assets_section(asset_values, assets_error),
@@ -390,6 +481,13 @@ class Task021OperationsDashboard:
                     else None,
                     operation_report,
                     operation_state_error,
+                )
+            )
+        if self.readers.read_attention_state is not None:
+            sections.extend(
+                (
+                    self._incident_section(incident_values, attention_state_error),
+                    self._alert_section(alert_values, attention_state_error),
                 )
             )
         section_values = tuple(sections)
@@ -684,6 +782,275 @@ class Task021OperationsDashboard:
         )
 
     @staticmethod
+    def _alert_projection_is_consistent(
+        alert: DashboardAlertClassificationReceipt,
+    ) -> bool:
+        data = alert.to_dict()
+        lifecycle = AlertLifecycle(data["lifecycle"])
+        severity = AlertSeverity(data["severity"])
+        reasons = set(data["reason_codes"])
+        incident_bound = data["incident_sha256"] is not None
+        acknowledged = data["acknowledgement_receipt_sha256"] is not None
+        open_reasons = {
+            "ACTIVE_INCIDENT",
+            "JOB_ATTENTION_REQUIRED",
+            "EVIDENCE_FAILURE",
+        }
+        unknown_reasons = {
+            "SUBJECT_STALE",
+            "SUBJECT_INVALIDATED",
+            "SUBJECT_UNKNOWN",
+            "INCIDENT_STATE_UNKNOWN",
+            "SOURCE_RESULT_UNKNOWN",
+        }
+
+        if lifecycle is AlertLifecycle.OPEN:
+            if acknowledged or len(reasons) != 1 or not reasons <= open_reasons:
+                return False
+            reason = next(iter(reasons))
+            if reason == "ACTIVE_INCIDENT":
+                return incident_bound
+            return not incident_bound and severity is AlertSeverity.HIGH
+        if lifecycle is AlertLifecycle.ACKNOWLEDGED:
+            base_reasons = reasons - {"ACKNOWLEDGED_NOT_RESOLVED"}
+            if (
+                not acknowledged
+                or "ACKNOWLEDGED_NOT_RESOLVED" not in reasons
+                or len(reasons) != 2
+                or len(base_reasons) != 1
+                or not base_reasons <= open_reasons
+            ):
+                return False
+            reason = next(iter(base_reasons))
+            if reason == "ACTIVE_INCIDENT":
+                return incident_bound
+            return not incident_bound and severity is AlertSeverity.HIGH
+        if lifecycle is AlertLifecycle.RESOLVED_PROVEN:
+            return (
+                not acknowledged
+                and incident_bound
+                and severity is AlertSeverity.INFO
+                and reasons == {"INCIDENT_RESOLUTION_PROVEN"}
+            )
+        if lifecycle is AlertLifecycle.SUPPRESSED_BY_POLICY:
+            return (
+                not acknowledged
+                and not incident_bound
+                and severity is AlertSeverity.INFO
+                and reasons == {"NO_ALERT_CONDITION_CLASSIFIED"}
+            )
+        return (
+            not acknowledged
+            and severity is AlertSeverity.UNKNOWN
+            and len(reasons) == 1
+            and reasons <= unknown_reasons
+            and incident_bound == (reasons == {"INCIDENT_STATE_UNKNOWN"})
+        )
+
+    @classmethod
+    def _incident_section(
+        cls,
+        incidents: tuple[DashboardIncidentReadModel, ...],
+        failed: bool,
+    ) -> DashboardSection:
+        if failed:
+            return cls._failed_section(
+                "incidents",
+                "Incident",
+                "正本snapshotに一致するIncident状態を安全に読み取れませんでした。",
+            )
+        if not incidents:
+            return DashboardSection(
+                "incidents",
+                "Incident",
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本snapshotにIncidentは列挙されていません。"
+                "不在だけを健康証明には使用しません。",
+            )
+        row = cls._incident_summary_row(incidents)
+        return cls._section(
+            "incidents",
+            "Incident",
+            (row,),
+            "正本snapshotに含まれるIncidentを件数非開示で集約表示します。"
+            "個別行、識別子、ハッシュ、時刻、source座標、receiptは表示しません。",
+        )
+
+    @classmethod
+    def _incident_summary_row(
+        cls,
+        incidents: tuple[DashboardIncidentReadModel, ...],
+    ) -> DashboardRow:
+        records = tuple(item.to_dict() for item in incidents)
+        freshness = tuple(FreshnessState(item["freshness_state"]) for item in records)
+        states = tuple(DashboardIncidentState(item["incident_state"]) for item in records)
+        if FreshnessState.UNKNOWN in freshness or DashboardIncidentState.UNKNOWN in states:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "状態不明を含む",
+                "Incident公開状態に判定不能な状態が含まれます。",
+                "正本Incident ownerで状態を照合してください。",
+            )
+        elif any(
+            value in {FreshnessState.STALE, FreshnessState.INVALIDATED}
+            for value in freshness
+        ):
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "現在値として扱えない状態を含む",
+                "古いまたは無効なIncident公開状態が含まれます。",
+                "正本Incident ownerで再観測してください。",
+            )
+        elif DashboardIncidentState.ACTIVE in states:
+            severities = tuple(
+                AlertSeverity(item["severity"])
+                for item in records
+                if item["incident_state"] == DashboardIncidentState.ACTIVE.value
+            )
+            rank = {
+                AlertSeverity.UNKNOWN: 0,
+                AlertSeverity.INFO: 1,
+                AlertSeverity.WARNING: 2,
+                AlertSeverity.HIGH: 3,
+                AlertSeverity.CRITICAL: 4,
+            }
+            highest = max(severities, key=rank.__getitem__)
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                f"未解決を含む（最高重大度: {_SEVERITY_JAPANESE[highest]}）",
+                "未解決のIncident公開状態が含まれます。",
+                "正本Incident ownerで対応状況を確認してください。",
+            )
+        else:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "解決証明済みのみ",
+                "なし",
+                "正本の解決履歴を確認できます。",
+            )
+        return DashboardRow(
+            row_id="incident-public-summary",
+            name_ja="Incident公開状態（件数非開示）",
+            state=display,
+            state_ja=label,
+            failure_reason_ja=failure,
+            next_action_ja=action,
+            artifact_location_ja="非表示（公開状態のみ）",
+            source_owner="TASK-021_CANONICAL_INCIDENT",
+        )
+
+    @classmethod
+    def _alert_section(
+        cls,
+        alerts: tuple[DashboardAlertClassificationReceipt, ...],
+        failed: bool,
+    ) -> DashboardSection:
+        if failed:
+            return cls._failed_section(
+                "alerts",
+                "Alert",
+                "正本snapshotに一致するAlert状態を安全に読み取れませんでした。",
+            )
+        if not alerts:
+            return DashboardSection(
+                "alerts",
+                "Alert",
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本snapshotにAlertは列挙されていません。"
+                "不在だけを健康証明には使用しません。",
+            )
+        row = cls._alert_summary_row(alerts)
+        return cls._section(
+            "alerts",
+            "Alert",
+            (row,),
+            "正本snapshotに含まれるAlert分類を件数非開示で集約表示します。"
+            "個別行、識別子、ハッシュ、時刻、source座標、receiptは表示しません。"
+            "この画面から確認、解決、通知送信は行いません。",
+        )
+
+    @classmethod
+    def _alert_summary_row(
+        cls,
+        alerts: tuple[DashboardAlertClassificationReceipt, ...],
+    ) -> DashboardRow:
+        records = tuple(item.to_dict() for item in alerts)
+        lifecycles = tuple(AlertLifecycle(item["lifecycle"]) for item in records)
+        if AlertLifecycle.UNKNOWN in lifecycles:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "状態不明を含む",
+                "Alert公開状態に判定不能な状態が含まれます。",
+                "正本Alert ownerで状態を照合してください。",
+            )
+        elif any(
+            value in {AlertLifecycle.OPEN, AlertLifecycle.ACKNOWLEDGED}
+            for value in lifecycles
+        ):
+            active_severities = tuple(
+                AlertSeverity(item["severity"])
+                for item in records
+                if item["lifecycle"]
+                in {AlertLifecycle.OPEN.value, AlertLifecycle.ACKNOWLEDGED.value}
+            )
+            rank = {
+                AlertSeverity.UNKNOWN: 0,
+                AlertSeverity.INFO: 1,
+                AlertSeverity.WARNING: 2,
+                AlertSeverity.HIGH: 3,
+                AlertSeverity.CRITICAL: 4,
+            }
+            highest = max(active_severities, key=rank.__getitem__)
+            has_open = AlertLifecycle.OPEN in lifecycles
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                (
+                    f"未処理を含む（最高重大度: {_SEVERITY_JAPANESE[highest]}）"
+                    if has_open
+                    else f"確認済み・未解決を含む（最高重大度: {_SEVERITY_JAPANESE[highest]}）"
+                ),
+                (
+                    "未処理のAlert公開状態が含まれます。"
+                    if has_open
+                    else "確認済みですが、解決未証明のAlert公開状態が含まれます。"
+                ),
+                "正本Alert ownerで内容と解決Evidenceを確認してください。",
+            )
+        elif set(lifecycles) == {AlertLifecycle.RESOLVED_PROVEN}:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "解決証明済みのみ",
+                "なし",
+                "正本の解決履歴を確認できます。",
+            )
+        elif set(lifecycles) == {AlertLifecycle.SUPPRESSED_BY_POLICY}:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "Policyにより通知対象外のみ",
+                "なし",
+                "必要に応じて正本Policyを確認できます。",
+            )
+        else:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "解決証明済み／通知対象外のみ",
+                "なし",
+                "必要に応じて正本の解決履歴とPolicyを確認できます。",
+            )
+        return DashboardRow(
+            row_id="alert-public-summary",
+            name_ja="Alert公開状態（件数非開示）",
+            state=display,
+            state_ja=label,
+            failure_reason_ja=failure,
+            next_action_ja=action,
+            artifact_location_ja="非表示（公開状態のみ）",
+            source_owner="TASK-021_CANONICAL_ALERT",
+        )
+
+    @staticmethod
     def _operation_state_section(
         operation: CanonicalOperationState | None,
         report: dict[str, object] | None,
@@ -939,6 +1306,7 @@ EFFECT_SURFACE = MappingProxyType({
     "job_or_export_execution": False,
     "automatic_repair": False,
     "dashboard_operation_execution": False,
+    "alert_acknowledgement_or_resolution": False,
     "provider_or_model_operation": False,
     "private_media_read": False,
     "audio_scope_included": False,
@@ -947,6 +1315,8 @@ EFFECT_SURFACE = MappingProxyType({
 
 
 __all__ = [
+    "AttentionStateReader",
+    "CanonicalAttentionState",
     "CanonicalDashboardReaders",
     "CanonicalOperationState",
     "CanonicalValidationResult",

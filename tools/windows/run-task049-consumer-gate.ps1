@@ -102,11 +102,22 @@ if ($mainBuildReused) {
   $mainBuildRoot = Assert-NotDriveRootChild $ExistingMainBuildRoot 'Existing main build root'
   $mainBuildRoot = Assert-Descendant $mainBuildRoot $repo 'Existing main build root'
   if (-not (Test-Path -LiteralPath $mainBuildRoot -PathType Container)) { throw "ExistingMainBuildRoot is unavailable: $mainBuildRoot" }
-  $worktreeBuildRun = Split-Path -Parent $mainBuildRoot
+  $worktreeBuildRun = $mainBuildRoot
 } else {
-  $worktreeBuildRun = Assert-NotDriveRootChild (Join-Path $repo "builds\task049-consumer-gate\$RunId") 'Worktree build run root'
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $runDigest = [System.BitConverter]::ToString(
+      $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($RunId))
+    ).Replace('-', '').ToLowerInvariant().Substring(0, 12)
+  } finally {
+    $sha256.Dispose()
+  }
+  # TASK-036 enforces a bounded installed-application path. Preserve the full
+  # operation identity in Evidence while using this collision-resistant short
+  # build leaf beneath the repository-authorized builds root.
+  $worktreeBuildRun = Assert-NotDriveRootChild (Join-Path $repo "builds\t49\$runDigest") 'Worktree build run root'
   $worktreeBuildRun = Assert-Descendant $worktreeBuildRun $repo 'Worktree build run root'
-  $mainBuildRoot = Join-Path $worktreeBuildRun 'main-build'
+  $mainBuildRoot = $worktreeBuildRun
 }
 if (Test-Path -LiteralPath $evidenceRun) { throw "Evidence run root already exists: $evidenceRun" }
 if (Test-Path -LiteralPath $runtimeRun) { throw "Runtime run root already exists: $runtimeRun" }

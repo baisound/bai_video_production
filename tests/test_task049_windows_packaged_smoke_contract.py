@@ -39,6 +39,7 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "Observed buttons:",
         "observed elements:",
         "$button.Current.IsEnabled -and -not $button.Current.IsOffscreen",
+        "Find-ButtonWithTokens $root @('WINDOW_VAULT', $State)",
     ):
         assert token in source
     assert "Release" not in source or "public_release_performed" in source

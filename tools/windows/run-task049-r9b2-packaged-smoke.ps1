@@ -127,6 +127,18 @@ function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Roo
   return $null
 }
 
+function Find-ButtonWithTokens([System.Windows.Automation.AutomationElement]$Root, [string[]]$Tokens) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+  foreach ($button in $buttons) {
+    $name = $button.Current.Name
+    if (@($Tokens | Where-Object { -not $name.Contains($_) }).Count -eq 0) { return $button }
+  }
+  return $null
+}
+
 function Get-ButtonNames([System.Windows.Automation.AutomationElement]$Root) {
   $condition = [System.Windows.Automation.PropertyCondition]::new(
     [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
@@ -196,7 +208,7 @@ function Wait-ForEventState([IntPtr]$Handle, [string]$State) {
   do {
     Start-Sleep -Milliseconds 350
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
-    $button = Find-ButtonPrefix $root ("WINDOW_VAULT · " + $State)
+    $button = Find-ButtonWithTokens $root @('WINDOW_VAULT', $State)
   } while ($null -eq $button -and [DateTime]::UtcNow -lt $deadline)
   return $button
 }

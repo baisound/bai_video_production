@@ -22,6 +22,11 @@ from .durable_product_job import (
     DurableProductJobState,
 )
 from .interactive_timeline import InteractiveTimeline
+from .integrated_dashboard_operations import (
+    CoverageState,
+    DashboardSnapshotState,
+    IntegratedDashboardSnapshotRevision,
+)
 from .serialization import validate_sha256
 
 
@@ -152,6 +157,7 @@ JobReader = Callable[[], DurableProductJobCollection]
 AssetReader = Callable[[], Sequence[AssetRecord]]
 TimelineReader = Callable[[], InteractiveTimeline | None]
 ValidationReader = Callable[[], Sequence[CanonicalValidationResult]]
+IntegratedSnapshotReader = Callable[[], IntegratedDashboardSnapshotRevision | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +168,7 @@ class CanonicalDashboardReaders:
     read_assets: AssetReader
     read_timeline: TimelineReader
     read_validation_results: ValidationReader
+    read_integrated_snapshot: IntegratedSnapshotReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -182,6 +189,60 @@ _ERROR_JAPANESE = MappingProxyType({
     "ERR_PRODUCT_JOB_INTERRUPTED": "処理が中断され、結果の照合が必要です。",
 })
 
+_INTEGRATED_SNAPSHOT_JAPANESE = MappingProxyType({
+    DashboardSnapshotState.ACTION_REQUIRED: (
+        DashboardDisplayState.WARNING,
+        "対応が必要",
+        "正本の運用判定で対応が必要な状態です。",
+        "正本のJob、Evidence、Incidentを確認してください。",
+    ),
+    DashboardSnapshotState.DEGRADED: (
+        DashboardDisplayState.IN_PROGRESS,
+        "進行中または縮退",
+        "処理中または一部機能が縮退しています。",
+        "正本側の進行状況と失敗理由を確認してください。",
+    ),
+    DashboardSnapshotState.NO_ACTIVE_INCIDENT_PROVEN: (
+        DashboardDisplayState.SUCCESS,
+        "現在のIncidentなし（証明済み）",
+        "なし",
+        "必要に応じて正本の最新状態を確認できます。",
+    ),
+    DashboardSnapshotState.STALE: (
+        DashboardDisplayState.WARNING,
+        "情報が古い",
+        "表示元が期限切れ、無効、または更新待ちです。",
+        "正本ソースの更新後に再読み取りしてください。",
+    ),
+    DashboardSnapshotState.UNKNOWN: (
+        DashboardDisplayState.UNKNOWN,
+        "判定不能",
+        "判定に必要な正本情報が不足しています。",
+        "正本の確認範囲と検証状態を確認してください。",
+    ),
+})
+
+_COVERAGE_JAPANESE = MappingProxyType({
+    CoverageState.COMPLETE: (
+        DashboardDisplayState.SUCCESS,
+        "完全",
+        "なし",
+        "対象範囲は正本スナップショットで確認済みです。",
+    ),
+    CoverageState.PARTIAL: (
+        DashboardDisplayState.WARNING,
+        "一部のみ",
+        "対象範囲の一部だけが確認済みです。",
+        "未確認の正本ソースを確認してください。",
+    ),
+    CoverageState.UNKNOWN: (
+        DashboardDisplayState.UNKNOWN,
+        "不明",
+        "対象範囲を確定できません。",
+        "正本の検索条件と参照元の結び付きを確認してください。",
+    ),
+})
+
 
 class Task021OperationsDashboard:
     """Refresh a read-only dashboard from canonical in-memory snapshots."""
@@ -197,6 +258,12 @@ class Task021OperationsDashboard:
         assets, assets_error = self._safe_read(self.readers.read_assets)
         timeline, timeline_error = self._safe_read(self.readers.read_timeline)
         validations, validations_error = self._safe_read(self.readers.read_validation_results)
+        integrated_snapshot: object | None = None
+        integrated_snapshot_error = False
+        if self.readers.read_integrated_snapshot is not None:
+            integrated_snapshot, integrated_snapshot_error = self._safe_read(
+                self.readers.read_integrated_snapshot
+            )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
         if job_collection is not None and job_collection.project_id != self.project_id:
@@ -212,19 +279,35 @@ class Task021OperationsDashboard:
         ):
             timeline_error, timeline = True, None
 
-        sections = (
+        if integrated_snapshot is not None and (
+            not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
+            or integrated_snapshot.to_dict()["project_id"] != self.project_id
+        ):
+            integrated_snapshot_error, integrated_snapshot = True, None
+
+        sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
             self._assets_section(asset_values, assets_error),
             self._timeline_section(timeline, timeline_error),
             self._jobs_section(job_collection, jobs_error, export_only=True),
             self._validation_section(validation_values, validations_error),
-        )
-        state = self._aggregate_state(tuple(section.state for section in sections))
+        ]
+        if self.readers.read_integrated_snapshot is not None:
+            sections.append(
+                self._integrated_snapshot_section(
+                    integrated_snapshot
+                    if isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
+                    else None,
+                    integrated_snapshot_error,
+                )
+            )
+        section_values = tuple(sections)
+        state = self._aggregate_state(tuple(section.state for section in section_values))
         return OperationsDashboardSnapshot(
             project_id=self.project_id,
             state=state,
             state_ja=_STATE_LABELS[state],
-            sections=sections,
+            sections=section_values,
         )
 
     @staticmethod
@@ -445,6 +528,71 @@ class Task021OperationsDashboard:
         return DashboardSection(section_id, title, DashboardDisplayState.FAILURE, (row,), reason)
 
     @staticmethod
+    def _integrated_snapshot_section(
+        snapshot: IntegratedDashboardSnapshotRevision | None,
+        failed: bool,
+    ) -> DashboardSection:
+        section_id = "operations-state"
+        title = "運用判定"
+        if failed:
+            return Task021OperationsDashboard._failed_section(
+                section_id,
+                title,
+                "正本の統合スナップショットを安全に読み取れませんでした。",
+            )
+        if snapshot is None:
+            return DashboardSection(
+                section_id,
+                title,
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本の統合スナップショットはまだありません。",
+            )
+
+        data = snapshot.to_dict()
+        snapshot_state = DashboardSnapshotState(data["snapshot_state"])
+        coverage_state = CoverageState(data["coverage_state"])
+        display_state, state_ja, reason_ja, next_action_ja = (
+            _INTEGRATED_SNAPSHOT_JAPANESE[snapshot_state]
+        )
+        coverage_display, coverage_ja, coverage_reason, coverage_next = (
+            _COVERAGE_JAPANESE[coverage_state]
+        )
+        rows = (
+            DashboardRow(
+                row_id="integrated-snapshot-state",
+                name_ja="統合スナップショット判定",
+                state=display_state,
+                state_ja=state_ja,
+                failure_reason_ja=reason_ja,
+                next_action_ja=next_action_ja,
+                artifact_location_ja="非表示（公開状態のみ）",
+                source_owner="TASK-021_CANONICAL_SNAPSHOT",
+            ),
+            DashboardRow(
+                row_id="integrated-snapshot-coverage",
+                name_ja="確認範囲",
+                state=coverage_display,
+                state_ja=coverage_ja,
+                failure_reason_ja=coverage_reason,
+                next_action_ja=coverage_next,
+                artifact_location_ja="非表示（公開状態のみ）",
+                source_owner="TASK-021_CANONICAL_SNAPSHOT",
+            ),
+        )
+        section_state = Task021OperationsDashboard._aggregate_state(
+            tuple(row.state for row in rows)
+        )
+        return DashboardSection(
+            section_id,
+            title,
+            section_state,
+            rows,
+            "正本スナップショットの公開状態だけを表示します。"
+            "識別子、ハッシュ、時刻、非公開情報は表示しません。",
+        )
+
+    @staticmethod
     def _aggregate_state(states: tuple[DashboardDisplayState, ...]) -> DashboardDisplayState:
         if not states or all(state is DashboardDisplayState.EMPTY for state in states):
             return DashboardDisplayState.EMPTY
@@ -521,6 +669,7 @@ EFFECT_SURFACE = MappingProxyType({
 __all__ = [
     "CanonicalDashboardReaders",
     "CanonicalValidationResult",
+    "IntegratedSnapshotReader",
     "DashboardDisplayState",
     "DashboardRow",
     "DashboardSection",

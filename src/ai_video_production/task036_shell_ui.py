@@ -1373,6 +1373,21 @@ class Task036ShellBridge:
             expected_launch_config_sha256=args["expected_launch_config_sha256"]
         )
 
+    def faster_whisper_model_settings_snapshot(self, args: Any) -> dict[str, Any]:
+        if (
+            type(args) is not dict
+            or set(args) != {"expected_launch_config_sha256"}
+            or not isinstance(args["expected_launch_config_sha256"], str)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "FasterWhisper model-settings snapshot request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_faster_whisper_model_settings().snapshot(
+            expected_launch_config_sha256=args["expected_launch_config_sha256"]
+        )
+
     @_meter_write_guarded
     def apply_faster_whisper_model_folder_update(self, args: Any) -> dict[str, Any]:
         if (

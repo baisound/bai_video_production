@@ -143,6 +143,20 @@ def _validate_config_document(document: Any) -> None:
     validator(document)
 
 
+def _cache_directory_is_safe(document: dict[str, Any]) -> bool:
+    try:
+        project_root = Path(document["project"]["project_root"])
+        cache = Path(document["paths"]["asr_cache_directory"])
+        _require_safe_ancestry(cache)
+        metadata = cache.stat(follow_symlinks=False)
+        if _is_alias(metadata) or not stat.S_ISDIR(metadata.st_mode):
+            return False
+        cache.resolve(strict=True).relative_to(project_root.resolve(strict=True))
+        return True
+    except (KeyError, OSError, ProductError, TypeError, ValueError):
+        return False
+
+
 def _base_projection(status: str) -> dict[str, Any]:
     return {
         "settings_update_version": SETTINGS_UPDATE_VERSION,
@@ -205,6 +219,66 @@ class Task098FasterWhisperModelSettingsService:
         for key in tuple(self._pending):
             if self._pending[key].expires_at < now:
                 del self._pending[key]
+
+    def snapshot(self, *, expected_launch_config_sha256: str) -> dict[str, Any]:
+        try:
+            expected = validate_sha256(
+                expected_launch_config_sha256,
+                field_name="expected_launch_config_sha256",
+            )
+        except ValueError as exc:
+            raise _error(
+                "ERR_TASK098_MODEL_SETTINGS_EXPECTED_SHA_INVALID",
+                "Expected launch configuration identity is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        raw, document = _read_config(self._path)
+        current_sha = sha256_bytes(raw)
+        if current_sha != expected:
+            raise _error(
+                "ERR_TASK098_MODEL_SETTINGS_STALE",
+                "TASK-036 launch configuration differs from the reviewed identity",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        base = {
+            **_base_projection("BLOCKED"),
+            "launch_config_sha256": current_sha,
+            "model_id": None,
+            "reason_codes": [],
+            "settings_updated": False,
+            "cache_directory_configured": True,
+            "cache_reuse_available": False,
+            "cache_hit_observed": False,
+            "restart_readback": True,
+            "model_manifest_continuity_confirmed": False,
+            "runtime_compatibility_confirmed": False,
+        }
+        if not _cache_directory_is_safe(document):
+            return {**base, "reason_codes": ["CACHE_DIRECTORY_UNSAFE"]}
+        model = document["asr"]["model"]
+        if not Path(model).is_absolute():
+            return {
+                **base,
+                "status": "LOCAL_MODEL_NOT_CONFIGURED",
+                "reason_codes": ["LOCAL_MODEL_NOT_CONFIGURED"],
+                "cache_reuse_available": True,
+            }
+        inspection = inspect_faster_whisper_model_directory(model)
+        if inspection.outcome != "READY":
+            return {
+                **base,
+                "reason_codes": list(inspection.reason_codes),
+                "inspection": inspection.to_public_dict(),
+                "cache_reuse_available": True,
+            }
+        return {
+            **base,
+            "status": "READY",
+            "model_id": inspection.model_id,
+            "reason_codes": list(inspection.reason_codes),
+            "inspection": inspection.to_public_dict(),
+            "cache_reuse_available": True,
+        }
 
     def prepare(self, *, expected_launch_config_sha256: str) -> dict[str, Any]:
         try:

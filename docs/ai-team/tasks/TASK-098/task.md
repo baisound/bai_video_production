@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-a3-model-manager-settings`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A3-R2 completed; A3-R3 is not yet allocated`
-- Next action: `fresh bounded A3-R3 design/authority review for cache reuse/read-back and restart tests without model construction`
+- Active Atomic Unit: `NONE — A3 is complete through A3-R3`
+- Next action: `fresh bounded A4 design/authority review for the review workspace; no A4 mutation is allocated by A3 completion`
 
 ## Objective
 
@@ -665,3 +665,42 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Evidence:
   `evidence/a3-r2-guarded-model-settings-20260922-r01.md`.
 - Next Unit: fresh A3-R3 review for cache reuse/read-back and restart tests.
+
+## A3-R3 cache/restart read-back completion
+
+- Design/review:
+  `a3-r3-cache-restart-readback-pre-mutation-review-20260922.md`.
+- Added a read-only snapshot over the existing TASK-036 launch configuration.
+  It requires the exact current config digest, validates the existing cache
+  directory and re-runs the A3-R1 local-model inspection without constructing
+  a FasterWhisper model.
+- A newly constructed service reads back an A3-R2 selection by the same
+  path-free model ID. A symbolic model returns
+  `LOCAL_MODEL_NOT_CONFIGURED`; stale config identity, unsafe cache ancestry
+  and missing/invalid model contents fail closed.
+- The projection distinguishes safe cache configuration from actual execution:
+  `cache_reuse_available` may be true, while `cache_hit_observed`,
+  `model_manifest_continuity_confirmed` and
+  `runtime_compatibility_confirmed` remain false. A3-R3 therefore makes no
+  cache-hit, persisted-manifest-continuity or runtime/model-compatibility claim.
+- A3-R2 confirmation state remains process-local and cannot be applied through
+  a reconstructed service. Shell request shape is exact and all public output
+  remains path-free.
+- Direct pytest collection was `NOT_CONFIRMED` because the WSL cryptography
+  build lacks unused Argon2id. No dependency changed; a process-local unused
+  import stub enabled the existing Shell graph.
+- Final A3-R3 through A3-R0, settings, Shell, trusted-launch and direct A2
+  regression: `234 PASS / 0 FAIL` in `41.43s`. Python compile and Git diff
+  check: `PASS`.
+- Critic design findings `0/2/2/0` were corrected; final findings:
+  `Critical 0 / High 0 / Medium 0 / Low 0`. Tester: `PASS`; Judge:
+  `ACCEPT / COMMIT_READY`.
+- Only pytest-owned temporary configs/models/cache directories were touched.
+  Real Product settings, native picker, model load/inference, Provider,
+  download/network, private audio, recording, Dataset/training, installation,
+  Release, Deploy and Production Activation were not executed.
+- Remote branch push remains parked because destination ownership was not
+  approved by the external safety reviewer; no retry or workaround occurred.
+- Evidence:
+  `evidence/a3-r3-cache-restart-readback-20260922-r01.md`.
+- Next Unit: fresh A4 design/authority review for the review workspace.

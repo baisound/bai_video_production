@@ -421,6 +421,25 @@ def test_cleanup_failure_is_unknown_not_success(tmp_path: Path) -> None:
     fixture.store.close()
 
 
+def test_windows_backend_collects_non_os_worker_exception(monkeypatch) -> None:
+    class BrokenWinsound:
+        SND_MEMORY = 1
+        SND_NODEFAULT = 4
+
+        @staticmethod
+        def PlaySound(body, flags):
+            del body, flags
+            raise ValueError("synthetic worker failure")
+
+    monkeypatch.setattr(
+        WindowsWavePlaybackBackend,
+        "_winsound",
+        staticmethod(lambda: BrokenWinsound),
+    )
+    with pytest.raises(ReviewRuntimeKnownFailure, match="native playback failed"):
+        WindowsWavePlaybackBackend().play(b"not-empty", threading.Event())
+
+
 def test_port_and_request_accept_no_host_path(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     assert not any("path" in name for name in fixture.request.__dataclass_fields__)

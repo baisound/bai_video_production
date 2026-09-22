@@ -104,9 +104,11 @@ class WindowsWavePlaybackBackend:
             try:
                 winsound.PlaySound(
                     wav_body,
-                    winsound.SND_MEMORY | winsound.SND_SYNC | winsound.SND_NODEFAULT,
+                    winsound.SND_MEMORY
+                    | getattr(winsound, "SND_SYNC", 0)
+                    | winsound.SND_NODEFAULT,
                 )
-            except (OSError, RuntimeError) as exc:
+            except Exception as exc:
                 failures.append(exc)
             finally:
                 completed.set()

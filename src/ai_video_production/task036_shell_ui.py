@@ -21,6 +21,9 @@ from .desktop_shell import ShellApplicationService, WorkspaceId
 from .desktop_shell_projection import DesktopEditingProjectionService, EditingProjection
 from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
+from .task098_faster_whisper_model_settings import (
+    Task098FasterWhisperModelSettingsService,
+)
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import (
     Task036PreEditRuntime,
@@ -351,6 +354,7 @@ class Task036ShellBridge:
         review: Task036ReviewFacade | None = None,
         application: Task036EditingApplication | None = None,
         native_dialog: Task036NativeDialogService | None = None,
+        faster_whisper_model_settings: Task098FasterWhisperModelSettingsService | None = None,
         pre_edit_runtime: Task036PreEditRuntime | None = None,
         workflow_runtime: Task036WorkflowRuntime | None = None,
         workflow_runtime_factory: Callable[[Task036EditingApplication], Task036WorkflowRuntime] | None = None,
@@ -399,6 +403,7 @@ class Task036ShellBridge:
         self._review = review
         self._application = application
         self._native_dialog = native_dialog
+        self._faster_whisper_model_settings = faster_whisper_model_settings
         if pre_edit_runtime is not None and pre_edit_runtime.coordinator.shell is not service:
             raise ValueError("pre-edit runtime must use the supplied Shell service")
         self._pre_edit_runtime = pre_edit_runtime
@@ -668,6 +673,17 @@ class Task036ShellBridge:
                 ProductErrorCategory.STATE,
             )
         return self._native_dialog
+
+    def _require_faster_whisper_model_settings(
+        self,
+    ) -> Task098FasterWhisperModelSettingsService:
+        if self._faster_whisper_model_settings is None:
+            raise ProductError(
+                "ERR_TASK098_MODEL_SETTINGS_NOT_BOUND",
+                "FasterWhisper model settings are not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._faster_whisper_model_settings
 
     def _require_workflow_runtime(self) -> Task036WorkflowRuntime:
         if self._workflow_runtime is None:
@@ -1341,6 +1357,37 @@ class Task036ShellBridge:
         if args not in (None, {}):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "handoff folder chooser request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_native_dialog().choose_handoff_folder().to_ui_dict()
+
+    def prepare_faster_whisper_model_folder_update(self, args: Any) -> dict[str, Any]:
+        if (
+            type(args) is not dict
+            or set(args) != {"expected_launch_config_sha256"}
+            or not isinstance(args["expected_launch_config_sha256"], str)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "FasterWhisper model-folder prepare request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_faster_whisper_model_settings().prepare(
+            expected_launch_config_sha256=args["expected_launch_config_sha256"]
+        )
+
+    @_meter_write_guarded
+    def apply_faster_whisper_model_folder_update(self, args: Any) -> dict[str, Any]:
+        if (
+            type(args) is not dict
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "FasterWhisper model-folder apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_faster_whisper_model_settings().apply(
+            confirmation_id=args["confirmation_id"]
+        )
 
     def game_intelligence_snapshot(self, args: Any = None) -> dict[str, Any]:
         if args is None:

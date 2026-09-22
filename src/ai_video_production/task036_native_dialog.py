@@ -21,12 +21,14 @@ class DialogPurpose(str, Enum):
     MEDIA_SOURCE = "MEDIA_SOURCE"
     PROJECT_FOLDER = "PROJECT_FOLDER"
     HANDOFF_FOLDER = "HANDOFF_FOLDER"
+    FASTER_WHISPER_MODEL_FOLDER = "FASTER_WHISPER_MODEL_FOLDER"
 
 
 class NativeDialogBackend(Protocol):
     def choose_open_media(self) -> str | None: ...
     def choose_project_folder(self) -> str | None: ...
     def choose_handoff_folder(self) -> str | None: ...
+    def choose_faster_whisper_model_folder(self) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,3 +157,20 @@ class Task036NativeDialogService:
         if selected is None:
             return self._cancelled(DialogPurpose.HANDOFF_FOLDER)
         return self._directory(selected, purpose=DialogPurpose.HANDOFF_FOLDER)
+
+    def choose_faster_whisper_model_folder(self) -> NativeDialogSelection:
+        try:
+            selected = self.backend.choose_faster_whisper_model_folder()
+        except NativeFileDialogUnavailable as exc:
+            raise ProductError(
+                "ERR_TASK098_MODEL_FOLDER_DIALOG_UNAVAILABLE",
+                "Native FasterWhisper model-folder chooser is unavailable",
+                ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                details={"purpose": DialogPurpose.FASTER_WHISPER_MODEL_FOLDER.value},
+            ) from exc
+        if selected is None:
+            return self._cancelled(DialogPurpose.FASTER_WHISPER_MODEL_FOLDER)
+        return self._directory(
+            selected,
+            purpose=DialogPurpose.FASTER_WHISPER_MODEL_FOLDER,
+        )

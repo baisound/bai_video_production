@@ -110,7 +110,8 @@ function Find-ButtonPrefix([System.Windows.Automation.AutomationElement]$Root, [
     [System.Windows.Automation.ControlType]::Button)
   $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   foreach ($button in $buttons) {
-    if ($button.Current.Name.StartsWith($Prefix, [System.StringComparison]::Ordinal)) { return $button }
+    if ($button.Current.IsEnabled -and -not $button.Current.IsOffscreen -and
+        $button.Current.Name.StartsWith($Prefix, [System.StringComparison]::Ordinal)) { return $button }
   }
   return $null
 }
@@ -121,7 +122,8 @@ function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Roo
     [System.Windows.Automation.ControlType]::Button)
   $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   foreach ($button in $buttons) {
-    if ($button.Current.Name.Contains($Text)) { return $button }
+    if ($button.Current.IsEnabled -and -not $button.Current.IsOffscreen -and
+        $button.Current.Name.Contains($Text)) { return $button }
   }
   return $null
 }
@@ -205,7 +207,9 @@ try {
   $first = Start-App 1
   Invoke-Button $first.gameButton
   $initialEvent = Wait-ForEventState $first.root 'NEEDS_REVIEW'
-  if ($null -eq $initialEvent) { throw 'Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store.' }
+  if ($null -eq $initialEvent) {
+    throw "Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store. Observed buttons: $((Get-ButtonNames $first.root) -join ', ')"
+  }
   Invoke-Button $initialEvent
   $confirm = Find-ButtonExact $first.root '承認 / Confirm'
   if ($null -eq $confirm -or -not $confirm.Current.IsEnabled) { throw 'Human Confirm control is unavailable for the selected Event.' }

@@ -38,6 +38,7 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "$start.EnvironmentVariables['BAI_TASK036_LAUNCH_CONFIG']",
         "Observed buttons:",
         "observed elements:",
+        "$button.Current.IsEnabled -and -not $button.Current.IsOffscreen",
     ):
         assert token in source
     assert "Release" not in source or "public_release_performed" in source

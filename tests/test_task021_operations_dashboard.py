@@ -28,8 +28,10 @@ from ai_video_production.interactive_timeline import (
 )
 from ai_video_production.integrated_dashboard_operations import (
     DashboardAlertClassificationReceipt,
+    DashboardEvidenceReadModel,
     DashboardExecutionReceiptBinding,
     DashboardIncidentReadModel,
+    DashboardJobReadModel,
     DashboardOperationProposalRevision,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
@@ -38,6 +40,7 @@ from ai_video_production.task021_operations_dashboard import (
     EFFECT_SURFACE,
     CanonicalAttentionState,
     CanonicalDashboardReaders,
+    CanonicalJobEvidenceState,
     CanonicalOperationState,
     CanonicalValidationResult,
     DashboardDisplayState,
@@ -150,6 +153,8 @@ def integrated_snapshot(
     coverage_state: str = "PARTIAL",
     incident_hashes: tuple[str, ...] = (),
     alert_hashes: tuple[str, ...] = (),
+    job_hashes: tuple[str, ...] = (),
+    evidence_hashes: tuple[str, ...] = (),
 ) -> IntegratedDashboardSnapshotRevision:
     return IntegratedDashboardSnapshotRevision.create(
         snapshot_id="task021-integrated-snapshot",
@@ -159,8 +164,8 @@ def integrated_snapshot(
         policy_sha256=H1,
         query_sha256=H2,
         source_binding_hashes=[H3],
-        job_view_hashes=[],
-        evidence_view_hashes=[],
+        job_view_hashes=sorted(job_hashes),
+        evidence_view_hashes=sorted(evidence_hashes),
         incident_view_hashes=sorted(incident_hashes),
         alert_hashes=sorted(alert_hashes),
         coverage_state=coverage_state,
@@ -171,6 +176,50 @@ def integrated_snapshot(
         private_detail_included=False,
         effect_started_by_dashboard=False,
     )
+
+
+def job_read_model(
+    *,
+    state: str = "RUNNING",
+    freshness: str = "CURRENT",
+    **overrides,
+) -> DashboardJobReadModel:
+    fields = dict(
+        view_id="private-job-view",
+        source_binding_sha256=H3,
+        job_sha256=H1,
+        operation_identity="private-operation-identity",
+        job_state=state,
+        state_version=1,
+        attempt=0,
+        updated_at=T0,
+        freshness_state=freshness,
+        reason_codes=["PRIVATE_JOB_REASON"],
+        effect_started_by_dashboard=False,
+    )
+    fields.update(overrides)
+    return DashboardJobReadModel.create(**fields)
+
+
+def evidence_read_model(
+    *,
+    state: str = "PASS",
+    freshness: str = "CURRENT",
+    **overrides,
+) -> DashboardEvidenceReadModel:
+    fields = dict(
+        view_id="private-evidence-view",
+        source_binding_sha256=H3,
+        evidence_record_type="private-evidence-type",
+        evidence_sha256=H2,
+        result_state=state,
+        observed_at=T0,
+        freshness_state=freshness,
+        reason_codes=["PRIVATE_EVIDENCE_REASON"],
+        body_included=False,
+    )
+    fields.update(overrides)
+    return DashboardEvidenceReadModel.create(**fields)
 
 
 def incident_model(
@@ -1226,6 +1275,407 @@ def test_attention_state_private_failure_and_wrong_member_types_are_redacted() -
         assert snapshot.section("incidents").state is DashboardDisplayState.FAILURE
         assert snapshot.section("alerts").state is DashboardDisplayState.FAILURE
         assert "secret-token" not in html and r"C:\private" not in html
+
+
+def test_job_evidence_state_reads_once_and_aggregates_without_identity_leak() -> None:
+    failed_job = job_read_model(state="FAILED")
+    running_job = job_read_model(
+        view_id="another-private-job-view",
+        job_sha256=H2,
+        operation_identity="another-private-operation-identity",
+    )
+    failed_evidence = evidence_read_model(state="FAIL")
+    passing_evidence = evidence_read_model(
+        view_id="another-private-evidence-view",
+        evidence_record_type="another-private-evidence-type",
+        evidence_sha256=H1,
+    )
+    canonical = integrated_snapshot(
+        snapshot_state="ACTION_REQUIRED",
+        coverage_state="COMPLETE",
+        job_hashes=(failed_job.record_sha256, running_job.record_sha256),
+        evidence_hashes=(failed_evidence.record_sha256, passing_evidence.record_sha256),
+    )
+    calls = {"snapshot": 0, "read_models": 0}
+
+    def read_snapshot() -> IntegratedDashboardSnapshotRevision:
+        calls["snapshot"] += 1
+        return canonical
+
+    def read_models() -> CanonicalJobEvidenceState:
+        calls["read_models"] += 1
+        return CanonicalJobEvidenceState(
+            (failed_job, running_job),
+            (failed_evidence, passing_evidence),
+        )
+
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_snapshot,
+            read_job_evidence_state=read_models,
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert calls == {"snapshot": 1, "read_models": 1}
+    assert snapshot.section("canonical-jobs").state is DashboardDisplayState.FAILURE
+    assert snapshot.section("canonical-jobs").rows[0].state_ja == "失敗を含む"
+    assert snapshot.section("canonical-evidence").state is DashboardDisplayState.FAILURE
+    assert snapshot.section("canonical-evidence").rows[0].state_ja == "FAILを含む"
+    assert len(snapshot.section("canonical-jobs").rows) == 1
+    assert len(snapshot.section("canonical-evidence").rows) == 1
+    assert EFFECT_SURFACE["job_or_export_execution"] is False
+    assert all(
+        not row.operation_available
+        for section_id in ("canonical-jobs", "canonical-evidence")
+        for row in snapshot.section(section_id).rows
+    )
+    for private_value in (
+        "private-job-view",
+        "another-private-job-view",
+        "private-operation-identity",
+        "another-private-operation-identity",
+        "private-evidence-view",
+        "another-private-evidence-view",
+        "private-evidence-type",
+        "another-private-evidence-type",
+        "PRIVATE_JOB_REASON",
+        "PRIVATE_EVIDENCE_REASON",
+        failed_job.record_sha256,
+        running_job.record_sha256,
+        failed_evidence.record_sha256,
+        passing_evidence.record_sha256,
+        H1,
+        H2,
+        H3,
+        T0,
+    ):
+        assert private_value not in html
+    assert "公開状態 1" not in html and "公開状態 2" not in html
+
+
+@pytest.mark.parametrize(
+    ("state", "expected_state", "expected_label"),
+    (
+        ("SUCCEEDED", DashboardDisplayState.SUCCESS, "完了のみ"),
+        ("QUEUED", DashboardDisplayState.IN_PROGRESS, "進行中を含む"),
+        ("HUMAN_REQUIRED", DashboardDisplayState.WARNING, "人間確認待ちを含む"),
+        ("CANCELLED", DashboardDisplayState.WARNING, "キャンセル済みを含む"),
+        ("UNKNOWN", DashboardDisplayState.UNKNOWN, "結果不明を含む"),
+    ),
+)
+def test_job_read_model_closed_states_have_public_projection(
+    state: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    model = job_read_model(state=state)
+    canonical = integrated_snapshot(job_hashes=(model.record_sha256,))
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState((model,), ()),
+        ),
+    ).refresh()
+
+    row = snapshot.section("canonical-jobs").rows[0]
+    assert row.state is expected_state
+    assert row.state_ja == expected_label
+
+
+@pytest.mark.parametrize(
+    ("state", "expected_state", "expected_label"),
+    (
+        ("PASS", DashboardDisplayState.SUCCESS, "PASSのみ"),
+        ("FAIL", DashboardDisplayState.FAILURE, "FAILを含む"),
+        (
+            "NOT_SUPPORTED",
+            DashboardDisplayState.UNKNOWN,
+            "判定不能（未対応を含む）",
+        ),
+        ("UNKNOWN", DashboardDisplayState.UNKNOWN, "結果不明を含む"),
+    ),
+)
+def test_evidence_read_model_closed_states_have_public_projection(
+    state: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    model = evidence_read_model(state=state)
+    canonical = integrated_snapshot(evidence_hashes=(model.record_sha256,))
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState((), (model,)),
+        ),
+    ).refresh()
+
+    row = snapshot.section("canonical-evidence").rows[0]
+    assert row.state is expected_state
+    assert row.state_ja == expected_label
+
+
+@pytest.mark.parametrize(
+    ("freshness", "expected_state", "expected_label"),
+    (
+        ("STALE", DashboardDisplayState.WARNING, "現在値として扱えない状態を含む"),
+        ("INVALIDATED", DashboardDisplayState.WARNING, "現在値として扱えない状態を含む"),
+        ("UNKNOWN", DashboardDisplayState.UNKNOWN, "鮮度不明を含む"),
+    ),
+)
+def test_job_evidence_non_current_records_never_project_current_result(
+    freshness: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    job_model = job_read_model(state="FAILED", freshness=freshness)
+    evidence_model = evidence_read_model(state="FAIL", freshness=freshness)
+    canonical = integrated_snapshot(
+        snapshot_state="STALE",
+        job_hashes=(job_model.record_sha256,),
+        evidence_hashes=(evidence_model.record_sha256,),
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState(
+                (job_model,), (evidence_model,)
+            ),
+        ),
+    ).refresh()
+
+    for section_id in ("canonical-jobs", "canonical-evidence"):
+        row = snapshot.section(section_id).rows[0]
+        assert row.state is expected_state
+        assert row.state_ja == expected_label
+
+
+def test_empty_job_evidence_state_does_not_claim_success_or_pass() -> None:
+    canonical = integrated_snapshot(snapshot_state="UNKNOWN", coverage_state="UNKNOWN")
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState((), ()),
+        ),
+    ).refresh()
+
+    assert snapshot.section("canonical-jobs").state is DashboardDisplayState.EMPTY
+    assert "不在だけを成功証明には使用しません" in snapshot.section("canonical-jobs").note_ja
+    assert snapshot.section("canonical-evidence").state is DashboardDisplayState.EMPTY
+    assert "不在だけをPASS証明には使用しません" in snapshot.section("canonical-evidence").note_ja
+    assert snapshot.state is DashboardDisplayState.UNKNOWN
+
+
+def test_job_evidence_snapshot_crossing_and_source_crossing_fail_closed() -> None:
+    model = job_read_model()
+    canonical = integrated_snapshot(job_hashes=(model.record_sha256,))
+
+    def refresh(state) -> object:
+        return Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_job_evidence_state=lambda: state,
+            ),
+        ).refresh()
+
+    for invalid_state in (None, CanonicalJobEvidenceState((), ())):
+        snapshot = refresh(invalid_state)
+        assert snapshot.section("canonical-jobs").state is DashboardDisplayState.FAILURE
+        assert snapshot.section("canonical-evidence").state is DashboardDisplayState.FAILURE
+
+    foreign = job_read_model(
+        view_id="foreign-private-job-view",
+        source_binding_sha256=H2,
+    )
+    source_crossed_snapshot = integrated_snapshot(job_hashes=(foreign.record_sha256,))
+    crossed = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: source_crossed_snapshot,
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState((foreign,), ()),
+        ),
+    ).refresh()
+    assert crossed.section("canonical-jobs").state is DashboardDisplayState.FAILURE
+    assert crossed.section("canonical-evidence").state is DashboardDisplayState.FAILURE
+
+
+def test_job_evidence_private_failure_and_wrong_member_types_are_redacted() -> None:
+    canonical = integrated_snapshot()
+
+    def private_failure() -> CanonicalJobEvidenceState:
+        raise RuntimeError(r"C:\private\secret-token")
+
+    for reader in (
+        private_failure,
+        lambda: CanonicalJobEvidenceState(("not-a-job",), ()),  # type: ignore[arg-type]
+    ):
+        snapshot = Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_job_evidence_state=reader,
+            ),
+        ).refresh()
+        html = render_accessible_dashboard_html(snapshot)
+        assert snapshot.section("canonical-jobs").state is DashboardDisplayState.FAILURE
+        assert snapshot.section("canonical-evidence").state is DashboardDisplayState.FAILURE
+        assert "secret-token" not in html and r"C:\private" not in html
+
+
+@pytest.mark.parametrize("record_kind", ("JOB", "EVIDENCE"))
+def test_job_evidence_direct_constructor_corruption_fails_closed_and_redacts(
+    record_kind: str,
+) -> None:
+    private_value = r"C:\private\secret-token"
+    corrupt_job = DashboardJobReadModel({"private_body": private_value})
+    corrupt_evidence = DashboardEvidenceReadModel({"private_body": private_value})
+    state = (
+        CanonicalJobEvidenceState((corrupt_job,), ())
+        if record_kind == "JOB"
+        else CanonicalJobEvidenceState((), (corrupt_evidence,))
+    )
+    canonical = integrated_snapshot()
+
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_job_evidence_state=lambda: state,
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert snapshot.section("canonical-jobs").state is DashboardDisplayState.FAILURE
+    assert snapshot.section("canonical-evidence").state is DashboardDisplayState.FAILURE
+    assert private_value not in html
+    assert "secret-token" not in html
+
+
+def test_corrupt_integrated_snapshot_fails_all_dependent_sections_closed() -> None:
+    private_value = r"C:\private\secret-token"
+    corrupt = IntegratedDashboardSnapshotRevision({"private_body": private_value})
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: corrupt,
+            read_operation_state=lambda: None,
+            read_attention_state=lambda: CanonicalAttentionState((), ()),
+            read_job_evidence_state=lambda: CanonicalJobEvidenceState((), ()),
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    for section_id in (
+        "operations-state",
+        "operation-gate",
+        "incidents",
+        "alerts",
+        "canonical-jobs",
+        "canonical-evidence",
+    ):
+        assert snapshot.section(section_id).state is DashboardDisplayState.FAILURE
+    assert private_value not in html
+    assert "secret-token" not in html
+
+
+def test_corrupt_operation_record_fails_closed_and_redacts() -> None:
+    private_value = r"C:\private\secret-token"
+    corrupt = DashboardOperationProposalRevision({"private_body": private_value})
+    canonical = integrated_snapshot()
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                corrupt, None, None, T1
+            ),
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert snapshot.section("operation-gate").state is DashboardDisplayState.FAILURE
+    assert private_value not in html
+    assert "secret-token" not in html
+
+
+@pytest.mark.parametrize("record_kind", ("INCIDENT", "ALERT"))
+def test_corrupt_attention_record_fails_closed_and_redacts(record_kind: str) -> None:
+    private_value = r"C:\private\secret-token"
+    corrupt_incident = DashboardIncidentReadModel({"private_body": private_value})
+    corrupt_alert = DashboardAlertClassificationReceipt({"private_body": private_value})
+    attention = (
+        CanonicalAttentionState((corrupt_incident,), ())
+        if record_kind == "INCIDENT"
+        else CanonicalAttentionState((), (corrupt_alert,))
+    )
+    canonical = integrated_snapshot()
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_attention_state=lambda: attention,
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert snapshot.section("incidents").state is DashboardDisplayState.FAILURE
+    assert snapshot.section("alerts").state is DashboardDisplayState.FAILURE
+    assert private_value not in html
+    assert "secret-token" not in html
 
 
 def test_static_surface_has_no_store_filesystem_network_or_process_control() -> None:

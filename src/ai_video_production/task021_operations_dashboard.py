@@ -27,11 +27,15 @@ from .integrated_dashboard_operations import (
     AlertSeverity,
     CoverageState,
     DashboardAlertClassificationReceipt,
+    DashboardEvidenceReadModel,
     DashboardExecutionReceiptBinding,
     DashboardIncidentReadModel,
     DashboardIncidentState,
+    DashboardJobReadModel,
     DashboardOperationProposalRevision,
     DashboardSnapshotState,
+    DurableJobViewState,
+    EvidenceResultState,
     FreshnessState,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
@@ -195,6 +199,17 @@ AttentionStateReader = Callable[[], CanonicalAttentionState | None]
 
 
 @dataclass(frozen=True, slots=True)
+class CanonicalJobEvidenceState:
+    """Exact snapshot-bound Job and Evidence records for public display."""
+
+    jobs: tuple[DashboardJobReadModel, ...]
+    evidence: tuple[DashboardEvidenceReadModel, ...]
+
+
+JobEvidenceStateReader = Callable[[], CanonicalJobEvidenceState | None]
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalDashboardReaders:
     """Injected read ports owned outside TASK-021; no callback may be a writer."""
 
@@ -205,6 +220,7 @@ class CanonicalDashboardReaders:
     read_integrated_snapshot: IntegratedSnapshotReader | None = None
     read_operation_state: OperationStateReader | None = None
     read_attention_state: AttentionStateReader | None = None
+    read_job_evidence_state: JobEvidenceStateReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -338,6 +354,12 @@ class Task021OperationsDashboard:
             attention_state, attention_state_error = self._safe_read(
                 self.readers.read_attention_state
             )
+        job_evidence_state: object | None = None
+        job_evidence_state_error = False
+        if self.readers.read_job_evidence_state is not None:
+            job_evidence_state, job_evidence_state_error = self._safe_read(
+                self.readers.read_job_evidence_state
+            )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
         if job_collection is not None and job_collection.project_id != self.project_id:
@@ -353,14 +375,28 @@ class Task021OperationsDashboard:
         ):
             timeline_error, timeline = True, None
 
-        if integrated_snapshot is not None and (
-            not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
-            or integrated_snapshot.to_dict()["project_id"] != self.project_id
-        ):
-            integrated_snapshot_error, integrated_snapshot = True, None
+        if integrated_snapshot is not None:
+            if not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                integrated_snapshot_error, integrated_snapshot = True, None
+            else:
+                try:
+                    integrated_snapshot = IntegratedDashboardSnapshotRevision.from_dict(
+                        integrated_snapshot.to_dict()
+                    )
+                    snapshot_project_id = integrated_snapshot.to_dict()["project_id"]
+                except Exception:
+                    integrated_snapshot_error, integrated_snapshot = True, None
+                else:
+                    if snapshot_project_id != self.project_id:
+                        integrated_snapshot_error, integrated_snapshot = True, None
 
         operation_report: dict[str, object] | None = None
-        if operation_state is not None:
+        if (
+            self.readers.read_operation_state is not None
+            and not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
+        ):
+            operation_state_error = True
+        elif operation_state is not None:
             if not isinstance(operation_state, CanonicalOperationState):
                 operation_state_error, operation_state = True, None
             elif (
@@ -380,22 +416,43 @@ class Task021OperationsDashboard:
                 or not isinstance(operation_state.evaluated_at, str)
             ):
                 operation_state_error = True
-            elif not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
-                operation_state_error = True
-            elif (
-                operation_state.proposal.to_dict()["snapshot_sha256"]
-                != integrated_snapshot.record_sha256
-            ):
-                operation_state_error = True
             else:
                 try:
+                    proposal = DashboardOperationProposalRevision.from_dict(
+                        operation_state.proposal.to_dict()
+                    )
+                    confirmation = (
+                        HumanOperationConfirmationBinding.from_dict(
+                            operation_state.confirmation.to_dict()
+                        )
+                        if operation_state.confirmation is not None
+                        else None
+                    )
+                    execution_receipt = (
+                        DashboardExecutionReceiptBinding.from_dict(
+                            operation_state.execution_receipt.to_dict()
+                        )
+                        if operation_state.execution_receipt is not None
+                        else None
+                    )
+                    if (
+                        proposal.to_dict()["snapshot_sha256"]
+                        != integrated_snapshot.record_sha256
+                    ):
+                        raise ValueError("operation proposal crosses the canonical snapshot")
                     operation_report = operation_admission_report(
-                        proposal=operation_state.proposal,
-                        confirmation=operation_state.confirmation,
-                        execution_receipt=operation_state.execution_receipt,
+                        proposal=proposal,
+                        confirmation=confirmation,
+                        execution_receipt=execution_receipt,
                         evaluated_at=operation_state.evaluated_at,
                     )
-                except (TypeError, ValueError):
+                    operation_state = CanonicalOperationState(
+                        proposal,
+                        confirmation,
+                        execution_receipt,
+                        operation_state.evaluated_at,
+                    )
+                except Exception:
                     operation_state_error = True
 
         incident_values: tuple[DashboardIncidentReadModel, ...] = ()
@@ -426,36 +483,108 @@ class Task021OperationsDashboard:
             ):
                 attention_state_error = True
             else:
-                snapshot_data = integrated_snapshot.to_dict()
-                incident_hashes = sorted(
-                    item.record_sha256 for item in attention_state.incidents
-                )
-                alert_hashes = sorted(
-                    item.record_sha256 for item in attention_state.alerts
-                )
-                exact_snapshot_membership = (
-                    incident_hashes == snapshot_data["incident_view_hashes"]
-                    and alert_hashes == snapshot_data["alert_hashes"]
-                )
-                incident_hash_set = set(incident_hashes)
-                alert_incidents_are_bound = all(
-                    item.to_dict()["incident_sha256"] is None
-                    or item.to_dict()["incident_sha256"] in incident_hash_set
-                    for item in attention_state.alerts
-                )
-                alert_projections_are_consistent = all(
-                    self._alert_projection_is_consistent(item)
-                    for item in attention_state.alerts
-                )
-                if (
-                    not exact_snapshot_membership
-                    or not alert_incidents_are_bound
-                    or not alert_projections_are_consistent
-                ):
+                try:
+                    validated_incidents = tuple(
+                        DashboardIncidentReadModel.from_dict(item.to_dict())
+                        for item in attention_state.incidents
+                    )
+                    validated_alerts = tuple(
+                        DashboardAlertClassificationReceipt.from_dict(item.to_dict())
+                        for item in attention_state.alerts
+                    )
+                    snapshot_data = integrated_snapshot.to_dict()
+                    incident_hashes = sorted(
+                        item.record_sha256 for item in validated_incidents
+                    )
+                    alert_hashes = sorted(
+                        item.record_sha256 for item in validated_alerts
+                    )
+                    exact_snapshot_membership = (
+                        incident_hashes == snapshot_data["incident_view_hashes"]
+                        and alert_hashes == snapshot_data["alert_hashes"]
+                    )
+                    incident_hash_set = set(incident_hashes)
+                    alert_incidents_are_bound = all(
+                        item.to_dict()["incident_sha256"] is None
+                        or item.to_dict()["incident_sha256"] in incident_hash_set
+                        for item in validated_alerts
+                    )
+                    alert_projections_are_consistent = all(
+                        self._alert_projection_is_consistent(item)
+                        for item in validated_alerts
+                    )
+                except Exception:
                     attention_state_error = True
                 else:
-                    incident_values = attention_state.incidents
-                    alert_values = attention_state.alerts
+                    if (
+                        not exact_snapshot_membership
+                        or not alert_incidents_are_bound
+                        or not alert_projections_are_consistent
+                    ):
+                        attention_state_error = True
+                    else:
+                        incident_values = validated_incidents
+                        alert_values = validated_alerts
+
+        canonical_job_values: tuple[DashboardJobReadModel, ...] = ()
+        canonical_evidence_values: tuple[DashboardEvidenceReadModel, ...] = ()
+        if self.readers.read_job_evidence_state is not None:
+            if not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                job_evidence_state_error = True
+            elif job_evidence_state is None:
+                snapshot_data = integrated_snapshot.to_dict()
+                if (
+                    snapshot_data["job_view_hashes"]
+                    or snapshot_data["evidence_view_hashes"]
+                ):
+                    job_evidence_state_error = True
+            elif not isinstance(job_evidence_state, CanonicalJobEvidenceState):
+                job_evidence_state_error, job_evidence_state = True, None
+            elif (
+                not isinstance(job_evidence_state.jobs, tuple)
+                or not all(
+                    isinstance(item, DashboardJobReadModel)
+                    for item in job_evidence_state.jobs
+                )
+                or not isinstance(job_evidence_state.evidence, tuple)
+                or not all(
+                    isinstance(item, DashboardEvidenceReadModel)
+                    for item in job_evidence_state.evidence
+                )
+            ):
+                job_evidence_state_error = True
+            else:
+                try:
+                    validated_jobs = tuple(
+                        DashboardJobReadModel.from_dict(item.to_dict())
+                        for item in job_evidence_state.jobs
+                    )
+                    validated_evidence = tuple(
+                        DashboardEvidenceReadModel.from_dict(item.to_dict())
+                        for item in job_evidence_state.evidence
+                    )
+                    snapshot_data = integrated_snapshot.to_dict()
+                    job_hashes = sorted(item.record_sha256 for item in validated_jobs)
+                    evidence_hashes = sorted(
+                        item.record_sha256 for item in validated_evidence
+                    )
+                    source_hashes = set(snapshot_data["source_binding_hashes"])
+                    source_membership_is_exact = all(
+                        item.to_dict()["source_binding_sha256"] in source_hashes
+                        for item in (*validated_jobs, *validated_evidence)
+                    )
+                except Exception:
+                    job_evidence_state_error = True
+                else:
+                    if (
+                        job_hashes != snapshot_data["job_view_hashes"]
+                        or evidence_hashes != snapshot_data["evidence_view_hashes"]
+                        or not source_membership_is_exact
+                    ):
+                        job_evidence_state_error = True
+                    else:
+                        canonical_job_values = validated_jobs
+                        canonical_evidence_values = validated_evidence
 
         sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
@@ -471,6 +600,17 @@ class Task021OperationsDashboard:
                     if isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
                     else None,
                     integrated_snapshot_error,
+                )
+            )
+        if self.readers.read_job_evidence_state is not None:
+            sections.extend(
+                (
+                    self._canonical_jobs_section(
+                        canonical_job_values, job_evidence_state_error
+                    ),
+                    self._canonical_evidence_section(
+                        canonical_evidence_values, job_evidence_state_error
+                    ),
                 )
             )
         if self.readers.read_operation_state is not None:
@@ -779,6 +919,214 @@ class Task021OperationsDashboard:
             rows,
             "正本スナップショットの公開状態だけを表示します。"
             "識別子、ハッシュ、時刻、非公開情報は表示しません。",
+        )
+
+    @classmethod
+    def _canonical_jobs_section(
+        cls,
+        jobs: tuple[DashboardJobReadModel, ...],
+        failed: bool,
+    ) -> DashboardSection:
+        if failed:
+            return cls._failed_section(
+                "canonical-jobs",
+                "統合Job状態",
+                "正本snapshotに一致するJob公開状態を安全に読み取れませんでした。",
+            )
+        if not jobs:
+            return DashboardSection(
+                "canonical-jobs",
+                "統合Job状態",
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本snapshotにJob read modelは列挙されていません。"
+                "不在だけを成功証明には使用しません。",
+            )
+        return cls._section(
+            "canonical-jobs",
+            "統合Job状態",
+            (cls._canonical_jobs_summary_row(jobs),),
+            "正本snapshotに含まれるJob read modelを件数非開示で集約表示します。"
+            "個別行、識別子、ハッシュ、時刻、source座標、reason codeは表示しません。",
+        )
+
+    @staticmethod
+    def _canonical_jobs_summary_row(
+        jobs: tuple[DashboardJobReadModel, ...],
+    ) -> DashboardRow:
+        records = tuple(item.to_dict() for item in jobs)
+        freshness = tuple(FreshnessState(item["freshness_state"]) for item in records)
+        states = tuple(DurableJobViewState(item["job_state"]) for item in records)
+        if FreshnessState.UNKNOWN in freshness:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "鮮度不明を含む",
+                "Job公開状態の鮮度を確定できません。",
+                "正本Job ownerで現在状態を照合してください。",
+            )
+        elif any(
+            value in {FreshnessState.STALE, FreshnessState.INVALIDATED}
+            for value in freshness
+        ):
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "現在値として扱えない状態を含む",
+                "古いまたは無効なJob公開状態が含まれます。",
+                "正本Job ownerで再観測してください。",
+            )
+        elif DurableJobViewState.FAILED in states:
+            display, label, failure, action = (
+                DashboardDisplayState.FAILURE,
+                "失敗を含む",
+                "失敗したJob公開状態が含まれます。",
+                "正本Job ownerで失敗理由を確認してください。",
+            )
+        elif DurableJobViewState.HUMAN_REQUIRED in states:
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "人間確認待ちを含む",
+                "人間による判断が必要なJob公開状態が含まれます。",
+                "正本Job ownerのHuman Gateで確認してください。",
+            )
+        elif DurableJobViewState.UNKNOWN in states:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "結果不明を含む",
+                "Job公開状態に判定不能な結果が含まれます。",
+                "正本Job ownerで結果を照合してください。",
+            )
+        elif DurableJobViewState.CANCELLED in states:
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "キャンセル済みを含む",
+                "キャンセルされたJob公開状態が含まれます。",
+                "必要なら正本Job ownerで新しい処理を準備してください。",
+            )
+        elif any(
+            state
+            in {
+                DurableJobViewState.QUEUED,
+                DurableJobViewState.PREFLIGHT,
+                DurableJobViewState.READY,
+                DurableJobViewState.DISPATCHING,
+                DurableJobViewState.RUNNING,
+            }
+            for state in states
+        ):
+            display, label, failure, action = (
+                DashboardDisplayState.IN_PROGRESS,
+                "進行中を含む",
+                "なし",
+                "正本Job ownerの進行状況を確認してください。",
+            )
+        else:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "完了のみ",
+                "なし",
+                "正本Job ownerの完了記録を確認できます。",
+            )
+        return DashboardRow(
+            row_id="canonical-job-public-summary",
+            name_ja="統合Job公開状態（件数非開示）",
+            state=display,
+            state_ja=label,
+            failure_reason_ja=failure,
+            next_action_ja=action,
+            artifact_location_ja="非表示（公開状態のみ）",
+            source_owner="TASK-021_CANONICAL_JOB_READ_MODEL",
+        )
+
+    @classmethod
+    def _canonical_evidence_section(
+        cls,
+        evidence: tuple[DashboardEvidenceReadModel, ...],
+        failed: bool,
+    ) -> DashboardSection:
+        if failed:
+            return cls._failed_section(
+                "canonical-evidence",
+                "統合Evidence状態",
+                "正本snapshotに一致するEvidence公開状態を安全に読み取れませんでした。",
+            )
+        if not evidence:
+            return DashboardSection(
+                "canonical-evidence",
+                "統合Evidence状態",
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本snapshotにEvidence read modelは列挙されていません。"
+                "不在だけをPASS証明には使用しません。",
+            )
+        return cls._section(
+            "canonical-evidence",
+            "統合Evidence状態",
+            (cls._canonical_evidence_summary_row(evidence),),
+            "正本snapshotに含まれるEvidence read modelを件数非開示で集約表示します。"
+            "個別行、識別子、ハッシュ、時刻、source座標、reason codeは表示しません。",
+        )
+
+    @staticmethod
+    def _canonical_evidence_summary_row(
+        evidence: tuple[DashboardEvidenceReadModel, ...],
+    ) -> DashboardRow:
+        records = tuple(item.to_dict() for item in evidence)
+        freshness = tuple(FreshnessState(item["freshness_state"]) for item in records)
+        states = tuple(EvidenceResultState(item["result_state"]) for item in records)
+        if FreshnessState.UNKNOWN in freshness:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "鮮度不明を含む",
+                "Evidence公開状態の鮮度を確定できません。",
+                "正本Evidence ownerで現在状態を照合してください。",
+            )
+        elif any(
+            value in {FreshnessState.STALE, FreshnessState.INVALIDATED}
+            for value in freshness
+        ):
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "現在値として扱えない状態を含む",
+                "古いまたは無効なEvidence公開状態が含まれます。",
+                "正本Evidence ownerで再観測してください。",
+            )
+        elif EvidenceResultState.FAIL in states:
+            display, label, failure, action = (
+                DashboardDisplayState.FAILURE,
+                "FAILを含む",
+                "FAILのEvidence公開状態が含まれます。",
+                "正本Evidence ownerで失敗理由を確認してください。",
+            )
+        elif EvidenceResultState.UNKNOWN in states:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "結果不明を含む",
+                "Evidence公開状態に判定不能な結果が含まれます。",
+                "正本Evidence ownerで結果を照合してください。",
+            )
+        elif EvidenceResultState.NOT_SUPPORTED in states:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "判定不能（未対応を含む）",
+                "未対応のEvidence公開状態があり、結果を確定できません。",
+                "正本Evidence ownerで対応範囲を確認してください。",
+            )
+        else:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "PASSのみ",
+                "なし",
+                "正本Evidence ownerのPASS記録を確認できます。",
+            )
+        return DashboardRow(
+            row_id="canonical-evidence-public-summary",
+            name_ja="統合Evidence公開状態（件数非開示）",
+            state=display,
+            state_ja=label,
+            failure_reason_ja=failure,
+            next_action_ja=action,
+            artifact_location_ja="非表示（公開状態のみ）",
+            source_owner="TASK-021_CANONICAL_EVIDENCE_READ_MODEL",
         )
 
     @staticmethod
@@ -1318,9 +1666,11 @@ __all__ = [
     "AttentionStateReader",
     "CanonicalAttentionState",
     "CanonicalDashboardReaders",
+    "CanonicalJobEvidenceState",
     "CanonicalOperationState",
     "CanonicalValidationResult",
     "IntegratedSnapshotReader",
+    "JobEvidenceStateReader",
     "OperationStateReader",
     "DashboardDisplayState",
     "DashboardRow",

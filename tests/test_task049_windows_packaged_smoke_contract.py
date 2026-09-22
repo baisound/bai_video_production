@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ai_video_production.dbd_commentary_knowledge import DbDTriviaStore
 from ai_video_production.game_event_store import GameIntelligenceStore
 
 
@@ -27,9 +28,70 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "provider_execution_started = $false",
         "production_timeline_mutated = $false",
         "resolve_write_performed = $false",
+        "[string]$BuildRoot = ''",
+        "$env:BVP_TASK048_BUILD_ROOT = $buildRootFull",
+        "$package = Join-Path $buildRootFull 'BAI Video Production'",
     ):
         assert token in source
     assert "Release" not in source or "public_release_performed" in source
+
+
+def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() -> None:
+    source = (ROOT / "tools" / "windows" / "run-task049-consumer-gate.ps1").read_text(encoding="utf-8")
+    for token in (
+        "C:\\home\\baisound\\evidence\\bai-video-production",
+        "TASK-049\\windows-consumer-gate",
+        "bai-video-production\\TASK-049\\windows-consumer-gate",
+        "run-task049-r9b2-packaged-smoke.ps1",
+        "build-dbd-trivia-editor-exe.bat",
+        "build-dbd-training-studio-exe.bat",
+        "BAI Video Production.exe",
+        "BAI DbD Trivia Editor.exe",
+        "BAI DbD Training Studio.exe",
+        "candidate_readback = 'PASS'",
+        "workspace_template_readback = 'PASS'",
+        "real_media_roi_calibration = 'NOT_CONFIRMED'",
+        "human_gold_kpi = 'NOT_CONFIRMED'",
+        "provider_execution_started = $false",
+        "model_or_runtime_acquired = $false",
+        "release_or_deploy_performed = $false",
+        "Get-Content -LiteralPath $receiptPath",
+        'assert PyInstaller.__version__ == "6.22.2"',
+    ):
+        assert token in source
+    assert "build-all-windows-release.ps1" not in source
+
+
+def test_consumer_gate_fixture_is_synthetic_candidate_without_human_gold(tmp_path: Path) -> None:
+    root = tmp_path / "consumer-gate-fixture"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT / "src")
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools" / "windows" / "create-task049-consumer-gate-fixture.py"),
+            "--root",
+            str(root),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    metadata = json.loads(result.stdout)
+    assert metadata["rights_basis"] == "SYNTHETIC_CREATED_FOR_LOCAL_TEST"
+    assert metadata["trivia_status"] == "CANDIDATE"
+    assert metadata["real_media_used"] is False
+    assert metadata["private_media_used"] is False
+    assert metadata["human_gold_labels_created"] is False
+    assert metadata["provider_execution_started"] is False
+    assert metadata["model_or_runtime_acquired"] is False
+    assert Path(metadata["training_workspace"], "workspace.json").is_file()
+    trivia = DbDTriviaStore(metadata["trivia_database"])
+    stored = trivia.latest(metadata["trivia_id"])
+    assert stored.status.value == "CANDIDATE"
+    assert stored.title == metadata["trivia_title"]
 
 
 def test_fixture_tool_creates_real_store_state_without_real_media_or_external_effects(tmp_path: Path) -> None:

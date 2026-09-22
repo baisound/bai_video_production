@@ -2,6 +2,7 @@ param(
   [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
   [Parameter(Mandatory = $true)]
   [string]$EvidenceDirectory,
+  [string]$BuildRoot = '',
   [string]$PythonExe = ''
 )
 
@@ -10,7 +11,25 @@ if ($env:OS -ne 'Windows_NT') { throw 'TASK-049 R9B2 packaged smoke must run on 
 
 $repo = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $evidence = [System.IO.Path]::GetFullPath($EvidenceDirectory)
+$driveRoot = [System.IO.Path]::GetPathRoot($evidence).TrimEnd('\', '/')
+$evidenceParent = [System.IO.Path]::GetDirectoryName($evidence).TrimEnd('\', '/')
+if ($evidence -eq $driveRoot -or $evidenceParent -eq $driveRoot) {
+  throw "EvidenceDirectory must not be a drive root or its direct child: $evidence"
+}
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+
+if ([string]::IsNullOrWhiteSpace($BuildRoot)) {
+  $BuildRoot = Join-Path $env:TEMP ('bai-video-production\TASK-049\r9b2\' + [guid]::NewGuid().ToString('N') + '\main-build')
+}
+$buildRootFull = [System.IO.Path]::GetFullPath($BuildRoot)
+$buildDriveRoot = [System.IO.Path]::GetPathRoot($buildRootFull).TrimEnd('\', '/')
+$buildParent = [System.IO.Path]::GetDirectoryName($buildRootFull).TrimEnd('\', '/')
+if ($buildRootFull -eq $buildDriveRoot -or $buildParent -eq $buildDriveRoot) {
+  throw "BuildRoot must not be a drive root or its direct child: $buildRootFull"
+}
+if (Test-Path -LiteralPath $buildRootFull) {
+  throw "BuildRoot must be a fresh operation-owned path: $buildRootFull"
+}
 
 if ([string]::IsNullOrWhiteSpace($PythonExe)) {
   $venvPython = Join-Path $repo '.venv\Scripts\python.exe'
@@ -18,10 +37,16 @@ if ([string]::IsNullOrWhiteSpace($PythonExe)) {
 }
 
 $build = Join-Path $repo 'build-windows-exe.bat'
-& $build
-if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
+$oldBuildRoot = $env:BVP_TASK048_BUILD_ROOT
+try {
+  $env:BVP_TASK048_BUILD_ROOT = $buildRootFull
+  & $build
+  if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
+} finally {
+  $env:BVP_TASK048_BUILD_ROOT = $oldBuildRoot
+}
 
-$package = Join-Path $repo 'builds\BAI Video Production'
+$package = Join-Path $buildRootFull 'BAI Video Production'
 $exe = Join-Path $package 'BAI Video Production.exe'
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Packaged executable is missing: $exe" }
 $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant()
@@ -29,8 +54,14 @@ $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvari
 $runRoot = Join-Path $env:TEMP ('bai-task049-r9b2-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $runRoot -Force | Out-Null
 $fixtureTool = Join-Path $repo 'tools\windows\create-task049-game-intelligence-fixture.py'
-& $PythonExe $fixtureTool --root $runRoot | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "TASK-049 fixture creation failed with exit code $LASTEXITCODE" }
+$oldPythonPath = $env:PYTHONPATH
+try {
+  $env:PYTHONPATH = Join-Path $repo 'src'
+  & $PythonExe $fixtureTool --root $runRoot | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "TASK-049 fixture creation failed with exit code $LASTEXITCODE" }
+} finally {
+  $env:PYTHONPATH = $oldPythonPath
+}
 $metadataPath = Join-Path $runRoot 'task049-fixture-metadata.json'
 $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
@@ -172,6 +203,9 @@ try {
     production_timeline_mutated = $false
     resolve_write_performed = $false
     public_release_performed = $false
+    build_root = $buildRootFull
+    runtime_root = $runRoot
+    evidence_root = $evidence
   }
   $receiptPath = Join-Path $evidence 'task049-r9b2-packaged-smoke.json'
   $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding UTF8

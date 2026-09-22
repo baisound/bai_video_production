@@ -42,6 +42,7 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "C:\\home\\baisound\\evidence\\bai-video-production",
         "TASK-049\\windows-consumer-gate",
         "bai-video-production\\TASK-049\\windows-consumer-gate",
+        "builds\\task049-consumer-gate",
         "run-task049-r9b2-packaged-smoke.ps1",
         "build-dbd-trivia-editor-exe.bat",
         "build-dbd-training-studio-exe.bat",
@@ -57,6 +58,7 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "release_or_deploy_performed = $false",
         "Get-Content -LiteralPath $receiptPath",
         'assert PyInstaller.__version__ == "6.22.2"',
+        "worktree_build_root = $worktreeBuildRun",
     ):
         assert token in source
     assert "build-all-windows-release.ps1" not in source

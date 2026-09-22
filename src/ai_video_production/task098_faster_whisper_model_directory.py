@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from importlib import resources
 import json
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, ClassVar, Iterable, Mapping
 
 from jsonschema import Draft202012Validator
@@ -41,20 +42,27 @@ BLOCKED_REASONS = frozenset(
     }
 )
 
-_FIXED_FILES = frozenset(
+FIXED_MODEL_FILE_NAMES = frozenset(
     {"config.json", "model.bin", "tokenizer.json", "preprocessor_config.json"}
 )
-_VOCABULARY_FILES = frozenset({"vocabulary.txt", "vocabulary.json"})
-_ALLOWED_FILES = _FIXED_FILES | _VOCABULARY_FILES
-_REQUIRED_FIXED = frozenset({"config.json", "model.bin", "tokenizer.json"})
-_FILE_SIZE_LIMITS = {
-    "config.json": 4 * 1024 * 1024,
-    "model.bin": 32 * 1024 * 1024 * 1024,
-    "tokenizer.json": 128 * 1024 * 1024,
-    "vocabulary.txt": 128 * 1024 * 1024,
-    "vocabulary.json": 128 * 1024 * 1024,
-    "preprocessor_config.json": 4 * 1024 * 1024,
-}
+VOCABULARY_MODEL_FILE_NAMES = frozenset({"vocabulary.txt", "vocabulary.json"})
+ALLOWED_MODEL_FILE_NAMES = FIXED_MODEL_FILE_NAMES | VOCABULARY_MODEL_FILE_NAMES
+REQUIRED_FIXED_MODEL_FILE_NAMES = frozenset(
+    {"config.json", "model.bin", "tokenizer.json"}
+)
+JSON_MODEL_FILE_NAMES = frozenset(
+    {"config.json", "tokenizer.json", "vocabulary.json", "preprocessor_config.json"}
+)
+MODEL_FILE_SIZE_LIMITS: Mapping[str, int] = MappingProxyType(
+    {
+        "config.json": 4 * 1024 * 1024,
+        "model.bin": 32 * 1024 * 1024 * 1024,
+        "tokenizer.json": 128 * 1024 * 1024,
+        "vocabulary.txt": 128 * 1024 * 1024,
+        "vocabulary.json": 128 * 1024 * 1024,
+        "preprocessor_config.json": 4 * 1024 * 1024,
+    }
+)
 _PRIVATE_FIELDS = frozenset(
     {
         "record_type",
@@ -108,9 +116,12 @@ class FasterWhisperModelFileObservationV1:
     sha256: str
 
     def __post_init__(self) -> None:
-        if self.name not in _ALLOWED_FILES:
+        if self.name not in ALLOWED_MODEL_FILE_NAMES:
             raise ValueError("file name is outside the closed model contract")
-        if type(self.size_bytes) is not int or not 1 <= self.size_bytes <= _FILE_SIZE_LIMITS[self.name]:
+        if (
+            type(self.size_bytes) is not int
+            or not 1 <= self.size_bytes <= MODEL_FILE_SIZE_LIMITS[self.name]
+        ):
             raise ValueError("file size is outside the allowed bound")
         validate_sha256(self.sha256, field_name="file sha256")
 
@@ -134,9 +145,9 @@ def _normalize_files(
     if len(names) != len(set(names)):
         raise ValueError("model file names must be unique")
     names_set = set(names)
-    if not _REQUIRED_FIXED.issubset(names_set):
+    if not REQUIRED_FIXED_MODEL_FILE_NAMES.issubset(names_set):
         raise ValueError("required model files are missing")
-    if len(names_set & _VOCABULARY_FILES) != 1:
+    if len(names_set & VOCABULARY_MODEL_FILE_NAMES) != 1:
         raise ValueError("exactly one supported vocabulary file is required")
     return tuple(sorted(files, key=lambda item: item.name))
 

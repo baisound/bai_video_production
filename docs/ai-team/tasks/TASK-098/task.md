@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-a3-model-manager-settings`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A3-R0 completed; A3-R1 is not yet allocated`
-- Next action: `fresh bounded A3-R1 design/authority review for the contained read-only model-directory inspector`
+- Active Atomic Unit: `NONE — A3-R1 completed; A3-R2 is not yet allocated`
+- Next action: `fresh bounded A3-R2 design/authority review for expected-digest guarded update of existing private TASK-036 ASR model/cache fields`
 
 ## Objective
 
@@ -601,3 +601,32 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Evidence:
   `evidence/a3-r0-model-directory-contract-20260922-r01.md`.
 - Next Unit: fresh A3-R1 review for the contained read-only filesystem inspector.
+
+## A3-R1 read-only model-directory inspector completion
+
+- Design/review:
+  `a3-r1-model-directory-inspector-pre-mutation-review-20260922.md`.
+- Added a contained inspector that accepts one explicit absolute local path,
+  rejects symlink/reparse ancestry, scans at most 64 top-level entries and reads
+  only the six A3-R0 allowlisted filenames.
+- Each admitted file must remain a single-link regular file across pre-open,
+  opened-handle, post-read-handle and post-read path identity checks. SHA-256 is
+  streamed in bounded chunks; present JSON files must be valid UTF-8 JSON.
+- BLOCKED output contains only closed reason codes and no partial observation,
+  host path, exception text or file body. READY binds only a private digest of
+  the canonical locator; the A3-R0 public projection remains path/digest-free.
+- The Product dependency is a `>=1.2.1,<2` range, so this Unit does not claim
+  installed-runtime or model execution compatibility.
+- Initial test cycle: `102 PASS / 1 FAIL`; the sole failure found non-regular
+  entries classified by link count before file type. Classification order was
+  corrected to alias, regular-file type, then hardlink count.
+- Final A3-R1, A3-R0 and direct A2 contract regression:
+  `106 PASS / 0 FAIL`; Python compile and Git diff check: `PASS`.
+- Final Critic findings: `Critical 0 / High 0 / Medium 0 / Low 0`; Tester:
+  `PASS`; Judge: `ACCEPT / COMMIT_READY`.
+- Settings, native picker, model construction/inference, download/network,
+  private audio, recording, Dataset adoption, training, installation, Release,
+  Deploy and Production Activation were not executed.
+- Evidence:
+  `evidence/a3-r1-model-directory-inspector-20260922-r01.md`.
+- Next Unit: fresh A3-R2 review for expected-digest guarded settings update.

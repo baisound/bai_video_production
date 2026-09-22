@@ -213,6 +213,16 @@ function Wait-ForEventState([IntPtr]$Handle, [string]$State) {
   return $button
 }
 
+function Wait-ForEnabledButton([IntPtr]$Handle, [string]$Name) {
+  $deadline = [DateTime]::UtcNow.AddSeconds(15)
+  do {
+    Start-Sleep -Milliseconds 250
+    $root = [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
+    $button = Find-ButtonExact $root $Name
+  } while (($null -eq $button -or -not $button.Current.IsEnabled) -and [DateTime]::UtcNow -lt $deadline)
+  return $button
+}
+
 $first = $null
 $second = $null
 try {
@@ -224,8 +234,7 @@ try {
     throw "Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store. Observed buttons: $((Get-ButtonNames $currentRoot) -join ', ')"
   }
   Invoke-Button $initialEvent
-  $currentRoot = [System.Windows.Automation.AutomationElement]::FromHandle($first.handle)
-  $confirm = Find-ButtonExact $currentRoot '承認 / Confirm'
+  $confirm = Wait-ForEnabledButton $first.handle '承認 / Confirm'
   if ($null -eq $confirm -or -not $confirm.Current.IsEnabled) { throw 'Human Confirm control is unavailable for the selected Event.' }
   Invoke-Button $confirm
   $confirmed = Wait-ForEventState $first.handle 'CONFIRMED'

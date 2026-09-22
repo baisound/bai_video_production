@@ -144,7 +144,7 @@ def main() -> int:
             "language": "ja",
         },
         "resolve": {
-            "sandbox_project": "BAI_TASK049_R9B2_SMOKE",
+            "sandbox_project": "BAI_CAPABILITY_PROBE_TASK049_R9B2_SMOKE",
             "timeline_rate": "30000/1001",
             "source_frame_rate": "30000/1001",
         },

@@ -2,7 +2,9 @@ param(
   [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
   [Parameter(Mandatory = $true)]
   [string]$EvidenceDirectory,
-  [string]$PythonExe = ''
+  [string]$BuildRoot = '',
+  [string]$PythonExe = '',
+  [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,7 +12,28 @@ if ($env:OS -ne 'Windows_NT') { throw 'TASK-049 R9B2 packaged smoke must run on 
 
 $repo = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $evidence = [System.IO.Path]::GetFullPath($EvidenceDirectory)
+$driveRoot = [System.IO.Path]::GetPathRoot($evidence).TrimEnd('\', '/')
+$evidenceParent = [System.IO.Path]::GetDirectoryName($evidence).TrimEnd('\', '/')
+if ($evidence -eq $driveRoot -or $evidenceParent -eq $driveRoot) {
+  throw "EvidenceDirectory must not be a drive root or its direct child: $evidence"
+}
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+
+if ([string]::IsNullOrWhiteSpace($BuildRoot)) {
+  $BuildRoot = Join-Path $env:TEMP ('bai-video-production\TASK-049\r9b2\' + [guid]::NewGuid().ToString('N') + '\main-build')
+}
+$buildRootFull = [System.IO.Path]::GetFullPath($BuildRoot)
+$buildDriveRoot = [System.IO.Path]::GetPathRoot($buildRootFull).TrimEnd('\', '/')
+$buildParent = [System.IO.Path]::GetDirectoryName($buildRootFull).TrimEnd('\', '/')
+if ($buildRootFull -eq $buildDriveRoot -or $buildParent -eq $buildDriveRoot) {
+  throw "BuildRoot must not be a drive root or its direct child: $buildRootFull"
+}
+if (-not $SkipBuild -and (Test-Path -LiteralPath $buildRootFull)) {
+  throw "BuildRoot must be a fresh operation-owned path: $buildRootFull"
+}
+if ($SkipBuild -and -not (Test-Path -LiteralPath $buildRootFull -PathType Container)) {
+  throw "SkipBuild requires an existing BuildRoot: $buildRootFull"
+}
 
 if ([string]::IsNullOrWhiteSpace($PythonExe)) {
   $venvPython = Join-Path $repo '.venv\Scripts\python.exe'
@@ -18,10 +41,18 @@ if ([string]::IsNullOrWhiteSpace($PythonExe)) {
 }
 
 $build = Join-Path $repo 'build-windows-exe.bat'
-& $build
-if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
+if (-not $SkipBuild) {
+  $oldBuildRoot = $env:BVP_TASK048_BUILD_ROOT
+  try {
+    $env:BVP_TASK048_BUILD_ROOT = $buildRootFull
+    & $build
+    if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
+  } finally {
+    $env:BVP_TASK048_BUILD_ROOT = $oldBuildRoot
+  }
+}
 
-$package = Join-Path $repo 'builds\BAI Video Production'
+$package = Join-Path $buildRootFull 'BAI Video Production'
 $exe = Join-Path $package 'BAI Video Production.exe'
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Packaged executable is missing: $exe" }
 $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant()
@@ -29,8 +60,14 @@ $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvari
 $runRoot = Join-Path $env:TEMP ('bai-task049-r9b2-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $runRoot -Force | Out-Null
 $fixtureTool = Join-Path $repo 'tools\windows\create-task049-game-intelligence-fixture.py'
-& $PythonExe $fixtureTool --root $runRoot | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "TASK-049 fixture creation failed with exit code $LASTEXITCODE" }
+$oldPythonPath = $env:PYTHONPATH
+try {
+  $env:PYTHONPATH = Join-Path $repo 'src'
+  & $PythonExe $fixtureTool --root $runRoot | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "TASK-049 fixture creation failed with exit code $LASTEXITCODE" }
+} finally {
+  $env:PYTHONPATH = $oldPythonPath
+}
 $metadataPath = Join-Path $runRoot 'task049-fixture-metadata.json'
 $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
@@ -78,6 +115,45 @@ function Find-ButtonPrefix([System.Windows.Automation.AutomationElement]$Root, [
   return $null
 }
 
+function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Root, [string]$Text) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+  foreach ($button in $buttons) {
+    if ($button.Current.Name.Contains($Text)) { return $button }
+  }
+  return $null
+}
+
+function Find-ButtonWithTokens([System.Windows.Automation.AutomationElement]$Root, [string[]]$Tokens) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+  foreach ($button in $buttons) {
+    $name = $button.Current.Name
+    if (@($Tokens | Where-Object { -not $name.Contains($_) }).Count -eq 0) { return $button }
+  }
+  return $null
+}
+
+function Get-ButtonNames([System.Windows.Automation.AutomationElement]$Root) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  return @($Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition) |
+    ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Sort-Object -Unique)
+}
+
+function Get-AutomationNames([System.Windows.Automation.AutomationElement]$Root) {
+  return @($Root.FindAll(
+      [System.Windows.Automation.TreeScope]::Descendants,
+      [System.Windows.Automation.Condition]::TrueCondition) |
+    ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Sort-Object -Unique |
+    Select-Object -First 40)
+}
+
 function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
   if ($null -eq $Button) { throw 'Required packaged Game Intelligence button is unavailable.' }
   $pattern = $null
@@ -88,16 +164,13 @@ function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
 }
 
 function Start-App([int]$Attempt) {
-  $oldConfig = [Environment]::GetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', 'Process')
-  $oldArgs = [Environment]::GetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', 'Process')
-  try {
-    [Environment]::SetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', [string]$metadata.launch_config, 'Process')
-    [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', '--force-renderer-accessibility', 'Process')
-    $process = Start-Process -FilePath $exe -WorkingDirectory $package -PassThru
-  } finally {
-    [Environment]::SetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', $oldConfig, 'Process')
-    [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', $oldArgs, 'Process')
-  }
+  $start = [System.Diagnostics.ProcessStartInfo]::new()
+  $start.FileName = $exe
+  $start.WorkingDirectory = $package
+  $start.UseShellExecute = $false
+  $start.EnvironmentVariables['BAI_TASK036_LAUNCH_CONFIG'] = [string]$metadata.launch_config
+  $start.EnvironmentVariables['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--force-renderer-accessibility'
+  $process = [System.Diagnostics.Process]::Start($start)
   $deadline = [DateTime]::UtcNow.AddSeconds(60)
   $window = $null
   do {
@@ -114,9 +187,13 @@ function Start-App([int]$Attempt) {
   do {
     Start-Sleep -Milliseconds 400
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
-    $gameButton = Find-ButtonExact $root 'G Game Intelligence'
+    $names = Get-ButtonNames $root
+    $gameButton = Find-ButtonContaining $root 'Game Intelligence'
   } while ($null -eq $gameButton -and [DateTime]::UtcNow -lt $readyDeadline)
-  if ($null -eq $gameButton) { throw 'Packaged Shell did not expose the TASK-049 Game Intelligence stage.' }
+  if ($null -eq $gameButton) {
+    $automationNames = Get-AutomationNames $root
+    throw "Packaged Shell did not expose the TASK-049 Game Intelligence stage. Observed buttons: $($names -join ', '); observed elements: $($automationNames -join ' | ')"
+  }
   return [ordered]@{ process=$process; root=$root; handle=$handle; gameButton=$gameButton }
 }
 
@@ -125,12 +202,23 @@ function Close-App($Run) {
   if (-not $Run.process.WaitForExit(15000)) { throw 'Packaged Shell did not close within 15 seconds.' }
 }
 
-function Wait-ForEventState([System.Windows.Automation.AutomationElement]$Root, [string]$State) {
+function Wait-ForEventState([IntPtr]$Handle, [string]$State) {
   $deadline = [DateTime]::UtcNow.AddSeconds(30)
   do {
     Start-Sleep -Milliseconds 350
-    $button = Find-ButtonPrefix $Root ("WINDOW_VAULT · " + $State)
+    $root = [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
+    $button = Find-ButtonWithTokens $root @('WINDOW_VAULT', $State)
   } while ($null -eq $button -and [DateTime]::UtcNow -lt $deadline)
+  return $button
+}
+
+function Wait-ForEnabledButton([IntPtr]$Handle, [string]$Name, [int]$TimeoutSeconds = 15) {
+  $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+  do {
+    Start-Sleep -Milliseconds 250
+    $root = [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
+    $button = Find-ButtonExact $root $Name
+  } while (($null -eq $button -or -not $button.Current.IsEnabled) -and [DateTime]::UtcNow -lt $deadline)
   return $button
 }
 
@@ -139,20 +227,29 @@ $second = $null
 try {
   $first = Start-App 1
   Invoke-Button $first.gameButton
-  $initialEvent = Wait-ForEventState $first.root 'NEEDS_REVIEW'
-  if ($null -eq $initialEvent) { throw 'Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store.' }
-  Invoke-Button $initialEvent
-  $confirm = Find-ButtonExact $first.root '承認 / Confirm'
+  $initialEvent = Wait-ForEventState $first.handle 'NEEDS_REVIEW'
+  if ($null -eq $initialEvent) {
+    $currentRoot = [System.Windows.Automation.AutomationElement]::FromHandle($first.handle)
+    throw "Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store. Observed buttons: $((Get-ButtonNames $currentRoot) -join ', ')"
+  }
+  $confirm = $null
+  foreach ($selectionAttempt in 1..3) {
+    $currentEvent = Wait-ForEventState $first.handle 'NEEDS_REVIEW'
+    if ($null -eq $currentEvent) { break }
+    Invoke-Button $currentEvent
+    $confirm = Wait-ForEnabledButton $first.handle '承認 / Confirm' 5
+    if ($null -ne $confirm -and $confirm.Current.IsEnabled) { break }
+  }
   if ($null -eq $confirm -or -not $confirm.Current.IsEnabled) { throw 'Human Confirm control is unavailable for the selected Event.' }
   Invoke-Button $confirm
-  $confirmed = Wait-ForEventState $first.root 'CONFIRMED'
+  $confirmed = Wait-ForEventState $first.handle 'CONFIRMED'
   if ($null -eq $confirmed) { throw 'Packaged Human Confirm did not read back as CONFIRMED.' }
   Close-App $first
   $first = $null
 
   $second = Start-App 2
   Invoke-Button $second.gameButton
-  $restartConfirmed = Wait-ForEventState $second.root 'CONFIRMED'
+  $restartConfirmed = Wait-ForEventState $second.handle 'CONFIRMED'
   if ($null -eq $restartConfirmed) { throw 'CONFIRMED Event did not survive packaged restart/read-back.' }
   Close-App $second
   $second = $null
@@ -172,6 +269,10 @@ try {
     production_timeline_mutated = $false
     resolve_write_performed = $false
     public_release_performed = $false
+    build_root = $buildRootFull
+    runtime_root = $runRoot
+    evidence_root = $evidence
+    build_reused = [bool]$SkipBuild
   }
   $receiptPath = Join-Path $evidence 'task049-r9b2-packaged-smoke.json'
   $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding UTF8

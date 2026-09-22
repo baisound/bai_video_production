@@ -12,6 +12,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Any, Protocol
 
+from .ids import IdKind, validate_id
 from .audio_workspace_media_review import (
     AudioMediaReviewIntent,
     AudioMediaReviewPolicyRevision,
@@ -75,6 +76,7 @@ def _reasons(value: tuple[str, ...]) -> None:
 class ReviewMediaRuntimeRequest:
     policy_sha256: str
     source_binding_sha256: str
+    source_content_sha256: str
     source_asset_id: str
     capability_binding_sha256: str
     intent_sha256: str
@@ -89,13 +91,13 @@ class ReviewMediaRuntimeRequest:
         for name, value in (
             ("policy_sha256", self.policy_sha256),
             ("source_binding_sha256", self.source_binding_sha256),
+            ("source_content_sha256", self.source_content_sha256),
             ("capability_binding_sha256", self.capability_binding_sha256),
             ("intent_sha256", self.intent_sha256),
             ("request_sha256", self.request_sha256),
         ):
             validate_sha256(value, field_name=name)
-        if not isinstance(self.source_asset_id, str) or not self.source_asset_id:
-            raise ValueError("source_asset_id is invalid")
+        validate_id(self.source_asset_id, IdKind.ASSET)
         if (
             not isinstance(self.requested_operations, tuple)
             or self.requested_operations
@@ -128,6 +130,7 @@ class ReviewMediaRuntimeRequest:
         body = {
             "policy_sha256": self.policy_sha256,
             "source_binding_sha256": self.source_binding_sha256,
+            "source_content_sha256": self.source_content_sha256,
             "source_asset_id": self.source_asset_id,
             "capability_binding_sha256": self.capability_binding_sha256,
             "intent_sha256": self.intent_sha256,
@@ -375,6 +378,7 @@ def build_review_media_runtime_request(
     body = {
         "policy_sha256": policy.record_sha256,
         "source_binding_sha256": source.record_sha256,
+        "source_content_sha256": source_data["canonical_sha256"],
         "source_asset_id": source_data["asset_id"],
         "capability_binding_sha256": capability.record_sha256,
         "intent_sha256": intent.record_sha256,
@@ -388,6 +392,7 @@ def build_review_media_runtime_request(
     return ReviewMediaRuntimeRequest(
         policy_sha256=policy.record_sha256,
         source_binding_sha256=source.record_sha256,
+        source_content_sha256=source_data["canonical_sha256"],
         source_asset_id=source_data["asset_id"],
         capability_binding_sha256=capability.record_sha256,
         intent_sha256=intent.record_sha256,

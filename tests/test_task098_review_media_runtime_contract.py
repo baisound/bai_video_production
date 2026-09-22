@@ -163,6 +163,8 @@ def test_request_constructor_rejects_hash_range_operation_and_rate_forgery() -> 
         replace(req, sample_rate_hz=44_100)
     with pytest.raises(ValueError, match="range"):
         replace(req, range_end_sample_exclusive=req.range_start_sample)
+    with pytest.raises(ValueError, match="ASSET"):
+        replace(req, source_asset_id="not-an-asset")
 
 
 def test_no_observation_is_not_bound_and_public_projection_is_body_free() -> None:

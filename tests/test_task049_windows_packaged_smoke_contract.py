@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ai_video_production.dbd_commentary_knowledge import DbDTriviaStore
 from ai_video_production.game_event_store import GameIntelligenceStore
+from ai_video_production.task036_trusted_launcher import Task036LaunchConfiguration
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -127,3 +128,6 @@ def test_fixture_tool_creates_real_store_state_without_real_media_or_external_ef
     assert event.confirmation_state.value == "NEEDS_REVIEW"
     assert event.state == {"fixture": True, "real_media": False}
     assert Path(metadata["launch_config"]).is_file()
+    launch = json.loads(Path(metadata["launch_config"]).read_text(encoding="utf-8"))
+    assert launch["resolve"]["sandbox_project"] == "BAI_CAPABILITY_PROBE_TASK049_R9B2_SMOKE"
+    assert Task036LaunchConfiguration.load(metadata["launch_config"]).resolve_project == launch["resolve"]["sandbox_project"]

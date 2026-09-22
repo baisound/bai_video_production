@@ -126,6 +126,14 @@ function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Roo
   return $null
 }
 
+function Get-ButtonNames([System.Windows.Automation.AutomationElement]$Root) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  return @($Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition) |
+    ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Sort-Object -Unique)
+}
+
 function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
   if ($null -eq $Button) { throw 'Required packaged Game Intelligence button is unavailable.' }
   $pattern = $null
@@ -136,16 +144,13 @@ function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
 }
 
 function Start-App([int]$Attempt) {
-  $oldConfig = [Environment]::GetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', 'Process')
-  $oldArgs = [Environment]::GetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', 'Process')
-  try {
-    [Environment]::SetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', [string]$metadata.launch_config, 'Process')
-    [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', '--force-renderer-accessibility', 'Process')
-    $process = Start-Process -FilePath $exe -WorkingDirectory $package -PassThru
-  } finally {
-    [Environment]::SetEnvironmentVariable('BAI_TASK036_LAUNCH_CONFIG', $oldConfig, 'Process')
-    [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', $oldArgs, 'Process')
-  }
+  $start = [System.Diagnostics.ProcessStartInfo]::new()
+  $start.FileName = $exe
+  $start.WorkingDirectory = $package
+  $start.UseShellExecute = $false
+  $start.EnvironmentVariables['BAI_TASK036_LAUNCH_CONFIG'] = [string]$metadata.launch_config
+  $start.EnvironmentVariables['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--force-renderer-accessibility'
+  $process = [System.Diagnostics.Process]::Start($start)
   $deadline = [DateTime]::UtcNow.AddSeconds(60)
   $window = $null
   do {
@@ -162,9 +167,12 @@ function Start-App([int]$Attempt) {
   do {
     Start-Sleep -Milliseconds 400
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
+    $names = Get-ButtonNames $root
     $gameButton = Find-ButtonContaining $root 'Game Intelligence'
   } while ($null -eq $gameButton -and [DateTime]::UtcNow -lt $readyDeadline)
-  if ($null -eq $gameButton) { throw 'Packaged Shell did not expose the TASK-049 Game Intelligence stage.' }
+  if ($null -eq $gameButton) {
+    throw "Packaged Shell did not expose the TASK-049 Game Intelligence stage. Observed buttons: $($names -join ', ')"
+  }
   return [ordered]@{ process=$process; root=$root; handle=$handle; gameButton=$gameButton }
 }
 

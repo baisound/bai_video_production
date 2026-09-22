@@ -138,3 +138,26 @@ def test_cli_accepts_sha_without_media_file(capsys) -> None:
     assert payload["execution_identity"]["source_sha256"] == SHA_A
     assert payload["model_loaded"] is False
     assert payload["inference_performed"] is False
+
+
+def test_config_only_identity_is_byte_stable_and_model_loaded_observation_is_model_free() -> None:
+    factory_calls: list[object] = []
+
+    def factory(*args, **kwargs):
+        factory_calls.append((args, kwargs))
+        raise AssertionError("config-only diagnostic must not construct a model")
+
+    first = FasterWhisperProvider(
+        FasterWhisperConfig(model="small", device="cpu", compute_type="int8"),
+        model_factory=factory,
+    )
+    second = FasterWhisperProvider(
+        FasterWhisperConfig(model="small", device="cpu", compute_type="int8"),
+        model_factory=factory,
+    )
+    first_identity = build_execution_identity(first, source_sha256=SHA_A, requested_language="ja")
+    second_identity = build_execution_identity(second, source_sha256=SHA_A, requested_language="ja")
+    assert first_identity.to_dict() == second_identity.to_dict()
+    assert first.model_loaded is False
+    assert second.model_loaded is False
+    assert factory_calls == []

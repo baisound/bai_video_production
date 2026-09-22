@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import gc
+import hashlib
+import inspect
+from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -10,8 +13,9 @@ from time import monotonic, sleep
 
 import pytest
 
+from ai_video_production import audio_workspace_media_review as media_review
 from ai_video_production.errors import ProductError
-from ai_video_production.faster_whisper_asr import FasterWhisperConfig
+from ai_video_production.faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
 from ai_video_production.ai_connections import (
     AiConnectionProfile,
     AiWorkload,
@@ -24,10 +28,15 @@ from ai_video_production.connection_settings_store import ConnectionSettingsStor
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
 from ai_video_production.task036_trusted_launcher import (
     OwnerSigningKeyPpkLaunchConfiguration,
+    Task036DeterministicFakeProviderFactoryV2,
+    Task036DeterministicFakeRuntimeCapabilityProbeV2,
+    Task036DeterministicFakeUtcClockV2,
+    Task036RuntimeManagedTranscriptionInjectionV2,
     Task036LaunchConfiguration,
     _handoff_subtitle_path,
     _resolve_asset_bindings,
     build_trusted_launch,
+    build_runtime_managed_trusted_launch_for_tests,
 )
 from ai_video_production.owner_signing_key_ppk_shell_service import (
     OwnerSigningKeyPpkShellService,
@@ -62,6 +71,42 @@ from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
 from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
+from ai_video_production.faster_whisper_runtime_contract import FasterWhisperRuntimeRequestV1
+from ai_video_production.task036_product_ports import FasterWhisperProviderSettingsV2
+from ai_video_production.task098_review_shell_application import Task098ReviewShellBinding
+from ai_video_production.task098_review_workspace_contract import ReviewViewport
+from ai_video_production.task098_review_workspace_coordinator import ReviewWorkspaceViewModel
+
+
+def test_runtime_managed_test_entrypoint_rejects_foreign_injection_before_configuration_use() -> None:
+    with pytest.raises(ProductError) as rejected:
+        build_runtime_managed_trusted_launch_for_tests(object(), object())
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    assert "meter_host_factory" not in inspect.signature(
+        build_runtime_managed_trusted_launch_for_tests,
+    ).parameters
+
+
+def test_runtime_managed_injection_accepts_only_exact_deterministic_fake_wrappers() -> None:
+    settings = FasterWhisperProviderSettingsV2(model="test-model")
+    request = FasterWhisperRuntimeRequestV1.create("cpu")
+    with pytest.raises(ProductError) as rejected:
+        Task036RuntimeManagedTranscriptionInjectionV2(
+            settings=settings,
+            runtime_request=request,
+            capability_probe=lambda *_args: True,
+            provider_factory=Task036DeterministicFakeProviderFactoryV2(),
+            clock=Task036DeterministicFakeUtcClockV2(),
+        )
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    injection = Task036RuntimeManagedTranscriptionInjectionV2(
+        settings=settings,
+        runtime_request=request,
+        capability_probe=Task036DeterministicFakeRuntimeCapabilityProbeV2(),
+        provider_factory=Task036DeterministicFakeProviderFactoryV2(),
+        clock=Task036DeterministicFakeUtcClockV2(),
+    )
+    assert type(injection.capability_probe) is Task036DeterministicFakeRuntimeCapabilityProbeV2
 
 
 def test_trusted_meter_factory_receives_selected_project_without_starting_capture(tmp_path):
@@ -189,6 +234,23 @@ class AsrProvider:
         raise AssertionError("provider must not execute during launch")
 
 
+def runtime_injection() -> Task036RuntimeManagedTranscriptionInjectionV2:
+    return Task036RuntimeManagedTranscriptionInjectionV2(
+        settings=FasterWhisperProviderSettingsV2(model="cached-local-model"),
+        runtime_request=FasterWhisperRuntimeRequestV1.create("cpu"),
+        capability_probe=Task036DeterministicFakeRuntimeCapabilityProbeV2(
+            cpu_available=True,
+            cuda_available=False,
+        ),
+        provider_factory=Task036DeterministicFakeProviderFactoryV2(
+            transcript_text="runtime text",
+        ),
+        clock=Task036DeterministicFakeUtcClockV2(
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        ),
+    )
+
+
 class OwnerSigningKeyImportStub:
     def __init__(self, *, fail_close: bool = False):
         self.close_count = 0
@@ -306,6 +368,60 @@ def config_document(tmp_path: Path) -> tuple[Path, dict]:
     return path, raw
 
 
+def task098_review_binding() -> Task098ReviewShellBinding:
+    h1 = "sha256:" + "1" * 64
+    h2 = "sha256:" + "2" * 64
+    now = "2026-09-22T00:00:00Z"
+    asset_id = "ASSET-" + "1" * 26
+    policy = media_review.AudioMediaReviewPolicyRevision.create(
+        policy_id="policy:task098:a6-launcher", revision=1,
+        parent_record_sha256=None, required_sample_rate_hz=48_000,
+        max_review_duration_samples=4_800, max_observation_age_seconds=3600,
+        official_policy_ref="policy:official:1", official_policy_sha256=h1,
+        effective_at=now, expires_at=None, audio_read_started=False,
+        media_mutation_started=False,
+    )
+    source = media_review.AudioMediaSourceBinding.create(
+        source_id="source:task098:a6-launcher", media_kind="AUDIO_ASSET",
+        contract_state="BOUND_VERIFIED", canonical_ref="asset-revision:1",
+        canonical_sha256=h1, canonical_revision=1, candidate_id="candidate:1",
+        asset_id=asset_id, rights_state="PASS", sample_rate_hz=48_000,
+        channel_count=1, duration_samples=4_800, observed_at=now,
+        body_included=False, absolute_path_included=False,
+    )
+    capability = media_review.PlaybackWaveformCapabilityBinding.create(
+        capability_id="capability:task098:a6-launcher",
+        contract_state="BOUND_VERIFIED", player_state="SUPPORTED",
+        waveform_state="SUPPORTED", decode_state="SUPPORTED",
+        sample_accurate_range_state="SUPPORTED",
+        capability_profile_ref="profile:a6-launcher",
+        capability_profile_sha256=h1, app_identity_sha256=h2,
+        observed_at=now, body_included=False, absolute_path_included=False,
+    )
+    intent = media_review.AudioMediaReviewIntent.create(
+        intent_id="intent:task098:a6-launcher", revision=1,
+        parent_record_sha256=None, project_id="phase-g-w2-sandbox",
+        policy_sha256=policy.record_sha256,
+        source_binding_sha256=source.record_sha256,
+        capability_binding_sha256=capability.record_sha256,
+        audio_workspace_snapshot_sha256=h2,
+        requested_operations=["AUDITION", "WAVEFORM_VIEW"],
+        range_start_sample=0, range_end_sample=4_800, requested_at=now,
+        body_included=False, absolute_path_included=False,
+        playback_started=False, waveform_render_started=False,
+        media_mutation_started=False,
+    )
+    view = ReviewWorkspaceViewModel(
+        source_binding_sha256=source.record_sha256, source_asset_id=asset_id,
+        source_candidate_id="candidate:1", intent_sha256=intent.record_sha256,
+        intent_id="intent:task098:a6-launcher", transcript_manifest_sha256=h1,
+        workspace_id="workspace.a6-launcher", workspace_revision=1,
+        workspace_snapshot_sha256=h2, transcript_rows=(), subtitle_rows=(),
+        viewport=ReviewViewport(4_800, 0, 4_800, 0, 0, 1),
+    )
+    return Task098ReviewShellBinding(policy, source, capability, intent, view, now)
+
+
 def signing_key_config_document(tmp_path: Path) -> tuple[Path, dict]:
     path, raw = config_document(tmp_path)
     destination = Path(raw["project"]["project_root"]) / "owner-signing-key.json"
@@ -401,6 +517,46 @@ def test_v13_trusted_launch_builds_canonical_owner_signing_service_without_ui(
     )
     assert launch.bridge._owner_signing_key_import is launch._owner_signing_key_import
     launch.close()
+
+
+def test_trusted_launch_binds_task098_review_to_its_canonical_store_without_media_effect(
+    tmp_path: Path,
+):
+    path, _raw = config_document(tmp_path)
+    calls = 0
+
+    def provider() -> Task098ReviewShellBinding:
+        nonlocal calls
+        calls += 1
+        return task098_review_binding()
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        review_workspace_binding_provider=provider,
+    )
+    try:
+        application = launch.bridge._review_workspace_application
+        assert application is not None
+        assert application._runtime._assets is launch._product_store
+        model = launch.bridge.view_model()
+        assert calls == 1
+        assert model["universal_wav_review"]["capabilities"] == {
+            "local_viewport_scroll": True,
+            "audition": True,
+            "waveform_render": True,
+            "subtitle_mutation": False,
+            "review_completion": False,
+            "review_state_persistence": False,
+            "human_decision_authorized": False,
+        }
+        assert application._runtime._active_cancel is None
+    finally:
+        launch.close()
+    assert application._closed is True
+    assert launch._review_workspace_application is None
 
 
 def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_execution(tmp_path: Path):
@@ -505,6 +661,80 @@ def test_trusted_launch_owns_body_free_signing_key_service_lifetime(tmp_path: Pa
     launch.close()
     assert service.close_count == 1
     assert launch._owner_signing_key_import is None
+
+
+@pytest.mark.parametrize("invalid_kind", ["missing", "foreign", "mixed", "malformed", "clock"])
+def test_v2_injection_rejects_before_any_project_store_or_provider_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid_kind: str,
+):
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    if invalid_kind == "missing":
+        injection = None
+    elif invalid_kind == "foreign":
+        injection = object()
+    else:
+        injection = runtime_injection()
+        if invalid_kind == "mixed":
+            object.__setattr__(injection, "settings", config.asr_config)
+        elif invalid_kind == "malformed":
+            object.__setattr__(injection, "runtime_request", object())
+        else:
+            object.__setattr__(injection.clock, "utc_timestamp", "2026-99-99T00:00:00Z")
+
+    def forbidden_store(*_args, **_kwargs):
+        raise AssertionError("store must not be touched before injection validation")
+
+    monkeypatch.setattr("ai_video_production.task036_trusted_launcher.SQLiteProductStore", forbidden_store)
+    with pytest.raises(ProductError) as rejected:
+        build_runtime_managed_trusted_launch_for_tests(
+            config, injection,
+        )
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    project = Path(raw["project"]["project_root"])
+    assert not (project / "assets").exists()
+    assert not (project / "jobs").exists()
+    assert not (project / "transcription").exists()
+    assert not (project / "product.sqlite3").exists()
+
+
+def test_v2_test_entrypoint_composes_actual_r1b_port_with_fake_only_provider(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    injection = runtime_injection()
+    source = Path(raw["paths"]["source_roots"][0]) / "source.mp4"
+
+    class SourceDialog(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_runtime_managed_trusted_launch_for_tests(
+        config,
+        injection,
+        native_dialog=Task036NativeDialogService(SourceDialog()),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
+    )
+    try:
+        class IngestStub:
+            def ingest_local_media(self, source_path):
+                digest = "sha256:" + hashlib.sha256(source_path.read_bytes()).hexdigest()
+                return IngestedMediaIdentity(
+                    "ASSET-00000000000000000000000000", digest, source_path,
+                )
+
+        launch.pre_edit_runtime.media.ingest_port = IngestStub()
+        bridge = launch.bridge
+        assert bridge.workflow_status({})["transcription_runtime_mode"] == "RUNTIME_MANAGED_V2"
+        bridge.choose_and_ingest_media({})
+        prepared = bridge.prepare_local_transcription({})
+        result = bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+        assert result["runtime_transcription"]["outcome"] == "READY_CPU"
+        assert result["runtime_transcription"]["model_download_authorized"] is False
+        assert str(config.project_root) not in json.dumps(result)
+        assert launch._meter_controller_host is None
+    finally:
+        launch.close()
 
 
 def test_trusted_launch_releases_other_resources_when_signing_service_close_fails(

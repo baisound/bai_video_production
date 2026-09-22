@@ -318,6 +318,33 @@ class WindowsNativeFileDialog:
             + _POWERSHELL_EPILOGUE
         )
 
+    def choose_faster_whisper_model_folder(self) -> str | None:
+        """Choose one existing local FasterWhisper model directory."""
+        return self._run(
+            _POWERSHELL_PREAMBLE
+            + r"""
+    $owner = $null
+    $dialog = $null
+    try {
+        $owner = New-BaiDialogOwner
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = 'FasterWhisperモデルフォルダーを選択 / Select FasterWhisper model folder'
+        $dialog.ShowNewFolderButton = $false
+        if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath
+        }
+        else {
+            [Console]::Out.Write('BAI_DIALOG_CANCEL')
+        }
+    }
+    finally {
+        if ($null -ne $dialog) { $dialog.Dispose() }
+        if ($null -ne $owner) { $owner.Close(); $owner.Dispose() }
+    }
+"""
+            + _POWERSHELL_EPILOGUE
+        )
+
     def choose_encrypted_ppk(self) -> str | None:
         """Choose one encrypted PuTTY PPK v3 file for TASK-059."""
         return self._run(

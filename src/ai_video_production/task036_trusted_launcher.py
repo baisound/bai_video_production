@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from contextlib import contextmanager
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -29,6 +30,8 @@ from .desktop_post_resolve_workflow import Task036PostResolveWorkflowFacade
 from .desktop_resolve_workflow import Task036ResolveWorkflowFacade
 from .errors import ProductError, ProductErrorCategory
 from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
+from .faster_whisper_runtime_contract import FasterWhisperRuntimeRequestV1
+from .faster_whisper_runtime_preflight import FasterWhisperRuntimeCapabilityProbe
 from .ids import IdKind, validate_id, validate_project_id
 from .ingest import AssetIngestService
 from .paths import LogicalPathResolver, PathMapping, SourcePathPolicy
@@ -46,9 +49,19 @@ from .task036_product_ports import (
     Task036AssetIngestPort,
     Task036CutCandidatePort,
     Task036LocalTranscriptionPort,
+    FasterWhisperProviderSettingsV2,
+    Task036RuntimeManagedLocalTranscriptionPortV2,
     _file_sha256,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .task098_review_media_runtime_windows import (
+    RegistryBoundReviewMediaRuntimePort,
+    WindowsWavePlaybackBackend,
+)
+from .task098_review_shell_application import (
+    Task098ReviewShellApplication,
+    Task098ReviewShellBinding,
+)
 from .task056_product_integration import Task056SpeechCueProductApplication
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .task044_nle_shell import Task044NleShellController
@@ -606,6 +619,9 @@ class Task036TrustedLaunch:
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
     _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
     _meter_controller_host: MeterControllerHost | None = field(default=None, repr=False)
+    _review_workspace_application: Task098ReviewShellApplication | None = field(
+        default=None, repr=False
+    )
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -629,6 +645,10 @@ class Task036TrustedLaunch:
         if local_lifetime is not None:
             local_lifetime.close()
             self._local_operation_lifetime = None
+        review_workspace_application = self._review_workspace_application
+        self._review_workspace_application = None
+        if review_workspace_application is not None:
+            review_workspace_application.close()
         lease = self._runtime_lease
         if lease is not None:
             lease.close()
@@ -651,6 +671,140 @@ class Task036TrustedLaunch:
             self.close()
         except Exception:
             pass
+
+
+@dataclass(frozen=True, slots=True)
+class Task036DeterministicFakeRuntimeCapabilityProbeV2:
+    """Closed, in-memory capability facts for the test-only v2 route."""
+
+    cpu_available: bool = True
+    cuda_available: bool = False
+
+    def __post_init__(self) -> None:
+        if type(self.cpu_available) is not bool or type(self.cuda_available) is not bool:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+                "Runtime-managed fake probe must contain exact bool facts",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+
+    def supports(self, device: str, compute_type: str) -> bool:
+        if (device, compute_type) == ("cpu", "int8"):
+            return self.cpu_available
+        if (device, compute_type) == ("cuda", "float16"):
+            return self.cuda_available
+        raise ValueError("runtime-managed fake probe received an unsupported capability pair")
+
+
+@dataclass(frozen=True, slots=True)
+class _Task098InMemoryDeterministicFakeSegment:
+    start: float = 0.0
+    end: float = 1.0
+    text: str = "deterministic test transcript"
+
+
+@dataclass(frozen=True, slots=True)
+class _Task098InMemoryDeterministicFakeInfo:
+    language: str = "ja"
+
+
+@dataclass(frozen=True, slots=True)
+class _Task098InMemoryDeterministicFakeModel:
+    """A tiny model-shaped object which never imports or loads a model."""
+
+    text: str
+
+    def transcribe(self, _media_path: str, **_kwargs: Any) -> tuple[tuple[object, ...], object]:
+        return ((_Task098InMemoryDeterministicFakeSegment(text=self.text),), _Task098InMemoryDeterministicFakeInfo())
+
+
+@dataclass(frozen=True, slots=True)
+class Task036DeterministicFakeProviderFactoryV2:
+    """Create only a FasterWhisperProvider backed by the in-memory fake model."""
+
+    transcript_text: str = "deterministic test transcript"
+
+    def __post_init__(self) -> None:
+        if type(self.transcript_text) is not str or not self.transcript_text.strip() or "\x00" in self.transcript_text:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+                "Runtime-managed fake Provider text is invalid",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+
+    def __call__(self, config: FasterWhisperConfig) -> FasterWhisperProvider:
+        if type(config) is not FasterWhisperConfig or config.allow_model_download is not False:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+                "Runtime-managed fake Provider configuration is invalid",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return FasterWhisperProvider(
+            config,
+            model_factory=lambda _model, **_kwargs: _Task098InMemoryDeterministicFakeModel(self.transcript_text),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Task036DeterministicFakeUtcClockV2:
+    """Return only its held canonical UTC test timestamp."""
+
+    utc_timestamp: str = "2026-09-20T00:00:00Z"
+
+    def __post_init__(self) -> None:
+        valid = (
+            type(self.utc_timestamp) is str
+            and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", self.utc_timestamp) is not None
+        )
+        if valid:
+            try:
+                datetime.strptime(self.utc_timestamp, "%Y-%m-%dT%H:%M:%SZ")
+            except ValueError:
+                valid = False
+        if not valid:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+                "Runtime-managed fake clock must hold a canonical UTC timestamp",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+
+    def __call__(self) -> str:
+        return self.utc_timestamp
+
+
+@dataclass(frozen=True, slots=True)
+class Task036RuntimeManagedTranscriptionInjectionV2:
+    """Exact fake-only dependencies for the non-serialized v2 test route."""
+
+    settings: FasterWhisperProviderSettingsV2
+    runtime_request: FasterWhisperRuntimeRequestV1
+    capability_probe: Task036DeterministicFakeRuntimeCapabilityProbeV2
+    provider_factory: Task036DeterministicFakeProviderFactoryV2
+    clock: Task036DeterministicFakeUtcClockV2
+
+    def __post_init__(self) -> None:
+        try:
+            valid = (
+                type(self.settings) is FasterWhisperProviderSettingsV2
+                and type(self.runtime_request) is FasterWhisperRuntimeRequestV1
+                and type(self.capability_probe) is Task036DeterministicFakeRuntimeCapabilityProbeV2
+                and type(self.provider_factory) is Task036DeterministicFakeProviderFactoryV2
+                and type(self.clock) is Task036DeterministicFakeUtcClockV2
+            )
+            if valid:
+                self.settings.__post_init__()
+                FasterWhisperRuntimeRequestV1.from_dict(self.runtime_request.to_dict())
+                self.capability_probe.__post_init__()
+                self.provider_factory.__post_init__()
+                self.clock.__post_init__()
+        except Exception:
+            valid = False
+        if not valid:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+                "Runtime-managed transcription injection is incomplete or invalid",
+                ProductErrorCategory.AUTHORIZATION,
+            )
 
 
 class _Task036LocalOperationLifetime:
@@ -927,11 +1081,10 @@ def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguratio
 
 
 
-def build_trusted_launch(
+def _build_trusted_launch(
     configuration: Task036LaunchConfiguration,
     *,
     native_dialog: Task036NativeDialogService | None = None,
-    asr_provider: FasterWhisperProvider | None = None,
     resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
     comfy_client: ComfyUIClient | None = None,
     final_review_external_gate_provider: Callable[
@@ -946,6 +1099,13 @@ def build_trusted_launch(
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
     local_audio_inventory: LocalAudioModelInventory | None = None,
     meter_host_factory: Callable[[Path, str], MeterControllerHost | None] = packaged_meter_host,
+    review_workspace_binding_provider: Callable[
+        [], Task098ReviewShellBinding
+    ] | None = None,
+    transcription_port_factory: Callable[
+        [Task036LaunchConfiguration, SQLiteProductStore], Any
+    ],
+    transcription_runtime_mode: str = "LEGACY_V1",
 ) -> Task036TrustedLaunch:
     managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
@@ -1016,6 +1176,24 @@ def build_trusted_launch(
             PathMapping("job://", configuration.job_root),
         ]
     )
+    if (
+        review_workspace_binding_provider is not None
+        and not callable(review_workspace_binding_provider)
+    ):
+        store.close()
+        raise ValueError("review workspace binding provider is invalid")
+    review_workspace_application = (
+        None
+        if review_workspace_binding_provider is None
+        else Task098ReviewShellApplication(
+            binding_provider=review_workspace_binding_provider,
+            runtime=RegistryBoundReviewMediaRuntimePort(
+                assets=store,
+                resolver=resolver,
+                playback=WindowsWavePlaybackBackend(),
+            ),
+        )
+    )
     ingest_service = AssetIngestService(
         store=store,
         resolver=resolver,
@@ -1026,14 +1204,7 @@ def build_trusted_launch(
         configuration.production_job_id,
         configuration.owner,
     )
-    transcription_port = Task036LocalTranscriptionPort(
-        asr_provider or FasterWhisperProvider(configuration.asr_config),
-        configuration.transcription_output,
-        store,
-        configuration.production_job_id,
-        language=configuration.asr_language,
-        timeline_rate=configuration.timeline_rate,
-    )
+    transcription_port = transcription_port_factory(configuration, store)
     speech_cue_application = Task056SpeechCueProductApplication(
         project_root=configuration.project_root,
         project_id=configuration.project_id,
@@ -1060,6 +1231,7 @@ def build_trusted_launch(
         transcription_port,
         cut_port,
         speech_cue_application,
+        transcription_runtime_mode=transcription_runtime_mode,
     )
     adapter = resolve_adapter or ResolveScriptingAssemblyAdapter()
 
@@ -1486,6 +1658,7 @@ def build_trusted_launch(
             generation_execution_application=generation_execution_application,
             generation_output_adoption_application=generation_output_adoption_application,
             audio_workspace_application=audio_workspace_application,
+            review_workspace_application=review_workspace_application,
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
@@ -1515,6 +1688,7 @@ def build_trusted_launch(
             _product_store=store,
             _ollama_runtime=managed_ollama_runtime,
             _meter_controller_host=meter_controller_host,
+            _review_workspace_application=review_workspace_application,
         )
     except BaseException:
         if meter_controller_host is not None:
@@ -1533,6 +1707,126 @@ def build_trusted_launch(
             runtime_lease.close()
         store.close()
         raise
+
+
+def build_trusted_launch(
+    configuration: Task036LaunchConfiguration,
+    *,
+    native_dialog: Task036NativeDialogService | None = None,
+    asr_provider: FasterWhisperProvider | None = None,
+    resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
+    comfy_client: ComfyUIClient | None = None,
+    final_review_external_gate_provider: Callable[[], tuple[FinalReviewExternalGateReceipt, ...]] | None = None,
+    final_review_export_preparation_provider: Callable[[FinalReviewApprovalReceipt], ExportPreparation] | None = None,
+    owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
+    allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
+    meter_host_factory: Callable[[Path, str], MeterControllerHost | None] = packaged_meter_host,
+    review_workspace_binding_provider: Callable[
+        [], Task098ReviewShellBinding
+    ] | None = None,
+) -> Task036TrustedLaunch:
+    """Compose the byte-compatible legacy v1 trusted launch."""
+
+    def transcription_port_factory(
+        config: Task036LaunchConfiguration,
+        store: SQLiteProductStore,
+    ) -> Task036LocalTranscriptionPort:
+        return Task036LocalTranscriptionPort(
+            asr_provider or FasterWhisperProvider(config.asr_config),
+            config.transcription_output,
+            store,
+            config.production_job_id,
+            language=config.asr_language,
+            timeline_rate=config.timeline_rate,
+        )
+
+    return _build_trusted_launch(
+        configuration,
+        native_dialog=native_dialog,
+        resolve_adapter=resolve_adapter,
+        comfy_client=comfy_client,
+        final_review_external_gate_provider=final_review_external_gate_provider,
+        final_review_export_preparation_provider=final_review_export_preparation_provider,
+        owner_signing_key_import=owner_signing_key_import,
+        allow_product_job_bootstrap=allow_product_job_bootstrap,
+        local_planning_inventory_provider=local_planning_inventory_provider,
+        ollama_runtime=ollama_runtime,
+        local_audio_inventory=local_audio_inventory,
+        meter_host_factory=meter_host_factory,
+        review_workspace_binding_provider=review_workspace_binding_provider,
+        transcription_port_factory=transcription_port_factory,
+    )
+
+
+def _runtime_managed_noop_meter_host(_project_root: Path, _project_id: str) -> None:
+    """The test-only v2 route must never attach the packaged meter host."""
+
+    return None
+
+
+def build_runtime_managed_trusted_launch_for_tests(
+    configuration: Task036LaunchConfiguration,
+    injection: Task036RuntimeManagedTranscriptionInjectionV2 | None = None,
+    *,
+    native_dialog: Task036NativeDialogService | None = None,
+    resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
+    comfy_client: ComfyUIClient | None = None,
+    final_review_external_gate_provider: Callable[[], tuple[FinalReviewExternalGateReceipt, ...]] | None = None,
+    final_review_export_preparation_provider: Callable[[FinalReviewApprovalReceipt], ExportPreparation] | None = None,
+    owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
+    allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
+) -> Task036TrustedLaunch:
+    """Compose the fake-only runtime-managed route without serialized authority."""
+
+    if type(injection) is not Task036RuntimeManagedTranscriptionInjectionV2:
+        raise ProductError(
+            "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND",
+            "Runtime-managed transcription injection is not bound",
+            ProductErrorCategory.AUTHORIZATION,
+        )
+    # Revalidate the frozen bundle before _build_trusted_launch can touch a
+    # directory, store, Project bootstrap or Provider constructor.
+    injection.__post_init__()
+
+    def transcription_port_factory(
+        config: Task036LaunchConfiguration,
+        store: SQLiteProductStore,
+    ) -> Task036RuntimeManagedLocalTranscriptionPortV2:
+        return Task036RuntimeManagedLocalTranscriptionPortV2(
+            settings=injection.settings,
+            runtime_request=injection.runtime_request,
+            capability_probe=injection.capability_probe,
+            provider_factory=injection.provider_factory,
+            clock=injection.clock,
+            output_directory=config.transcription_output,
+            store=store,
+            production_job_id=config.production_job_id,
+            language=config.asr_language,
+            timeline_rate=config.timeline_rate,
+        )
+
+    return _build_trusted_launch(
+        configuration,
+        native_dialog=native_dialog,
+        resolve_adapter=resolve_adapter,
+        comfy_client=comfy_client,
+        final_review_external_gate_provider=final_review_external_gate_provider,
+        final_review_export_preparation_provider=final_review_export_preparation_provider,
+        owner_signing_key_import=owner_signing_key_import,
+        allow_product_job_bootstrap=allow_product_job_bootstrap,
+        local_planning_inventory_provider=local_planning_inventory_provider,
+        ollama_runtime=ollama_runtime,
+        local_audio_inventory=local_audio_inventory,
+        meter_host_factory=_runtime_managed_noop_meter_host,
+        transcription_port_factory=transcription_port_factory,
+        transcription_runtime_mode="RUNTIME_MANAGED_V2",
+    )
 
 
 def run_trusted_native_shell(config_path: str | Path) -> None:

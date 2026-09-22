@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from ai_video_production import task036_shell_cli
 
 
@@ -39,3 +41,8 @@ def test_cli_uses_environment_config_without_bootstrapping(monkeypatch):
 
     assert task036_shell_cli.main([]) == 0
     assert calls == [("trusted", "C:/private/env-launch.json")]
+
+
+def test_cli_has_no_serialized_v2_or_runtime_injection_switch():
+    with pytest.raises(SystemExit):
+        task036_shell_cli.main(["--runtime-managed-v2"])

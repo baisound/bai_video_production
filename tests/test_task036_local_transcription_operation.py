@@ -9,8 +9,8 @@ from time import sleep
 
 import pytest
 
-from ai_video_production.errors import ProductError
-from ai_video_production.faster_whisper_asr import FasterWhisperConfig, LocalTranscriptionService
+from ai_video_production.errors import ProductError, ProductErrorCategory
+from ai_video_production.faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService
 from ai_video_production.profile import ProfileSnapshot
 from ai_video_production.store import SQLiteProductStore
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
@@ -106,6 +106,10 @@ def test_completed_durable_result_requires_explicit_recovery_without_provider_re
     port = make_port(provider, tmp_path)
 
     first = execute(port, source)
+    fixed_bytes_before_recovery = {
+        name: (tmp_path / "transcription" / name).read_bytes()
+        for name in ("transcript.json", "subtitles.srt", "transcription-report.json")
+    }
     restarted = make_port(provider, tmp_path)
     with pytest.raises(ProductError) as retry:
         execute(restarted, source)
@@ -123,6 +127,10 @@ def test_completed_durable_result_requires_explicit_recovery_without_provider_re
     assert second.provider_execution_started is False
     assert second.recovered_from_durable_result is True
     assert first.transcript.to_dict()["manifest_sha256"] == second.transcript.to_dict()["manifest_sha256"]
+    assert fixed_bytes_before_recovery == {
+        name: (tmp_path / "transcription" / name).read_bytes()
+        for name in fixed_bytes_before_recovery
+    }
 
 
 def test_durable_operation_is_scoped_to_exact_project_identity(tmp_path: Path) -> None:
@@ -500,6 +508,63 @@ def test_partial_fixed_output_promotion_rolls_forward_from_bound_immutable_set_w
     assert provider.calls == 1
 
 
+def test_v1_recovery_completion_collision_is_idempotent_and_keeps_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "canonical.mp4"
+    source.write_bytes(b"canonical media")
+    provider = FakeProvider()
+    port = make_port(provider, tmp_path)
+    engine_type = type(port._engine)
+    original_promote = engine_type._promote_publication
+    failed = False
+
+    def fail_once(self, *args, **kwargs):
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise ProductError(
+                "ERR_SYNTHETIC_PROMOTION_FAILURE", "promotion failed", ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return original_promote(self, *args, **kwargs)
+
+    monkeypatch.setattr(engine_type, "_promote_publication", fail_once)
+    with pytest.raises(ProductError):
+        execute(port, source)
+    monkeypatch.setattr(engine_type, "_promote_publication", original_promote)
+    operation = port.store.find_operation(JOB_ID, port._operation_key(PROJECT_ID, ASSET_ID, file_sha(source)))
+    assert operation is not None and operation.status == "PARTIAL" and operation.result_ref
+    fixed_before = {
+        name: (port.output_directory / name).read_bytes()
+        for name in ("transcript.json", "subtitles.srt", "transcription-report.json")
+        if (port.output_directory / name).exists()
+    }
+    original_cas = SQLiteProductStore.compare_and_set_operation_status
+
+    def report_completion_collision(self, operation_id, **kwargs):
+        if kwargs.get("status") == "COMPLETED":
+            row, changed = original_cas(self, operation_id, **kwargs)
+            assert changed is True
+            return row, False
+        return original_cas(self, operation_id, **kwargs)
+
+    monkeypatch.setattr(SQLiteProductStore, "compare_and_set_operation_status", report_completion_collision)
+    recovered = port.recover_local_media(
+        project_id=PROJECT_ID, source_path=source,
+        source_asset_id=ASSET_ID, source_asset_sha256=file_sha(source),
+    )
+    assert recovered.recovered_from_durable_result is True
+    assert provider.calls == 1
+    completed = port.store.get_operation(operation.operation_id)
+    assert completed.status == "COMPLETED" and completed.result_ref == operation.result_ref
+    slot = port.store.get_operation(recovered.slot_operation_id)
+    assert slot.status == "IN_PROGRESS" and slot.result_ref == operation.operation_id
+    assert fixed_before == {
+        name: (port.output_directory / name).read_bytes()
+        for name in fixed_before
+    }
+
+
 def test_in_progress_operation_never_infers_success_from_fabricated_fixed_files(
     tmp_path: Path,
 ) -> None:
@@ -532,6 +597,199 @@ def test_in_progress_operation_never_infers_success_from_fabricated_fixed_files(
         )
     assert rejected.value.code == "ERR_TASK036_TRANSCRIPTION_RECOVERY_INCOMPLETE"
     assert provider.calls == 1
+
+
+def test_cross_version_guard_is_symmetric_and_same_owner_retry_is_idempotent(tmp_path: Path) -> None:
+    port = make_port(FakeProvider(), tmp_path)
+    digest = "sha256:" + "a" * 64
+
+    guard_id = port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v1")
+    guard = port.store.get_operation(guard_id)
+    assert guard.command_type == "task036.local_transcription.cross_version_guard.v1"
+    assert guard.status == "IN_PROGRESS"
+    assert guard.result_ref is not None and guard.result_ref.startswith("task098-runtime-owner:v1:")
+    assert port.store.find_operation(JOB_ID, port._operation_key(PROJECT_ID, ASSET_ID, digest)) is None
+
+    assert port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v1") == guard_id
+    with pytest.raises(ProductError) as blocked:
+        port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v2")
+    assert blocked.value.code == "ERR_TASK036_TRANSCRIPTION_CROSS_VERSION_OWNER_EXISTS"
+
+
+def test_cross_version_guard_attempt_one_is_corrupt_and_cannot_be_reused(tmp_path: Path) -> None:
+    port = make_port(FakeProvider(), tmp_path)
+    digest = "sha256:" + "c" * 64
+    guard_id = port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v1")
+    guard = port.store.get_operation(guard_id)
+    port.store.compare_and_set_operation_status(
+        guard_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=(guard.result_ref,),
+        status="IN_PROGRESS",
+        result_ref=guard.result_ref,
+        replace_result_ref=True,
+        increment_attempt=True,
+    )
+    with pytest.raises(ProductError) as corrupt:
+        port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v1")
+    assert corrupt.value.code == "ERR_TASK036_TRANSCRIPTION_CROSS_VERSION_CORRUPT"
+
+
+def test_verified_different_source_v2_history_does_not_block_v1_continuation(tmp_path: Path) -> None:
+    port = make_port(FakeProvider(), tmp_path)
+    source_a = "sha256:" + "a" * 64
+    source_b = "sha256:" + "b" * 64
+    historical, _ = port.store.reserve_operation(
+        JOB_ID, "task036.local_transcription.v2", "historical-different-source",
+    )
+    port.store.compare_and_set_operation_status(
+        historical.operation_id,
+        expected_statuses=("PENDING",),
+        expected_result_refs=(None,),
+        status="IN_PROGRESS",
+        result_ref="task098-runtime-admission:v2:" + "b" * 64 + ":" + "d" * 64,
+        replace_result_ref=True,
+        increment_attempt=True,
+    )
+    guard_id = port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, source_a, version="v1")
+    guard = port.store.get_operation(guard_id)
+    assert guard.result_ref is not None and guard.result_ref.startswith("task098-runtime-owner:v1:")
+    assert historical.result_ref != guard.result_ref
+
+
+def test_v1_golden_key_and_execution_config_bytes_remain_unchanged(tmp_path: Path) -> None:
+    config = FasterWhisperConfig(
+        model="small", device="cpu", compute_type="int8", beam_size=5,
+        vad_filter=True, allow_model_download=False,
+    )
+    store = SQLiteProductStore(tmp_path / "product.sqlite3")
+    job = store.create_job(ProfileSnapshot.create("task036-golden", "1.0.0", {}).profile_snapshot_id)
+    port = Task036LocalTranscriptionPort(
+        FasterWhisperProvider(config), tmp_path / "transcription", store, job.job_id,
+        language="ja",
+    )
+    source_sha = "sha256:" + "a" * 64
+    assert port._authorize_provider()[2] == "sha256:6d1342167b48558a967afb5918cf85c7b746d2503310873bbc156a994645257b"
+    assert port._operation_key(PROJECT_ID, ASSET_ID, source_sha) == "task036-transcription-b17a8008a228e1356264cf6cb5d548bc36bc03ada8466c7fa746c25e1b56ed29"
+
+
+def test_v1_immutable_publication_bytes_have_independent_golden(tmp_path: Path) -> None:
+    source = tmp_path / "canonical.mp4"
+    source_bytes = b"canonical media"
+    source.write_bytes(source_bytes)
+    port = make_port(FakeProvider(), tmp_path)
+    outcome = execute(port, source)
+    assert outcome.operation_id and outcome.publication_set_sha256
+    expected_source_sha = "sha256:" + hashlib.sha256(source_bytes).hexdigest()
+
+    transcript_body = {
+        "manifest_version": "1.0.0",
+        "source_asset_id": ASSET_ID,
+        "language": "ja",
+        "provider_id": "faster-whisper",
+        "model_id": "cached-local-model",
+        "segments": [{
+            "segment_id": "seg-000001",
+            "range_us": {"start": 0, "end_exclusive": 1_000_000},
+            "text": "private text",
+            "confidence": None,
+            "speaker": None,
+        }],
+    }
+    transcript_body["manifest_sha256"] = sha256_bytes(canonical_json_bytes(transcript_body))
+    expected_transcript = canonical_json_bytes(transcript_body) + b"\n"
+    expected_srt = b"1\n00:00:00,000 --> 00:00:01,001\nprivate text\n"
+    expected_report = canonical_json_bytes({
+        "report_version": "1.0.0",
+        "ok": True,
+        "source_asset_id": ASSET_ID,
+        "provider_id": "faster-whisper",
+        "model_id": "cached-local-model",
+        "language": "ja",
+        "segment_count": 1,
+        "subtitle_cue_count": 1,
+        "transcript_file": "transcript.json",
+        "subtitle_file": "subtitles.srt",
+        "transcript_text_in_report": False,
+        "network_used_for_inference": False,
+        "model_download_authorized": False,
+    }) + b"\n"
+    expected_values = {
+        "transcript.json": expected_transcript,
+        "subtitles.srt": expected_srt,
+        "transcription-report.json": expected_report,
+    }
+    for name, expected in expected_values.items():
+        assert (port.output_directory / name).read_bytes() == expected
+
+    publication_root = port.output_directory / ".task036-publications" / outcome.operation_id
+    for name, expected in expected_values.items():
+        assert (publication_root / name).read_bytes() == expected
+    expected_files = {name: sha256_bytes(value) for name, value in expected_values.items()}
+    expected_unsigned_manifest = {
+        "publication_set_version": "1.0.0",
+        "project_id": PROJECT_ID,
+        "operation_id": outcome.operation_id,
+        "source_asset_id": ASSET_ID,
+        "source_asset_sha256": expected_source_sha,
+        "provider_id": "faster-whisper",
+        "model_id": "cached-local-model",
+        "execution_config_sha256": "sha256:42feac373dc636fa328c0588f41ff6fca9c5e4f6fbe57211fec1f4e8abcbbfa3",
+        "transcript_manifest_sha256": transcript_body["manifest_sha256"],
+        "files": expected_files,
+    }
+    expected_publication_sha = sha256_bytes(canonical_json_bytes(expected_unsigned_manifest))
+    expected_manifest = {
+        **expected_unsigned_manifest,
+        "publication_set_sha256": expected_publication_sha,
+    }
+    expected_manifest_bytes = canonical_json_bytes(expected_manifest)
+    actual_manifest_bytes = (publication_root / "publication-set.json").read_bytes()
+    assert actual_manifest_bytes == expected_manifest_bytes
+    assert outcome.publication_set_sha256 == expected_publication_sha
+    assert expected_manifest["source_asset_sha256"] == expected_source_sha
+    assert set(expected_manifest) == {
+        "publication_set_version", "project_id", "operation_id", "source_asset_id",
+        "source_asset_sha256", "provider_id", "model_id", "execution_config_sha256",
+        "transcript_manifest_sha256", "files", "publication_set_sha256",
+    }
+
+
+def test_v1_public_field_assignment_forwards_to_shared_engine(tmp_path: Path) -> None:
+    port = make_port(FakeProvider(), tmp_path)
+    replacement_provider = FakeProvider()
+    replacement_output = tmp_path / "replacement-output"
+    replacement_output.mkdir()
+    replacement_store = port.store
+    replacement_rate = port.timeline_rate
+    port.provider = replacement_provider
+    port.output_directory = replacement_output
+    port.store = replacement_store
+    port.production_job_id = JOB_ID
+    port.language = "ja"
+    port.timeline_rate = replacement_rate
+    assert port._engine.provider is replacement_provider
+    assert port._engine.output_directory == replacement_output
+    assert port._engine.store is replacement_store
+    assert port._engine.production_job_id == JOB_ID
+    assert port._engine.language == "ja"
+    assert port._engine.timeline_rate == replacement_rate
+
+
+@pytest.mark.parametrize("status", ["PENDING", "IN_PROGRESS", "PARTIAL", "COMPLETED", "FAILED"])
+def test_historical_opposite_version_state_blocks_without_provider_or_new_row(tmp_path: Path, status: str) -> None:
+    port = make_port(FakeProvider(), tmp_path)
+    digest = "sha256:" + "b" * 64
+    opposite, _ = port.store.reserve_operation(
+        JOB_ID, "task036.local_transcription.v2", "historical-v2-" + status,
+    )
+    if status != "PENDING":
+        opposite = port.store.update_operation_status(opposite.operation_id, status)
+
+    with pytest.raises(ProductError) as blocked:
+        port._acquire_cross_version_lease(PROJECT_ID, ASSET_ID, digest, version="v1")
+    assert blocked.value.code == "ERR_TASK036_TRANSCRIPTION_CROSS_VERSION_CONFLICT"
+    assert port.store.find_operation(JOB_ID, port._cross_version_guard_key(PROJECT_ID, ASSET_ID, digest)) is None
 
 
 def test_different_sources_share_one_project_fixed_output_slot(tmp_path: Path) -> None:

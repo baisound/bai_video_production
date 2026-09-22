@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from .faster_whisper_asr import FasterWhisperProvider
+from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
 from .serialization import sha256_json
 
 
@@ -35,11 +35,17 @@ def _validate_sha256(value: str) -> str:
     return value
 
 
-def _config_payload(provider: FasterWhisperProvider) -> dict[str, Any]:
-    config = provider.config
+def _config_payload_for_config(
+    config: FasterWhisperConfig,
+    *,
+    provider_id: str,
+    model_id: str,
+) -> dict[str, Any]:
+    """Build the legacy TASK-023 payload without entering a Provider boundary."""
+
     return {
-        "provider_id": provider.provider_id,
-        "model_id": provider.model_id,
+        "provider_id": provider_id,
+        "model_id": model_id,
         "model": config.model,
         "device": config.device,
         "compute_type": config.compute_type,
@@ -48,6 +54,14 @@ def _config_payload(provider: FasterWhisperProvider) -> dict[str, Any]:
         "model_download_authorized": bool(config.allow_model_download),
         "custom_cache_directory_configured": config.cache_directory is not None,
     }
+
+
+def _config_payload(provider: FasterWhisperProvider) -> dict[str, Any]:
+    return _config_payload_for_config(
+        provider.config,
+        provider_id=provider.provider_id,
+        model_id=provider.model_id,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,14 +86,25 @@ class FasterWhisperExecutionIdentity:
         }
 
 
-def build_execution_identity(
-    provider: FasterWhisperProvider,
+def build_execution_identity_for_config(
+    config: FasterWhisperConfig,
     *,
+    provider_id: str,
+    model_id: str,
     source_sha256: str,
     requested_language: str | None,
 ) -> FasterWhisperExecutionIdentity:
+    """Compute the exact legacy diagnostic identity from an effective config.
+
+    This stays intentionally byte-for-byte compatible with the historical
+    provider-taking helper, while allowing v2 recovery to verify diagnostics
+    without constructing a Provider or touching a model.
+    """
+
     source_sha256 = _validate_sha256(source_sha256)
-    provider_payload = _config_payload(provider)
+    provider_payload = _config_payload_for_config(
+        config, provider_id=provider_id, model_id=model_id,
+    )
     config_sha256 = sha256_json(provider_payload)
     execution_sha256 = sha256_json(
         {
@@ -95,6 +120,21 @@ def build_execution_identity(
         config_sha256=config_sha256,
         execution_sha256=execution_sha256,
         provider=provider_payload,
+    )
+
+
+def build_execution_identity(
+    provider: FasterWhisperProvider,
+    *,
+    source_sha256: str,
+    requested_language: str | None,
+) -> FasterWhisperExecutionIdentity:
+    return build_execution_identity_for_config(
+        provider.config,
+        provider_id=provider.provider_id,
+        model_id=provider.model_id,
+        source_sha256=source_sha256,
+        requested_language=requested_language,
     )
 
 

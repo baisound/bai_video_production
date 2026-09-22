@@ -405,7 +405,7 @@ def test_recommended_transcription_controls_use_one_local_safe_route() -> None:
         "workflow.next_recommended_action!=='transcription.start'",
         "無償ローカルFasterWhisper",
         "モデルの自動ダウンロード・有償Provider・Cloudは使用しません",
-        "call(recovery?'recover_local_transcription':'run_local_transcription',{confirmation_id:prepared.confirmation_id})",
+        "call(route[1],{confirmation_id:prepared.confirmation_id})",
         "prepare_local_transcription_recovery",
         "cancel_local_transcription",
         "result?.status!=='TRANSCRIBED'",

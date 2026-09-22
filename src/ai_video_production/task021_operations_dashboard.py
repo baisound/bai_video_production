@@ -24,8 +24,12 @@ from .durable_product_job import (
 from .interactive_timeline import InteractiveTimeline
 from .integrated_dashboard_operations import (
     CoverageState,
+    DashboardExecutionReceiptBinding,
+    DashboardOperationProposalRevision,
     DashboardSnapshotState,
+    HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
+    operation_admission_report,
 )
 from .serialization import validate_sha256
 
@@ -161,6 +165,19 @@ IntegratedSnapshotReader = Callable[[], IntegratedDashboardSnapshotRevision | No
 
 
 @dataclass(frozen=True, slots=True)
+class CanonicalOperationState:
+    """Exact canonical records required for a no-effect operation-state view."""
+
+    proposal: DashboardOperationProposalRevision
+    confirmation: HumanOperationConfirmationBinding | None
+    execution_receipt: DashboardExecutionReceiptBinding | None
+    evaluated_at: str
+
+
+OperationStateReader = Callable[[], CanonicalOperationState | None]
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalDashboardReaders:
     """Injected read ports owned outside TASK-021; no callback may be a writer."""
 
@@ -169,6 +186,7 @@ class CanonicalDashboardReaders:
     read_timeline: TimelineReader
     read_validation_results: ValidationReader
     read_integrated_snapshot: IntegratedSnapshotReader | None = None
+    read_operation_state: OperationStateReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -243,6 +261,24 @@ _COVERAGE_JAPANESE = MappingProxyType({
     ),
 })
 
+_OPERATION_KIND_JAPANESE = MappingProxyType({
+    "ACK_ALERT": "Alert確認",
+    "REQUEST_RECONCILE": "状態照合の依頼",
+    "REQUEST_PAUSE": "一時停止の依頼",
+    "REQUEST_CANCEL": "キャンセルの依頼",
+    "REQUEST_RESUME": "再開の依頼",
+    "OPEN_HUMAN_REVIEW": "人間レビューを開く依頼",
+    "REQUEST_PRIVATE_DETAIL": "非公開詳細の確認依頼",
+})
+
+_OPERATION_REASON_JAPANESE = MappingProxyType({
+    "PROPOSAL_NOT_CURRENT": "操作候補が現在有効ではありません。",
+    "HUMAN_CONFIRMATION_NOT_BOUND": "人間確認が結び付いていません。",
+    "HUMAN_CONFIRMATION_MISMATCH_OR_EXPIRED": "人間確認が不一致または期限切れです。",
+    "EXECUTION_RECEIPT_MISMATCH": "外部結果が操作候補または人間確認と一致しません。",
+    "EXTERNAL_RESULT_UNKNOWN_NO_REPLAY": "外部結果は不明です。自動再実行できません。",
+})
+
 
 class Task021OperationsDashboard:
     """Refresh a read-only dashboard from canonical in-memory snapshots."""
@@ -263,6 +299,12 @@ class Task021OperationsDashboard:
         if self.readers.read_integrated_snapshot is not None:
             integrated_snapshot, integrated_snapshot_error = self._safe_read(
                 self.readers.read_integrated_snapshot
+            )
+        operation_state: object | None = None
+        operation_state_error = False
+        if self.readers.read_operation_state is not None:
+            operation_state, operation_state_error = self._safe_read(
+                self.readers.read_operation_state
             )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
@@ -285,6 +327,45 @@ class Task021OperationsDashboard:
         ):
             integrated_snapshot_error, integrated_snapshot = True, None
 
+        operation_report: dict[str, object] | None = None
+        if operation_state is not None:
+            if not isinstance(operation_state, CanonicalOperationState):
+                operation_state_error, operation_state = True, None
+            elif (
+                not isinstance(
+                    operation_state.proposal, DashboardOperationProposalRevision
+                )
+                or operation_state.confirmation is not None
+                and not isinstance(
+                    operation_state.confirmation,
+                    HumanOperationConfirmationBinding,
+                )
+                or operation_state.execution_receipt is not None
+                and not isinstance(
+                    operation_state.execution_receipt,
+                    DashboardExecutionReceiptBinding,
+                )
+                or not isinstance(operation_state.evaluated_at, str)
+            ):
+                operation_state_error = True
+            elif not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                operation_state_error = True
+            elif (
+                operation_state.proposal.to_dict()["snapshot_sha256"]
+                != integrated_snapshot.record_sha256
+            ):
+                operation_state_error = True
+            else:
+                try:
+                    operation_report = operation_admission_report(
+                        proposal=operation_state.proposal,
+                        confirmation=operation_state.confirmation,
+                        execution_receipt=operation_state.execution_receipt,
+                        evaluated_at=operation_state.evaluated_at,
+                    )
+                except (TypeError, ValueError):
+                    operation_state_error = True
+
         sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
             self._assets_section(asset_values, assets_error),
@@ -299,6 +380,16 @@ class Task021OperationsDashboard:
                     if isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
                     else None,
                     integrated_snapshot_error,
+                )
+            )
+        if self.readers.read_operation_state is not None:
+            sections.append(
+                self._operation_state_section(
+                    operation_state
+                    if isinstance(operation_state, CanonicalOperationState)
+                    else None,
+                    operation_report,
+                    operation_state_error,
                 )
             )
         section_values = tuple(sections)
@@ -593,6 +684,194 @@ class Task021OperationsDashboard:
         )
 
     @staticmethod
+    def _operation_state_section(
+        operation: CanonicalOperationState | None,
+        report: dict[str, object] | None,
+        failed: bool,
+    ) -> DashboardSection:
+        section_id = "operation-gate"
+        title = "操作候補と外部結果"
+        if failed:
+            return Task021OperationsDashboard._failed_section(
+                section_id,
+                title,
+                "正本snapshotに一致する操作状態を安全に読み取れませんでした。",
+            )
+        if operation is None:
+            return DashboardSection(
+                section_id,
+                title,
+                DashboardDisplayState.EMPTY,
+                (),
+                "正本snapshotに結び付いた操作候補はまだありません。",
+            )
+        if report is None:
+            return Task021OperationsDashboard._failed_section(
+                section_id,
+                title,
+                "操作状態の正本契約を検証できませんでした。",
+            )
+
+        proposal = operation.proposal.to_dict()
+        gate_decision = str(report["gate_decision"])
+        external_state = str(report["external_result_state"])
+        reason_codes = tuple(str(value) for value in report["reason_codes"])
+        reasons = tuple(
+            _OPERATION_REASON_JAPANESE.get(value, "正本の理由コードを確認してください。")
+            for value in reason_codes
+        )
+        reason_ja = " ".join(dict.fromkeys(reasons)) or "なし"
+
+        if gate_decision == "READY_FOR_EXTERNAL_HUMAN_GATE":
+            gate_display, gate_label, gate_failure, gate_next = (
+                DashboardDisplayState.WARNING,
+                "外部Human Gate準備完了",
+                "この画面には実行権限がありません。",
+                "必要な場合は正本の外部実行画面で改めて確認してください。",
+            )
+        elif "EXECUTION_RECEIPT_MISMATCH" in reason_codes:
+            gate_display, gate_label, gate_failure, gate_next = (
+                DashboardDisplayState.UNKNOWN,
+                "外部結果照合不能",
+                reason_ja,
+                "正本の外部結果を照合してください。自動再実行は禁止です。",
+            )
+        elif gate_decision == "RESULT_RECORDED":
+            gate_display, gate_label, gate_failure, gate_next = (
+                DashboardDisplayState.SUCCESS,
+                "外部結果記録済み",
+                reason_ja,
+                "正本の外部結果を確認してください。自動再実行は行いません。",
+            )
+        else:
+            gate_display, gate_label, gate_failure, gate_next = (
+                DashboardDisplayState.WARNING,
+                "ブロック中",
+                reason_ja,
+                "正本の操作候補と人間確認を確認してください。",
+            )
+
+        confirmation = operation.confirmation
+        if confirmation is None:
+            confirmation_display, confirmation_label, confirmation_failure = (
+                DashboardDisplayState.WARNING,
+                "人間確認なし",
+                "外部実行に必要な人間確認がありません。",
+            )
+        else:
+            confirmation_data = confirmation.to_dict()
+            decision = confirmation_data["decision"]
+            if decision == "REJECT":
+                confirmation_display, confirmation_label, confirmation_failure = (
+                    DashboardDisplayState.WARNING,
+                    "人間が却下",
+                    "人間判断により外部実行できません。",
+                )
+            elif decision == "REVISE":
+                confirmation_display, confirmation_label, confirmation_failure = (
+                    DashboardDisplayState.WARNING,
+                    "修正依頼",
+                    "人間判断により操作候補の修正が必要です。",
+                )
+            elif "HUMAN_CONFIRMATION_MISMATCH_OR_EXPIRED" in reason_codes:
+                confirmation_display, confirmation_label, confirmation_failure = (
+                    DashboardDisplayState.WARNING,
+                    "再確認が必要",
+                    "人間確認が不一致または期限切れです。",
+                )
+            elif decision == "APPROVE":
+                confirmation_display, confirmation_label, confirmation_failure = (
+                    DashboardDisplayState.SUCCESS,
+                    "人間承認済み",
+                    "なし",
+                )
+            else:
+                confirmation_display, confirmation_label, confirmation_failure = (
+                    DashboardDisplayState.UNKNOWN,
+                    "確認不能",
+                    "人間確認の正本状態を確定できません。",
+                )
+
+        external_mapping = {
+            "NOT_DISPATCHED": (
+                DashboardDisplayState.EMPTY,
+                "未実行",
+                "なし",
+                "この画面から外部実行は開始できません。",
+            ),
+            "ACCEPTED": (
+                DashboardDisplayState.SUCCESS,
+                "外部で受理済み",
+                "なし",
+                "正本の永続化済み結果を確認できます。",
+            ),
+            "REJECTED": (
+                DashboardDisplayState.WARNING,
+                "外部で拒否",
+                "外部ownerが操作を受理しませんでした。",
+                "正本の外部結果を確認してください。",
+            ),
+            "FAILED": (
+                DashboardDisplayState.FAILURE,
+                "外部で失敗",
+                "外部実行が失敗しました。",
+                "正本の外部結果を確認し、再実行を自動化しないでください。",
+            ),
+            "UNKNOWN": (
+                DashboardDisplayState.UNKNOWN,
+                "外部結果不明",
+                "外部実行の結果を確定できません。",
+                "正本で照合してください。自動再実行は禁止です。",
+            ),
+        }
+        external_display, external_label, external_failure, external_next = (
+            external_mapping.get(external_state, external_mapping["UNKNOWN"])
+        )
+        public_location = "非表示（公開状態のみ）"
+        rows = (
+            DashboardRow(
+                row_id="operation-gate-decision",
+                name_ja=_OPERATION_KIND_JAPANESE.get(
+                    str(proposal["operation_kind"]), "正本の操作候補"
+                ),
+                state=gate_display,
+                state_ja=gate_label,
+                failure_reason_ja=gate_failure,
+                next_action_ja=gate_next,
+                artifact_location_ja=public_location,
+                source_owner="TASK-021_CANONICAL_OPERATION",
+            ),
+            DashboardRow(
+                row_id="operation-human-confirmation",
+                name_ja="人間確認",
+                state=confirmation_display,
+                state_ja=confirmation_label,
+                failure_reason_ja=confirmation_failure,
+                next_action_ja="正本のHuman Gateでのみ判断できます。",
+                artifact_location_ja=public_location,
+                source_owner="TASK-021_CANONICAL_OPERATION",
+            ),
+            DashboardRow(
+                row_id="operation-external-result",
+                name_ja="外部結果",
+                state=external_display,
+                state_ja=external_label,
+                failure_reason_ja=external_failure,
+                next_action_ja=external_next,
+                artifact_location_ja=public_location,
+                source_owner="TASK-021_CANONICAL_OPERATION",
+            ),
+        )
+        return DashboardSection(
+            section_id,
+            title,
+            Task021OperationsDashboard._aggregate_state(tuple(row.state for row in rows)),
+            rows,
+            "正本snapshotに一致する操作候補・人間確認・外部結果の公開状態だけを表示します。"
+            "この画面は操作を開始せず、識別子、ハッシュ、時刻、非公開情報を表示しません。",
+        )
+
+    @staticmethod
     def _aggregate_state(states: tuple[DashboardDisplayState, ...]) -> DashboardDisplayState:
         if not states or all(state is DashboardDisplayState.EMPTY for state in states):
             return DashboardDisplayState.EMPTY
@@ -659,6 +938,7 @@ EFFECT_SURFACE = MappingProxyType({
     "canonical_source_mutation": False,
     "job_or_export_execution": False,
     "automatic_repair": False,
+    "dashboard_operation_execution": False,
     "provider_or_model_operation": False,
     "private_media_read": False,
     "audio_scope_included": False,
@@ -668,8 +948,10 @@ EFFECT_SURFACE = MappingProxyType({
 
 __all__ = [
     "CanonicalDashboardReaders",
+    "CanonicalOperationState",
     "CanonicalValidationResult",
     "IntegratedSnapshotReader",
+    "OperationStateReader",
     "DashboardDisplayState",
     "DashboardRow",
     "DashboardSection",

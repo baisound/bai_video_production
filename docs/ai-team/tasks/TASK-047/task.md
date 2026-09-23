@@ -39,6 +39,28 @@
   recording, private audio persistence, encrypted staging acceptance, Dataset
   adoption, Training, stable Release and P-OBS-2 remain separate fresh Gates.
 
+## P-OBS-1B receipt-chain continuation status (2026-09-24)
+
+- R0 source-currentness V1 and transport-integrity V2 body-free schema/parser
+  are hosted-closed through PR #574. The R1 terminal gap map (PR #576) and
+  bounded-attempt freshness decision (PR #578) do not freeze a terminal ABI.
+- Stop-budget/trusted-time ownership boundary (PR #579, main
+  `89c38719cc2158eb26d0e3f48cd1e0a0ba645c32`), writer/completeness
+  proof conditions (PR #580, main
+  `e6557d99d4333f51dee49b6ddb8d4c03ba5e7428`) and pause/acoustic
+  producer-limit boundary (PR #581, main
+  `ecd6e57f059177b941b317ca0de42d736736d8b8`) are hosted-complete
+  **design-only** units. PR #580 and #581 each passed 9/9 same-head hosted
+  checks and final independent Critic `0/0/0/0`.
+- The R1 ABI, producer and native proof are **not complete**. Trusted-time
+  producer ownership, finite `B/G`, accepted-to-written accounting,
+  packetless failure record, source-frame cursor and drained pause barrier,
+  acoustic coverage, readback/failure nullability and the remaining terminal
+  matrix still require exact allocation and verification. No R1 receipt
+  issuance, TASK-082 custody, Asset/Dataset adoption, TASK-098 A5 admission,
+  Owner voice-model Product activation or Production use follows from these
+  design closures.
+
 ## Goal
 
 Provide the minimum auditable OBS capture path required before production

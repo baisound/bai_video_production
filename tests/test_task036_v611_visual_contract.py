@@ -771,17 +771,20 @@ def test_quick_projects_persisted_task042_intents_without_execution() -> None:
 
 def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
     for marker in (
-        "`${row.stage} · ${row.job_id}`",
-        "row.progress_value===null||row.progress_value===undefined?row.progress_kind",
+        "EXPORT_STAGE_COPY",
+        "row.progress_value===null||row.progress_value===undefined?EXPORT_STAGE_PROGRESS",
+        "Job: ${row.job_id}",
         "Operation: ${row.operation_identity}",
-        "Safe cancel: ${row.safe_cancel?'YES':'NO'}",
-        "Individual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}",
+        "Recovery: ${(row.recovery_actions||[]).join(', ')||'NONE'}",
+        "Evidence: ${row.evidence_ref||'NONE'}",
         "if(row.individual_confirmation_required)",
-        "このJobを個別確認して実行",
+        "書き出しを開始",
         "const EXPORT_SAFE_ERROR='書き出し操作の結果を確認できませんでした。状態を再読込してください。'",
         "const exportDispatchInFlight=new Set()",
         "if(exportDispatchInFlight.has(row.job_id))return",
         "export_queue_preflight',{job_id:row.job_id}",
+        "export_queue_retry_preflight',{job_id:row.job_id}",
+        "export_queue_open_destination',{job_id:row.job_id}",
         "export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id}",
         "export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id}",
         "const readback=await call('export_queue_snapshot',{},EXPORT_SAFE_ERROR)",
@@ -791,13 +794,13 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
         "current?.evidence_ref||'未確認'",
         "書き出し状態の再読込: ${current?.stage||'UNKNOWN'}",
         "if(row.safe_cancel)",
-        "安全にCancel",
+        "キャンセル",
         "expected_state_version:row.state_version",
         "final_review_export_cancel',{confirmation_id:prepared.confirmation_id}",
         "if(preparation?.state==='EXISTING_EXPORT_JOB')",
-        "Durable Export Job: ${preparation.job_id}",
-        "Target: ${preparation.target_identity}",
-        "State version: ${preparation.state_version}",
+        "この編集内容の書き出しは準備済みです。",
+        "出力: ${preparation.target_identity}",
+        "状態: ${EXPORT_STAGE_COPY[preparation.existing_job_state]",
     ):
         assert marker in SHELL_HTML
 
@@ -805,7 +808,7 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
 def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
     for marker in (
         "if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue",
-        "QUEUEDはprivate preflight、READYはJob単位のHuman確認後だけ実行します。",
+        "各Jobを事前確認し、1件ずつ明示確認して実行します。",
         "UNKNOWNは自動再実行しません。",
         "host path persisted: NO",
     ):

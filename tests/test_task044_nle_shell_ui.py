@@ -468,10 +468,12 @@ def test_nle_runtime_guard_runs_for_cached_controller_and_rejects_invalid_bindin
         (shell.interactive_timeline_cancel_edit, {}),
         (shell.export_queue_snapshot, {}),
         (shell.export_queue_preflight, {}),
+        (shell.export_queue_retry_preflight, {}),
         (shell.export_queue_prepare_dispatch, {}),
         (shell.export_queue_apply_dispatch, {}),
         (shell.export_queue_cancel_dispatch, {}),
         (shell.export_queue_cancel, {}),
+        (shell.export_queue_open_destination, {}),
     ):
         with pytest.raises(ProductError) as exc:
             operation(args)
@@ -518,6 +520,7 @@ def test_html_wires_dynamic_nle_without_javascript_durable_store() -> None:
 def test_html_wires_export_rows_and_accessibility_responsive_contracts() -> None:
     for marker in ('id="exportWorkspace"', "export_queue_snapshot",
                    "export_queue_preflight", "export_queue_prepare_dispatch",
+                   "export_queue_retry_preflight", "export_queue_open_destination",
                    "export_queue_apply_dispatch", "export_queue_cancel_dispatch",
                    "export_queue_cancel",
                    "export_queue_reconcile", "ACCEPT_PROVEN_SUCCESS",
@@ -527,3 +530,15 @@ def test_html_wires_export_rows_and_accessibility_responsive_contracts() -> None
         assert marker in HTML
     assert "blanket Execute All: NO" in HTML
     assert "host path persisted: NO" in HTML
+    for marker in (
+        'id="exportJourney"',
+        'data-export-step="source"',
+        'data-export-step="result"',
+        "編集内容を確認",
+        "事前確認を開始",
+        "書き出しを開始",
+        "保存先を開く",
+        "設定を確認して再試行",
+        "scheduleExportRefresh",
+    ):
+        assert marker in HTML

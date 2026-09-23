@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from importlib import resources
 import json
+import re
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -20,6 +21,12 @@ from jsonschema import Draft202012Validator
 SCHEMA_NAME = "task047-capture-source-transport-receipts.schema.json"
 MAX_WIRE_BYTES = 64 * 1024
 STRUCTURAL_ASSESSMENT = "STRUCTURAL_VALID_ONLY"
+_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,99}", re.ASCII)
+_HASH_RE = re.compile(r"[0-9a-f]{64}", re.ASCII)
+_ID_FIELDS = (
+    "project_id", "recording_session_id", "segment_attempt_id",
+    "operation_id", "idempotency_key", "capture_job_id",
+)
 _DOMAINS = {
     "CaptureSourceCurrentnessReceiptV1": b"TASK047_CAPTURE_SOURCE_CURRENTNESS_V1\0INITIAL\0",
     "CaptureTransportIntegrityReceiptV2": b"TASK047_CAPTURE_TRANSPORT_INTEGRITY_V2\0",
@@ -135,6 +142,16 @@ def _validate_record(record: dict[str, Any]) -> ParsedCaptureReceipt:
     if type(record_type) is not str or record_type not in _DOMAINS:
         _fail("UNSUPPORTED_VERSION")
     if next(_VALIDATOR.iter_errors(record), None) is not None:
+        _fail("INVALID_SHAPE")
+    if any(type(key) is not str for key in record):
+        _fail("INVALID_SHAPE")
+    if any(_ID_RE.fullmatch(record[field]) is None for field in _ID_FIELDS):
+        _fail("INVALID_SHAPE")
+    if any(
+        _HASH_RE.fullmatch(value) is None
+        for key, value in record.items()
+        if key.endswith("_sha256") and value is not None
+    ):
         _fail("INVALID_SHAPE")
     integer_fields = (
         _SOURCE_INTEGER_FIELDS

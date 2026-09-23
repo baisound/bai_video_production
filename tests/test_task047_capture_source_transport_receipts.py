@@ -121,6 +121,30 @@ def test_schema_is_valid_and_mirror_is_byte_identical() -> None:
     packaged = resources.files("ai_video_production.schema_resources").joinpath(SCHEMA_NAME).read_bytes()
     assert canonical == packaged
     Draft202012Validator.check_schema(json.loads(canonical))
+    assert Draft202012Validator(json.loads(canonical)).is_valid(_source())
+
+
+@pytest.mark.parametrize("field", [
+    "project_id", "source_binding_sha256", "consent_evaluation_sha256", "receipt_sha256",
+])
+@pytest.mark.parametrize("terminator", ["\n", "\r", "\u2028"])
+def test_schema_and_parser_reject_trailing_line_terminator(field: str, terminator: str) -> None:
+    schema = json.loads((ROOT / "schemas" / SCHEMA_NAME).read_text(encoding="utf-8"))
+    source = _source()
+    source[field] += terminator
+    if field != "receipt_sha256":
+        source = _with_digest(source)
+    assert not Draft202012Validator(schema).is_valid(source)
+    _assert_code(_wire(source), "INVALID_SHAPE")
+
+
+def test_transport_reference_rejects_trailing_line_terminator() -> None:
+    schema = json.loads((ROOT / "schemas" / SCHEMA_NAME).read_text(encoding="utf-8"))
+    transport = _transport()
+    transport["source_receipt_sha256"] += "\n"
+    transport = _with_digest(transport)
+    assert not Draft202012Validator(schema).is_valid(transport)
+    _assert_code(_wire(transport), "INVALID_SHAPE")
 
 
 def test_valid_pair_is_structural_only_and_digest_is_independently_recomputed() -> None:

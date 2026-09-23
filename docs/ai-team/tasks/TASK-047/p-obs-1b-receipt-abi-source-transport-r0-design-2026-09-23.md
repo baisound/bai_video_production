@@ -59,7 +59,10 @@ Asset store, packaging, installer, Release, Deploy or Production paths.
   `created_at <= observed_at < fresh_until`. Parsing them is necessary for
   ordering, but local wall time never establishes currentness.
 - IDs are ASCII `[A-Za-z0-9][A-Za-z0-9._:-]{0,99}`. The parser never accepts
-  filesystem paths, audio bodies or private source identifiers.
+  filesystem paths, audio bodies or private source identifiers. Schema patterns
+  use an explicit end-of-input assertion, and the parser independently uses
+  full matches, so a trailing line terminator cannot be accepted by `$` anchor
+  semantics.
 - Canonical digest preimage excludes `receipt_sha256`. Serialize with UTF-8,
   recursively sorted object keys, compact separators, no ASCII escaping and
   no non-finite number. Prefix with the exact domain bytes below, then SHA-256:
@@ -68,9 +71,9 @@ Asset store, packaging, installer, Release, Deploy or Production paths.
 - The source receipt has null predecessor. The transport receipt's predecessor
   is the exact source receipt digest; its `source_receipt_sha256` equals that
   same digest. All other common lineage identities must match byte for byte.
-The transport creation cannot precede source observation, and its freshness
-cannot extend beyond source freshness. This remains structural ordering, not
-a current-time admission decision.
+- The transport creation cannot precede source observation, and its freshness
+  cannot extend beyond source freshness. This remains structural ordering, not
+  a current-time admission decision.
 
 `CaptureSourceCurrentnessReceiptV1` adds exactly:
 

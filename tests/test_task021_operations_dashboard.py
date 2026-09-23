@@ -33,6 +33,8 @@ from ai_video_production.integrated_dashboard_operations import (
     DashboardIncidentReadModel,
     DashboardJobReadModel,
     DashboardOperationProposalRevision,
+    DashboardProjectionPolicyRevision,
+    DashboardQueryIntent,
     DashboardSourceBinding,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
@@ -43,6 +45,7 @@ from ai_video_production.task021_operations_dashboard import (
     CanonicalDashboardReaders,
     CanonicalJobEvidenceState,
     CanonicalOperationState,
+    CanonicalProjectionContextState,
     CanonicalSourceBindingState,
     CanonicalValidationResult,
     DashboardDisplayState,
@@ -61,6 +64,7 @@ T2 = "2026-09-22T01:00:00Z"
 H1 = "sha256:" + "1" * 64
 H2 = "sha256:" + "2" * 64
 H3 = "sha256:" + "3" * 64
+H4 = "sha256:" + "4" * 64
 
 
 def job(kind: str = "LOCAL_ANALYSIS", state: DurableProductJobState = DurableProductJobState.QUEUED) -> DurableProductJob:
@@ -158,14 +162,17 @@ def integrated_snapshot(
     job_hashes: tuple[str, ...] = (),
     evidence_hashes: tuple[str, ...] = (),
     source_hashes: tuple[str, ...] = (H3,),
+    policy_hash: str = H1,
+    query_hash: str = H2,
+    generated_at: str = T1,
 ) -> IntegratedDashboardSnapshotRevision:
     return IntegratedDashboardSnapshotRevision.create(
         snapshot_id="task021-integrated-snapshot",
         revision=1,
         parent_record_sha256=None,
         project_id=project_id,
-        policy_sha256=H1,
-        query_sha256=H2,
+        policy_sha256=policy_hash,
+        query_sha256=query_hash,
         source_binding_hashes=sorted(source_hashes),
         job_view_hashes=sorted(job_hashes),
         evidence_view_hashes=sorted(evidence_hashes),
@@ -174,11 +181,46 @@ def integrated_snapshot(
         coverage_state=coverage_state,
         snapshot_state=snapshot_state,
         source_watermark_sha256=H1,
-        generated_at=T1,
+        generated_at=generated_at,
         body_included=False,
         private_detail_included=False,
         effect_started_by_dashboard=False,
     )
+
+
+def projection_policy(**overrides) -> DashboardProjectionPolicyRevision:
+    fields = dict(
+        policy_id="private-projection-policy-id",
+        revision=1,
+        parent_record_sha256=None,
+        max_source_age_seconds=3600,
+        max_page_size=100,
+        max_sources=10,
+        max_items=20,
+        max_alerts=10,
+        max_incidents=10,
+        authority_ref="private-policy-authority",
+        authority_sha256=H4,
+        effective_at=T0,
+        expires_at=None,
+    )
+    fields.update(overrides)
+    return DashboardProjectionPolicyRevision.create(**fields)
+
+
+def dashboard_query(**overrides) -> DashboardQueryIntent:
+    fields = dict(
+        query_id="private-dashboard-query-id",
+        project_id=PROJECT_ID,
+        source_kinds=["DURABLE_JOB"],
+        state_filters=["FAILED", "RUNNING"],
+        page_size=100,
+        cursor_sha256=H4,
+        sort_order="UPDATED_AT_DESC",
+        body_included=False,
+    )
+    fields.update(overrides)
+    return DashboardQueryIntent.create(**fields)
 
 
 def source_binding(
@@ -1387,6 +1429,239 @@ def test_job_evidence_state_reads_once_and_aggregates_without_identity_leak() ->
     assert "公開状態 1" not in html and "公開状態 2" not in html
 
 
+def test_projection_context_reads_once_and_exposes_only_verified_public_state() -> None:
+    policy = projection_policy()
+    query = dashboard_query()
+    canonical = integrated_snapshot(
+        policy_hash=policy.record_sha256,
+        query_hash=query.record_sha256,
+    )
+    calls = {"snapshot": 0, "context": 0}
+
+    def read_snapshot() -> IntegratedDashboardSnapshotRevision:
+        calls["snapshot"] += 1
+        return canonical
+
+    def read_context() -> CanonicalProjectionContextState:
+        calls["context"] += 1
+        return CanonicalProjectionContextState(policy, query, T1)
+
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_snapshot,
+            read_projection_context_state=read_context,
+        ),
+    ).refresh()
+    section = snapshot.section("projection-context")
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert calls == {"snapshot": 1, "context": 1}
+    assert section.state is DashboardDisplayState.SUCCESS
+    assert tuple(row.row_id for row in section.rows) == (
+        "projection-policy-currentness",
+        "projection-query-binding",
+    )
+    assert tuple(row.state_ja for row in section.rows) == (
+        "確認時点で有効",
+        "正本snapshotと一致",
+    )
+    assert all(not row.operation_available for row in section.rows)
+    for private_value in (
+        "private-projection-policy-id",
+        "private-policy-authority",
+        "private-dashboard-query-id",
+        policy.record_sha256,
+        query.record_sha256,
+        H4,
+        T0,
+        T1,
+        "DURABLE_JOB",
+        "FAILED",
+        "RUNNING",
+        "UPDATED_AT_DESC",
+    ):
+        assert private_value not in html
+
+
+def test_projection_context_reports_expired_policy_without_exposing_expiry() -> None:
+    policy = projection_policy(expires_at=T2)
+    query = dashboard_query()
+    canonical = integrated_snapshot(
+        policy_hash=policy.record_sha256,
+        query_hash=query.record_sha256,
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_projection_context_state=lambda: CanonicalProjectionContextState(
+                policy, query, T2
+            ),
+        ),
+    ).refresh()
+    section = snapshot.section("projection-context")
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert section.state is DashboardDisplayState.WARNING
+    assert section.rows[0].state_ja == "確認時点で期限切れ"
+    assert section.rows[1].state is DashboardDisplayState.SUCCESS
+    assert T2 not in html
+
+
+def test_projection_context_mismatch_and_policy_limit_violations_fail_closed() -> None:
+    base_policy = projection_policy()
+    base_query = dashboard_query()
+    foreign_query = dashboard_query(project_id="PRJ-FOREIGN")
+    small_page_policy = projection_policy(max_page_size=10)
+    large_query = dashboard_query(page_size=11)
+    future_policy = projection_policy(effective_at=T2)
+    small_source_policy = projection_policy(max_sources=1)
+
+    cases = (
+        (
+            integrated_snapshot(
+                policy_hash=H1,
+                query_hash=base_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(base_policy, base_query, T1),
+        ),
+        (
+            integrated_snapshot(
+                policy_hash=base_policy.record_sha256,
+                query_hash=H2,
+            ),
+            CanonicalProjectionContextState(base_policy, base_query, T1),
+        ),
+        (
+            integrated_snapshot(
+                policy_hash=base_policy.record_sha256,
+                query_hash=foreign_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(base_policy, foreign_query, T1),
+        ),
+        (
+            integrated_snapshot(
+                policy_hash=small_page_policy.record_sha256,
+                query_hash=large_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(small_page_policy, large_query, T1),
+        ),
+        (
+            integrated_snapshot(
+                policy_hash=future_policy.record_sha256,
+                query_hash=base_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(future_policy, base_query, T2),
+        ),
+        (
+            integrated_snapshot(
+                source_hashes=(H3, H4),
+                policy_hash=small_source_policy.record_sha256,
+                query_hash=base_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(small_source_policy, base_query, T1),
+        ),
+        (
+            integrated_snapshot(
+                policy_hash=base_policy.record_sha256,
+                query_hash=base_query.record_sha256,
+            ),
+            CanonicalProjectionContextState(base_policy, base_query, T0),
+        ),
+    )
+
+    for canonical, context in cases:
+        snapshot = Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda canonical=canonical: canonical,
+                read_projection_context_state=lambda context=context: context,
+            ),
+        ).refresh()
+        section = snapshot.section("projection-context")
+        assert section.state is DashboardDisplayState.FAILURE
+        assert len(section.rows) == 1
+        assert section.rows[0].row_id == "projection-context-read-error"
+
+
+def test_projection_context_checks_selected_source_kinds_when_available() -> None:
+    binding = source_binding()
+    policy = projection_policy()
+    query = dashboard_query(source_kinds=["EVIDENCE"])
+    canonical = integrated_snapshot(
+        source_hashes=(binding.record_sha256,),
+        policy_hash=policy.record_sha256,
+        query_hash=query.record_sha256,
+    )
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_source_binding_state=lambda: CanonicalSourceBindingState((binding,)),
+            read_projection_context_state=lambda: CanonicalProjectionContextState(
+                policy, query, T1
+            ),
+        ),
+    ).refresh()
+
+    assert snapshot.section("source-bindings").state is DashboardDisplayState.SUCCESS
+    assert snapshot.section("projection-context").state is DashboardDisplayState.FAILURE
+
+
+def test_projection_context_private_failure_and_corruption_are_redacted() -> None:
+    private_value = r"C:\private\secret-token"
+    policy = projection_policy()
+    query = dashboard_query()
+    canonical = integrated_snapshot(
+        policy_hash=policy.record_sha256,
+        query_hash=query.record_sha256,
+    )
+    corrupt = DashboardProjectionPolicyRevision({"private_body": private_value})
+
+    def private_failure() -> CanonicalProjectionContextState:
+        raise RuntimeError(private_value)
+
+    for reader in (
+        private_failure,
+        lambda: CanonicalProjectionContextState(corrupt, query, T1),
+        lambda: CanonicalProjectionContextState(policy, query, "not-a-time"),
+        lambda: None,
+        lambda: "not-context",
+    ):
+        snapshot = Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_projection_context_state=reader,  # type: ignore[arg-type]
+            ),
+        ).refresh()
+        html = render_accessible_dashboard_html(snapshot)
+        assert snapshot.section("projection-context").state is DashboardDisplayState.FAILURE
+        assert private_value not in html
+        assert "secret-token" not in html
+
+
 def test_source_binding_state_reads_once_and_aggregates_without_identity_leak() -> None:
     first = source_binding()
     second = source_binding(
@@ -1830,6 +2105,7 @@ def test_corrupt_integrated_snapshot_fails_all_dependent_sections_closed() -> No
             read_attention_state=lambda: CanonicalAttentionState((), ()),
             read_job_evidence_state=lambda: CanonicalJobEvidenceState((), ()),
             read_source_binding_state=lambda: CanonicalSourceBindingState(()),
+            read_projection_context_state=lambda: None,
         ),
     ).refresh()
     html = render_accessible_dashboard_html(snapshot)
@@ -1842,6 +2118,7 @@ def test_corrupt_integrated_snapshot_fails_all_dependent_sections_closed() -> No
         "canonical-jobs",
         "canonical-evidence",
         "source-bindings",
+        "projection-context",
     ):
         assert snapshot.section(section_id).state is DashboardDisplayState.FAILURE
     assert private_value not in html

@@ -9,6 +9,7 @@ Product Job collection, not a second queue.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from html import escape
 import re
@@ -34,6 +35,8 @@ from .integrated_dashboard_operations import (
     DashboardIncidentState,
     DashboardJobReadModel,
     DashboardOperationProposalRevision,
+    DashboardProjectionPolicyRevision,
+    DashboardQueryIntent,
     DashboardSnapshotState,
     DashboardSourceBinding,
     DurableJobViewState,
@@ -90,6 +93,18 @@ def _public_ref(value: str, name: str) -> str:
     ):
         raise ValueError(f"{name} violates the public-only dashboard boundary")
     return value
+
+
+def _utc_instant(value: str, name: str) -> datetime:
+    if not isinstance(value, str) or not value.endswith("Z"):
+        raise ValueError(f"{name} must be UTC RFC3339")
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as exc:
+        raise ValueError(f"{name} must be UTC RFC3339") from exc
+    if parsed.utcoffset() is None or parsed.utcoffset().total_seconds() != 0:
+        raise ValueError(f"{name} must be UTC RFC3339")
+    return parsed
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +237,18 @@ SourceBindingStateReader = Callable[[], CanonicalSourceBindingState | None]
 
 
 @dataclass(frozen=True, slots=True)
+class CanonicalProjectionContextState:
+    """Exact policy and query records used by the canonical snapshot."""
+
+    policy: DashboardProjectionPolicyRevision
+    query: DashboardQueryIntent
+    evaluated_at: str
+
+
+ProjectionContextStateReader = Callable[[], CanonicalProjectionContextState | None]
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalDashboardReaders:
     """Injected read ports owned outside TASK-021; no callback may be a writer."""
 
@@ -234,6 +261,7 @@ class CanonicalDashboardReaders:
     read_attention_state: AttentionStateReader | None = None
     read_job_evidence_state: JobEvidenceStateReader | None = None
     read_source_binding_state: SourceBindingStateReader | None = None
+    read_projection_context_state: ProjectionContextStateReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -378,6 +406,12 @@ class Task021OperationsDashboard:
         if self.readers.read_source_binding_state is not None:
             source_binding_state, source_binding_state_error = self._safe_read(
                 self.readers.read_source_binding_state
+            )
+        projection_context_state: object | None = None
+        projection_context_state_error = False
+        if self.readers.read_projection_context_state is not None:
+            projection_context_state, projection_context_state_error = self._safe_read(
+                self.readers.read_projection_context_state
             )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
@@ -641,6 +675,109 @@ class Task021OperationsDashboard:
                     else:
                         source_binding_values = validated_bindings
 
+        projection_policy_state: str | None = None
+        if self.readers.read_projection_context_state is not None:
+            if not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                projection_context_state_error = True
+            elif projection_context_state is None:
+                projection_context_state_error = True
+            elif not isinstance(
+                projection_context_state, CanonicalProjectionContextState
+            ):
+                projection_context_state_error, projection_context_state = True, None
+            elif (
+                not isinstance(
+                    projection_context_state.policy,
+                    DashboardProjectionPolicyRevision,
+                )
+                or not isinstance(
+                    projection_context_state.query,
+                    DashboardQueryIntent,
+                )
+                or not isinstance(projection_context_state.evaluated_at, str)
+            ):
+                projection_context_state_error = True
+            else:
+                try:
+                    policy = DashboardProjectionPolicyRevision.from_dict(
+                        projection_context_state.policy.to_dict()
+                    )
+                    query = DashboardQueryIntent.from_dict(
+                        projection_context_state.query.to_dict()
+                    )
+                    snapshot_data = integrated_snapshot.to_dict()
+                    policy_data = policy.to_dict()
+                    query_data = query.to_dict()
+                    evaluated_at = _utc_instant(
+                        projection_context_state.evaluated_at,
+                        "evaluated_at",
+                    )
+                    generated_at = _utc_instant(
+                        snapshot_data["generated_at"],
+                        "generated_at",
+                    )
+                    effective_at = _utc_instant(
+                        policy_data["effective_at"],
+                        "effective_at",
+                    )
+                    expires_at = (
+                        _utc_instant(policy_data["expires_at"], "expires_at")
+                        if policy_data["expires_at"] is not None
+                        else None
+                    )
+                    if snapshot_data["policy_sha256"] != policy.record_sha256:
+                        raise ValueError("snapshot policy does not match")
+                    if snapshot_data["query_sha256"] != query.record_sha256:
+                        raise ValueError("snapshot query does not match")
+                    if query_data["project_id"] != self.project_id:
+                        raise ValueError("query project does not match")
+                    if query_data["page_size"] > policy_data["max_page_size"]:
+                        raise ValueError("query page size exceeds policy")
+                    if generated_at < effective_at or (
+                        expires_at is not None and generated_at >= expires_at
+                    ):
+                        raise ValueError("policy was not effective for the snapshot")
+                    if evaluated_at < generated_at:
+                        raise ValueError("evaluation predates the snapshot")
+                    if len(snapshot_data["source_binding_hashes"]) > policy_data[
+                        "max_sources"
+                    ]:
+                        raise ValueError("snapshot exceeds source cap")
+                    if (
+                        len(snapshot_data["job_view_hashes"])
+                        + len(snapshot_data["evidence_view_hashes"])
+                        > policy_data["max_items"]
+                    ):
+                        raise ValueError("snapshot exceeds item cap")
+                    if len(snapshot_data["alert_hashes"]) > policy_data["max_alerts"]:
+                        raise ValueError("snapshot exceeds alert cap")
+                    if (
+                        len(snapshot_data["incident_view_hashes"])
+                        > policy_data["max_incidents"]
+                    ):
+                        raise ValueError("snapshot exceeds incident cap")
+                    if self.readers.read_source_binding_state is not None:
+                        if source_binding_state_error:
+                            raise ValueError("source bindings are not verified")
+                        selected_kinds = set(query_data["source_kinds"])
+                        if any(
+                            item.to_dict()["source_kind"] not in selected_kinds
+                            for item in source_binding_values
+                        ):
+                            raise ValueError("source kind is outside the query")
+                    projection_policy_state = (
+                        "EXPIRED"
+                        if expires_at is not None and evaluated_at >= expires_at
+                        else "CURRENT"
+                    )
+                    projection_context_state = CanonicalProjectionContextState(
+                        policy,
+                        query,
+                        projection_context_state.evaluated_at,
+                    )
+                except Exception:
+                    projection_context_state_error = True
+
         sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
             self._assets_section(asset_values, assets_error),
@@ -655,6 +792,18 @@ class Task021OperationsDashboard:
                     if isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
                     else None,
                     integrated_snapshot_error,
+                )
+            )
+        if self.readers.read_projection_context_state is not None:
+            sections.append(
+                self._projection_context_section(
+                    projection_context_state
+                    if isinstance(
+                        projection_context_state, CanonicalProjectionContextState
+                    )
+                    else None,
+                    projection_policy_state,
+                    projection_context_state_error,
                 )
             )
         if self.readers.read_source_binding_state is not None:
@@ -980,6 +1129,65 @@ class Task021OperationsDashboard:
             rows,
             "正本スナップショットの公開状態だけを表示します。"
             "識別子、ハッシュ、時刻、非公開情報は表示しません。",
+        )
+
+    @staticmethod
+    def _projection_context_section(
+        state: CanonicalProjectionContextState | None,
+        policy_state: str | None,
+        failed: bool,
+    ) -> DashboardSection:
+        section_id = "projection-context"
+        title = "表示条件"
+        if failed or state is None or policy_state not in {"CURRENT", "EXPIRED"}:
+            return Task021OperationsDashboard._failed_section(
+                section_id,
+                title,
+                "正本snapshotに一致する表示条件を安全に確認できませんでした。",
+            )
+
+        if policy_state == "EXPIRED":
+            policy_display = DashboardDisplayState.WARNING
+            policy_label = "確認時点で期限切れ"
+            policy_reason = "表示ルールの期限が切れています。"
+            policy_action = "正本の表示ルールを更新してから再確認してください。"
+        else:
+            policy_display = DashboardDisplayState.SUCCESS
+            policy_label = "確認時点で有効"
+            policy_reason = "なし"
+            policy_action = "正本の表示ルールを確認できます。"
+
+        rows = (
+            DashboardRow(
+                row_id="projection-policy-currentness",
+                name_ja="表示ルール",
+                state=policy_display,
+                state_ja=policy_label,
+                failure_reason_ja=policy_reason,
+                next_action_ja=policy_action,
+                artifact_location_ja="非表示（公開状態のみ）",
+                source_owner="TASK-021_CANONICAL_PROJECTION_CONTEXT",
+            ),
+            DashboardRow(
+                row_id="projection-query-binding",
+                name_ja="表示範囲",
+                state=DashboardDisplayState.SUCCESS,
+                state_ja="正本snapshotと一致",
+                failure_reason_ja="なし",
+                next_action_ja="正本の表示範囲を確認できます。",
+                artifact_location_ja="非表示（公開状態のみ）",
+                source_owner="TASK-021_CANONICAL_PROJECTION_CONTEXT",
+            ),
+        )
+        return DashboardSection(
+            section_id,
+            title,
+            Task021OperationsDashboard._aggregate_state(
+                tuple(row.state for row in rows)
+            ),
+            rows,
+            "正本snapshotに使われた表示ルールと表示範囲の一致だけを表示します。"
+            "識別子、ハッシュ、時刻、件数、選択内容は表示しません。",
         )
 
     @classmethod
@@ -1813,11 +2021,13 @@ __all__ = [
     "CanonicalDashboardReaders",
     "CanonicalJobEvidenceState",
     "CanonicalOperationState",
+    "CanonicalProjectionContextState",
     "CanonicalSourceBindingState",
     "CanonicalValidationResult",
     "IntegratedSnapshotReader",
     "JobEvidenceStateReader",
     "OperationStateReader",
+    "ProjectionContextStateReader",
     "SourceBindingStateReader",
     "DashboardDisplayState",
     "DashboardRow",

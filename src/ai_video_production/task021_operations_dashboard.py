@@ -25,6 +25,7 @@ from .interactive_timeline import InteractiveTimeline
 from .integrated_dashboard_operations import (
     AlertLifecycle,
     AlertSeverity,
+    ContractState,
     CoverageState,
     DashboardAlertClassificationReceipt,
     DashboardEvidenceReadModel,
@@ -34,6 +35,7 @@ from .integrated_dashboard_operations import (
     DashboardJobReadModel,
     DashboardOperationProposalRevision,
     DashboardSnapshotState,
+    DashboardSourceBinding,
     DurableJobViewState,
     EvidenceResultState,
     FreshnessState,
@@ -210,6 +212,16 @@ JobEvidenceStateReader = Callable[[], CanonicalJobEvidenceState | None]
 
 
 @dataclass(frozen=True, slots=True)
+class CanonicalSourceBindingState:
+    """Exact source bindings enumerated by the canonical snapshot."""
+
+    bindings: tuple[DashboardSourceBinding, ...]
+
+
+SourceBindingStateReader = Callable[[], CanonicalSourceBindingState | None]
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalDashboardReaders:
     """Injected read ports owned outside TASK-021; no callback may be a writer."""
 
@@ -221,6 +233,7 @@ class CanonicalDashboardReaders:
     read_operation_state: OperationStateReader | None = None
     read_attention_state: AttentionStateReader | None = None
     read_job_evidence_state: JobEvidenceStateReader | None = None
+    read_source_binding_state: SourceBindingStateReader | None = None
 
 
 _JOB_JAPANESE = MappingProxyType({
@@ -359,6 +372,12 @@ class Task021OperationsDashboard:
         if self.readers.read_job_evidence_state is not None:
             job_evidence_state, job_evidence_state_error = self._safe_read(
                 self.readers.read_job_evidence_state
+            )
+        source_binding_state: object | None = None
+        source_binding_state_error = False
+        if self.readers.read_source_binding_state is not None:
+            source_binding_state, source_binding_state_error = self._safe_read(
+                self.readers.read_source_binding_state
             )
 
         job_collection = jobs if isinstance(jobs, DurableProductJobCollection) else None
@@ -586,6 +605,42 @@ class Task021OperationsDashboard:
                         canonical_job_values = validated_jobs
                         canonical_evidence_values = validated_evidence
 
+        source_binding_values: tuple[DashboardSourceBinding, ...] = ()
+        if self.readers.read_source_binding_state is not None:
+            if not isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision):
+                source_binding_state_error = True
+            elif source_binding_state is None:
+                source_binding_state_error = True
+            elif not isinstance(source_binding_state, CanonicalSourceBindingState):
+                source_binding_state_error, source_binding_state = True, None
+            elif (
+                not isinstance(source_binding_state.bindings, tuple)
+                or not all(
+                    isinstance(item, DashboardSourceBinding)
+                    for item in source_binding_state.bindings
+                )
+            ):
+                source_binding_state_error = True
+            else:
+                try:
+                    validated_bindings = tuple(
+                        DashboardSourceBinding.from_dict(item.to_dict())
+                        for item in source_binding_state.bindings
+                    )
+                    binding_hashes = sorted(
+                        item.record_sha256 for item in validated_bindings
+                    )
+                    snapshot_hashes = integrated_snapshot.to_dict()[
+                        "source_binding_hashes"
+                    ]
+                except Exception:
+                    source_binding_state_error = True
+                else:
+                    if binding_hashes != snapshot_hashes:
+                        source_binding_state_error = True
+                    else:
+                        source_binding_values = validated_bindings
+
         sections = [
             self._jobs_section(job_collection, jobs_error, export_only=False),
             self._assets_section(asset_values, assets_error),
@@ -600,6 +655,12 @@ class Task021OperationsDashboard:
                     if isinstance(integrated_snapshot, IntegratedDashboardSnapshotRevision)
                     else None,
                     integrated_snapshot_error,
+                )
+            )
+        if self.readers.read_source_binding_state is not None:
+            sections.append(
+                self._source_binding_section(
+                    source_binding_values, source_binding_state_error
                 )
             )
         if self.readers.read_job_evidence_state is not None:
@@ -919,6 +980,90 @@ class Task021OperationsDashboard:
             rows,
             "正本スナップショットの公開状態だけを表示します。"
             "識別子、ハッシュ、時刻、非公開情報は表示しません。",
+        )
+
+    @classmethod
+    def _source_binding_section(
+        cls,
+        bindings: tuple[DashboardSourceBinding, ...],
+        failed: bool,
+    ) -> DashboardSection:
+        if failed:
+            return cls._failed_section(
+                "source-bindings",
+                "参照元状態",
+                "正本snapshotに一致する参照元公開状態を安全に読み取れませんでした。",
+            )
+        if not bindings:
+            return cls._failed_section(
+                "source-bindings",
+                "参照元状態",
+                "正本snapshotに必要な参照元bindingを確認できませんでした。",
+            )
+        return cls._section(
+            "source-bindings",
+            "参照元状態",
+            (cls._source_binding_summary_row(bindings),),
+            "正本snapshotに含まれる参照元bindingを件数非開示で集約表示します。"
+            "個別行、種類、識別子、参照、ハッシュ、revision、時刻は表示しません。",
+        )
+
+    @staticmethod
+    def _source_binding_summary_row(
+        bindings: tuple[DashboardSourceBinding, ...],
+    ) -> DashboardRow:
+        records = tuple(item.to_dict() for item in bindings)
+        contracts = tuple(ContractState(item["contract_state"]) for item in records)
+        freshness = tuple(FreshnessState(item["freshness_state"]) for item in records)
+        validity = tuple(FreshnessState(item["validity_state"]) for item in records)
+        current_states = (*freshness, *validity)
+        if ContractState.MISMATCH in contracts:
+            display, label, failure, action = (
+                DashboardDisplayState.FAILURE,
+                "正本結び付け不一致を含む",
+                "参照元と正本の結び付けが一致しない状態を含みます。",
+                "正本source ownerで参照とdigestを照合してください。",
+            )
+        elif any(state is not ContractState.BOUND_VERIFIED for state in contracts):
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "正本結び付け不明を含む",
+                "参照元と正本の結び付けを確定できません。",
+                "正本source ownerでbindingを確認してください。",
+            )
+        elif any(
+            state in {FreshnessState.STALE, FreshnessState.INVALIDATED}
+            for state in current_states
+        ):
+            display, label, failure, action = (
+                DashboardDisplayState.WARNING,
+                "現在値として扱えない状態を含む",
+                "古いまたは無効な参照元状態が含まれます。",
+                "正本source ownerで再観測してください。",
+            )
+        elif FreshnessState.UNKNOWN in current_states:
+            display, label, failure, action = (
+                DashboardDisplayState.UNKNOWN,
+                "鮮度または妥当性不明を含む",
+                "参照元の鮮度または妥当性を確定できません。",
+                "正本source ownerで現在状態を照合してください。",
+            )
+        else:
+            display, label, failure, action = (
+                DashboardDisplayState.SUCCESS,
+                "正本結び付け・現在性を確認済み",
+                "なし",
+                "正本source ownerの現在状態を確認できます。",
+            )
+        return DashboardRow(
+            row_id="source-binding-public-summary",
+            name_ja="参照元公開状態（件数非開示）",
+            state=display,
+            state_ja=label,
+            failure_reason_ja=failure,
+            next_action_ja=action,
+            artifact_location_ja="非表示（公開状態のみ）",
+            source_owner="TASK-021_CANONICAL_SOURCE_BINDING",
         )
 
     @classmethod
@@ -1668,10 +1813,12 @@ __all__ = [
     "CanonicalDashboardReaders",
     "CanonicalJobEvidenceState",
     "CanonicalOperationState",
+    "CanonicalSourceBindingState",
     "CanonicalValidationResult",
     "IntegratedSnapshotReader",
     "JobEvidenceStateReader",
     "OperationStateReader",
+    "SourceBindingStateReader",
     "DashboardDisplayState",
     "DashboardRow",
     "DashboardSection",

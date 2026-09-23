@@ -33,6 +33,7 @@ from ai_video_production.integrated_dashboard_operations import (
     DashboardIncidentReadModel,
     DashboardJobReadModel,
     DashboardOperationProposalRevision,
+    DashboardSourceBinding,
     HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
 )
@@ -42,6 +43,7 @@ from ai_video_production.task021_operations_dashboard import (
     CanonicalDashboardReaders,
     CanonicalJobEvidenceState,
     CanonicalOperationState,
+    CanonicalSourceBindingState,
     CanonicalValidationResult,
     DashboardDisplayState,
     Task021OperationsDashboard,
@@ -155,6 +157,7 @@ def integrated_snapshot(
     alert_hashes: tuple[str, ...] = (),
     job_hashes: tuple[str, ...] = (),
     evidence_hashes: tuple[str, ...] = (),
+    source_hashes: tuple[str, ...] = (H3,),
 ) -> IntegratedDashboardSnapshotRevision:
     return IntegratedDashboardSnapshotRevision.create(
         snapshot_id="task021-integrated-snapshot",
@@ -163,7 +166,7 @@ def integrated_snapshot(
         project_id=project_id,
         policy_sha256=H1,
         query_sha256=H2,
-        source_binding_hashes=[H3],
+        source_binding_hashes=sorted(source_hashes),
         job_view_hashes=sorted(job_hashes),
         evidence_view_hashes=sorted(evidence_hashes),
         incident_view_hashes=sorted(incident_hashes),
@@ -176,6 +179,31 @@ def integrated_snapshot(
         private_detail_included=False,
         effect_started_by_dashboard=False,
     )
+
+
+def source_binding(
+    *,
+    contract_state: str = "BOUND_VERIFIED",
+    freshness: str = "CURRENT",
+    validity: str = "CURRENT",
+    **overrides,
+) -> DashboardSourceBinding:
+    fields = dict(
+        source_id="private-source-id",
+        source_kind="DURABLE_JOB",
+        contract_state=contract_state,
+        source_ref="private-canonical-source-ref",
+        source_sha256=H2,
+        source_revision=1,
+        observed_at=T0,
+        freshness_state=freshness,
+        validity_state=validity,
+        public_projection_only=False,
+        body_included=False,
+        private_path_included=False,
+    )
+    fields.update(overrides)
+    return DashboardSourceBinding.create(**fields)
 
 
 def job_read_model(
@@ -1359,6 +1387,200 @@ def test_job_evidence_state_reads_once_and_aggregates_without_identity_leak() ->
     assert "公開状態 1" not in html and "公開状態 2" not in html
 
 
+def test_source_binding_state_reads_once_and_aggregates_without_identity_leak() -> None:
+    first = source_binding()
+    second = source_binding(
+        source_id="another-private-source-id",
+        source_kind="EVIDENCE",
+        source_ref="another-private-canonical-source-ref",
+        source_sha256=H1,
+    )
+    canonical = integrated_snapshot(
+        snapshot_state="NO_ACTIVE_INCIDENT_PROVEN",
+        coverage_state="COMPLETE",
+        source_hashes=(first.record_sha256, second.record_sha256),
+    )
+    calls = {"snapshot": 0, "bindings": 0}
+
+    def read_snapshot() -> IntegratedDashboardSnapshotRevision:
+        calls["snapshot"] += 1
+        return canonical
+
+    def read_bindings() -> CanonicalSourceBindingState:
+        calls["bindings"] += 1
+        return CanonicalSourceBindingState((first, second))
+
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_snapshot,
+            read_source_binding_state=read_bindings,
+        ),
+    ).refresh()
+    section = snapshot.section("source-bindings")
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert calls == {"snapshot": 1, "bindings": 1}
+    assert section.state is DashboardDisplayState.SUCCESS
+    assert len(section.rows) == 1
+    assert section.rows[0].state_ja == "正本結び付け・現在性を確認済み"
+    assert section.rows[0].operation_available is False
+    for private_value in (
+        "private-source-id",
+        "another-private-source-id",
+        "private-canonical-source-ref",
+        "another-private-canonical-source-ref",
+        first.record_sha256,
+        second.record_sha256,
+        H1,
+        H2,
+        T0,
+        "DURABLE_JOB",
+        "EVIDENCE",
+    ):
+        assert private_value not in html
+    assert "公開状態 1" not in html and "公開状態 2" not in html
+
+
+@pytest.mark.parametrize(
+    ("binding_kwargs", "expected_state", "expected_label"),
+    (
+        (
+            {},
+            DashboardDisplayState.SUCCESS,
+            "正本結び付け・現在性を確認済み",
+        ),
+        (
+            {"contract_state": "MISMATCH"},
+            DashboardDisplayState.FAILURE,
+            "正本結び付け不一致を含む",
+        ),
+        (
+            {
+                "contract_state": "CANONICAL_REF_NOT_PROVIDED",
+                "source_ref": None,
+                "source_sha256": None,
+                "source_revision": None,
+                "observed_at": None,
+                "freshness": "UNKNOWN",
+                "validity": "UNKNOWN",
+            },
+            DashboardDisplayState.UNKNOWN,
+            "正本結び付け不明を含む",
+        ),
+        (
+            {"freshness": "STALE"},
+            DashboardDisplayState.WARNING,
+            "現在値として扱えない状態を含む",
+        ),
+        (
+            {"validity": "INVALIDATED"},
+            DashboardDisplayState.WARNING,
+            "現在値として扱えない状態を含む",
+        ),
+        (
+            {"freshness": "UNKNOWN"},
+            DashboardDisplayState.UNKNOWN,
+            "鮮度または妥当性不明を含む",
+        ),
+        (
+            {"validity": "UNKNOWN"},
+            DashboardDisplayState.UNKNOWN,
+            "鮮度または妥当性不明を含む",
+        ),
+    ),
+)
+def test_source_binding_closed_states_have_public_projection(
+    binding_kwargs: dict[str, object],
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    binding = source_binding(**binding_kwargs)
+    canonical = integrated_snapshot(source_hashes=(binding.record_sha256,))
+    snapshot = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_source_binding_state=lambda: CanonicalSourceBindingState((binding,)),
+        ),
+    ).refresh()
+
+    row = snapshot.section("source-bindings").rows[0]
+    assert row.state is expected_state
+    assert row.state_ja == expected_label
+
+
+def test_source_binding_exact_snapshot_membership_and_absence_fail_closed() -> None:
+    binding = source_binding()
+    foreign = source_binding(
+        source_id="foreign-private-source-id",
+        source_ref="foreign-private-source-ref",
+        source_sha256=H1,
+    )
+    canonical = integrated_snapshot(source_hashes=(binding.record_sha256,))
+
+    def refresh(state) -> object:
+        return Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_source_binding_state=lambda: state,
+            ),
+        ).refresh()
+
+    for invalid_state in (
+        None,
+        CanonicalSourceBindingState(()),
+        CanonicalSourceBindingState((binding, foreign)),
+        CanonicalSourceBindingState((foreign,)),
+        CanonicalSourceBindingState(("not-a-binding",)),  # type: ignore[arg-type]
+    ):
+        assert (
+            refresh(invalid_state).section("source-bindings").state
+            is DashboardDisplayState.FAILURE
+        )
+
+def test_source_binding_private_failure_and_direct_corruption_are_redacted() -> None:
+    private_value = r"C:\private\secret-token"
+    canonical = integrated_snapshot()
+    corrupt = DashboardSourceBinding({"private_body": private_value})
+
+    def private_failure() -> CanonicalSourceBindingState:
+        raise RuntimeError(private_value)
+
+    for reader in (
+        private_failure,
+        lambda: CanonicalSourceBindingState((corrupt,)),
+    ):
+        snapshot = Task021OperationsDashboard(
+            project_id=PROJECT_ID,
+            readers=CanonicalDashboardReaders(
+                read_jobs=jobs,
+                read_assets=lambda: (),
+                read_timeline=lambda: None,
+                read_validation_results=lambda: (),
+                read_integrated_snapshot=lambda: canonical,
+                read_source_binding_state=reader,
+            ),
+        ).refresh()
+        html = render_accessible_dashboard_html(snapshot)
+        assert snapshot.section("source-bindings").state is DashboardDisplayState.FAILURE
+        assert private_value not in html
+        assert "secret-token" not in html
+
+
 @pytest.mark.parametrize(
     ("state", "expected_state", "expected_label"),
     (
@@ -1607,6 +1829,7 @@ def test_corrupt_integrated_snapshot_fails_all_dependent_sections_closed() -> No
             read_operation_state=lambda: None,
             read_attention_state=lambda: CanonicalAttentionState((), ()),
             read_job_evidence_state=lambda: CanonicalJobEvidenceState((), ()),
+            read_source_binding_state=lambda: CanonicalSourceBindingState(()),
         ),
     ).refresh()
     html = render_accessible_dashboard_html(snapshot)
@@ -1618,6 +1841,7 @@ def test_corrupt_integrated_snapshot_fails_all_dependent_sections_closed() -> No
         "alerts",
         "canonical-jobs",
         "canonical-evidence",
+        "source-bindings",
     ):
         assert snapshot.section(section_id).state is DashboardDisplayState.FAILURE
     assert private_value not in html

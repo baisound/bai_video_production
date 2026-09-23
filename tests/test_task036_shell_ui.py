@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
+import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -18,6 +22,161 @@ from ai_video_production.connection_settings_web import ConnectionSettingsWebSer
 from ai_video_production.desktop_shell import ShellApplicationService
 from ai_video_production.errors import ProductError, ProductErrorCategory
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
+from ai_video_production.task036_pre_edit_runtime import (
+    _RUNTIME_CONTROL_EXACT_ROWS,
+    _RUNTIME_CONTROL_KEYS,
+)
+
+
+def test_r2c_shell_has_separate_body_free_control_route():
+    assert 'id="runtimeControlButton"' in HTML
+    assert "prepare_runtime_transcription_control',{}" in HTML
+    assert "apply_runtime_transcription_control',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "cancel_runtime_transcription_control',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "let runtimeControlInFlightEligible=false" in HTML
+    assert "(!runtimeControlInFlightEligible&&!controlAvailable)" in HTML
+    assert "runtimeControlInFlightEligible?'文字起こしをキャンセル'" in HTML
+    assert "(!transcriptionInFlight&&!controlAvailable)" not in HTML
+    assert "transcriptionInFlight?'文字起こしをキャンセル'" not in HTML
+    run_script = HTML[
+        HTML.index("async function runLocalTranscription"):
+        HTML.index("function deterministicPreEditIdentity")
+    ]
+    enable = (
+        "if(v2&&action==='START'){runtimeControlInFlightEligible=true;"
+        "runtimeControlDuringTranscription.disabled=false;"
+        "runtimeControlDuringTranscription.textContent='文字起こしをキャンセル'}"
+    )
+    assert enable in run_script
+    assert run_script.index(enable) < run_script.index("await call(route[1]")
+    assert run_script.index(
+        "finally{transcriptionInFlight=false;runtimeControlInFlightEligible=false"
+    ) > run_script.index("await call(route[1]")
+    assert "if(v2&&action==='START')" in run_script
+    assert "if(action==='START')" not in run_script
+    control_script = HTML[
+        HTML.index("const runtimeControlProjectionKeys="):
+        HTML.index("async function workflowAction")
+    ]
+    assert "workflow_status" not in control_script
+    assert "function isExactRuntimeControlProjection(value)" in control_script
+    assert "function isExactRuntimeControlApplyResult(value)" in control_script
+    assert "if(!value||Array.isArray(value)||typeof value!=='object')return false" in control_script
+    assert "JSON.stringify(Object.keys(value))!==JSON.stringify(runtimeControlProjectionKeys)" in control_script
+    assert "value.control_mode!=='PHASE_ONLY_V1'||value.no_replay!==true" in control_script
+    assert "runtimeControlProjectionRows.has(JSON.stringify(row))" in control_script
+    assert "JSON.stringify(['task_owner','status','transcription_control'])" in control_script
+    assert "if(isExactRuntimeControlApplyResult(applied))notify('文字起こし制御を受け付けました')" in control_script
+    assert "finally{await refreshShell()}" in control_script
+    key_match = re.search(
+        r"const runtimeControlProjectionKeys=(\[.*?\]);const runtimeControlProjectionRows=",
+        control_script,
+    )
+    assert key_match is not None and json.loads(key_match.group(1)) == list(_RUNTIME_CONTROL_KEYS)
+    row_prefix = "const runtimeControlProjectionRows=new Set("
+    row_start = control_script.index(row_prefix) + len(row_prefix)
+    row_end = control_script.index(".map(row=>JSON.stringify(row)));", row_start)
+    embedded_rows = {tuple(row) for row in json.loads(control_script[row_start:row_end])}
+    assert embedded_rows == set(_RUNTIME_CONTROL_EXACT_ROWS)
+    assert control_script.index("try{const applied=await call(") < control_script.index(
+        "if(isExactRuntimeControlApplyResult(applied))"
+    ) < control_script.index("finally{await refreshShell()}")
+    for private_name in (
+        "runtime_operation_id", "slot_operation_id", "source_asset_sha256",
+        "runtime_admission_ref", "expected_attempt", "record_sha256",
+    ):
+        assert private_name not in control_script
+
+
+def test_r2c_shell_javascript_rejects_malformed_apply_results_and_refreshes_once():
+    node = shutil.which("node")
+    assert node is not None, "Node.js is required for the bounded Shell JavaScript contract test"
+    control_script = HTML[
+        HTML.index("const runtimeControlProjectionKeys="):
+        HTML.index("async function workflowAction")
+    ]
+    row = sorted(_RUNTIME_CONTROL_EXACT_ROWS, key=repr)[0]
+    projection = {
+        "control_mode": "PHASE_ONLY_V1",
+        "phase": row[0],
+        "cancel_state": row[1],
+        "adjudication_state": row[2],
+        "available_action": row[3],
+        "status_label": row[4],
+        "provider_execution_started": row[5],
+        "provider_execution_known": row[6],
+        "provider_stop_confirmed": row[7],
+        "stop_evidence": row[8],
+        "slot_release_allowed": row[9],
+        "no_replay": True,
+    }
+    assert tuple(projection) == _RUNTIME_CONTROL_KEYS
+    valid = {
+        "task_owner": "TASK-098",
+        "status": "RUNTIME_TRANSCRIPTION_CONTROL_APPLIED",
+        "transcription_control": projection,
+    }
+    missing_top = dict(valid)
+    missing_top.pop("status")
+    extra_top = dict(valid)
+    extra_top["private"] = "forbidden"
+    missing_nested_projection = dict(projection)
+    missing_nested_projection.pop("stop_evidence")
+    extra_nested_projection = dict(projection)
+    extra_nested_projection["runtime_operation_id"] = "forbidden"
+    wrong_type_projection = dict(projection)
+    wrong_type_projection["provider_execution_started"] = "false"
+    invalid_row_projection = dict(projection)
+    invalid_row_projection["status_label"] = next(
+        candidate[4]
+        for candidate in sorted(_RUNTIME_CONTROL_EXACT_ROWS, key=repr)
+        if candidate[4] != row[4]
+        and tuple((
+            row[0], row[1], row[2], row[3], candidate[4],
+            row[5], row[6], row[7], row[8], row[9],
+        )) not in _RUNTIME_CONTROL_EXACT_ROWS
+    )
+    cases = [
+        {"name": "valid", "value": valid},
+        {"name": "null", "value": None},
+        {"name": "array", "value": []},
+        {"name": "missing-top", "value": missing_top},
+        {"name": "extra-top", "value": extra_top},
+        {"name": "missing-nested", "value": {**valid, "transcription_control": missing_nested_projection}},
+        {"name": "extra-private-nested", "value": {**valid, "transcription_control": extra_nested_projection}},
+        {"name": "wrong-type", "value": {**valid, "transcription_control": wrong_type_projection}},
+        {"name": "invalid-row", "value": {**valid, "transcription_control": invalid_row_projection}},
+        {"name": "throw", "throw": True},
+    ]
+    harness = control_script + (
+        "\nconst cases=" + json.dumps(cases, ensure_ascii=False, separators=(",", ":")) + ";"
+        "let activeCase=null,notificationCount=0,refreshCount=0;"
+        "const window={confirm:()=>true};"
+        "async function call(name,args){"
+        "if(name==='prepare_runtime_transcription_control')return {confirmation_id:'test',status_label:'test',warning:'test'};"
+        "if(name==='apply_runtime_transcription_control'){if(activeCase.throw)throw new Error('synthetic');return activeCase.value;}"
+        "throw new Error('unexpected call')}"
+        "function notify(){notificationCount+=1}"
+        "async function refreshShell(){refreshCount+=1}"
+        "(async()=>{const results=[];for(const item of cases){activeCase=item;notificationCount=0;refreshCount=0;"
+        "try{await runRuntimeTranscriptionControl()}catch(error){}"
+        "results.push({name:item.name,notifications:notificationCount,refreshes:refreshCount})}"
+        "process.stdout.write(JSON.stringify(results))})().catch(error=>{console.error(error);process.exit(1)});"
+    )
+    completed = subprocess.run(
+        [node, "-e", harness],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert completed.returncode == 0, completed.stderr
+    results = json.loads(completed.stdout)
+    assert results[0] == {"name": "valid", "notifications": 1, "refreshes": 1}
+    assert all(
+        result["notifications"] == 0 and result["refreshes"] == 1
+        for result in results[1:]
+    )
 
 
 def test_recording_meter_uses_existing_additive_extension_boundary():
@@ -112,7 +271,7 @@ def test_canonical_write_endpoints_all_have_meter_invalidation_guard():
     bridge = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Task036ShellBridge')
     actual = {node.name for node in bridge.body if isinstance(node, ast.FunctionDef)
               and any(isinstance(item, ast.Name) and item.id == '_meter_write_guarded' for item in node.decorator_list)}
-    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
+    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","verify_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","apply_faster_whisper_model_folder_update","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
     assert actual == set(expected)
 
 
@@ -193,6 +352,16 @@ def test_ui_is_professional_nle_layout_not_chat_first():
     assert "BAI Video Production" in HTML
     assert "window.pywebview.api" in HTML
     assert "chat" not in HTML.lower()
+
+
+def test_v2_transcription_ui_requires_explicit_human_confirmation_and_cancel_route():
+    assert "RUNTIME_MANAGED_V2" in HTML
+    assert "prepare_local_transcription" in HTML
+    assert "confirmation_id:prepared.confirmation_id" in HTML
+    assert "prepared.transcription_status_label" in HTML
+    assert "cancel_local_transcription" in HTML
+    assert "transcription_recovery_required===true" in HTML  # unchanged v1 route remains present
+    assert "workflow.transcription_available_action" in HTML
 
 
 def test_bridge_exposes_snapshot_and_workspace_only():
@@ -677,6 +846,23 @@ def test_html_exposes_allowlisted_post_review_workflow_action():
     assert "execute_native_render" in HTML
     assert "bind_runtime_render_qa" in HTML
     assert "create_editor_handoff" in HTML
+
+
+def test_html_exposes_human_only_universal_wav_review_without_auto_execution():
+    assert 'id="universalWavReviewButton" disabled' in HTML
+    assert 'id="universalWavReviewWaveform"' in HTML
+    assert "universal_wav_review_prepare" in HTML
+    assert "window.confirm" in HTML
+    assert "universal_wav_review_apply',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "waveform_envelope_milli.length<=2048" in HTML
+    assert "canonical_receipt_created===false" in HTML
+    assert "review_completion_claimed===false" in HTML
+    assert "Universal WAV Reviewで確認" in HTML
+    assert "universal_wav_review_select',{candidate_id:item.candidate_id}" in HTML
+    assert "wav_header_read===true" in HTML
+    assert "audio_body_read===false" in HTML
+    assert "playback_started===false" in HTML
+    assert "waveform_render_started===false" in HTML
 
 
 def test_html_has_keyboard_focus_and_screen_reader_landmarks():

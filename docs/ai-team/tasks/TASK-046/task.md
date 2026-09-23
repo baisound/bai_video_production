@@ -1,6 +1,6 @@
 # TASK-046 — Voice Studio / Voice Dataset & Local Voice Profile
 
-- Status: `P_VS_1A_PROFILE_FOUNDATION_HOSTED_CLOSED / P_VS_3A_3B_4A_4B_CONTRACT_FOUNDATION_HOSTED_CLOSED / BEGINNER_CLIENT_UNSIGNED_TECHNICAL_PREVIEW_HOSTED_CLOSED / PRODUCTION_RECORDING_TRAINING_MODEL_AUDIO_GATED`
+- Status: `P_VS_1A_PROFILE_FOUNDATION_HOSTED_CLOSED / P_VS_3A_3B_4A_4B_CONTRACT_FOUNDATION_HOSTED_CLOSED / BEGINNER_CLIENT_UNSIGNED_TECHNICAL_PREVIEW_HOSTED_CLOSED / OWNER_MODEL_PAIR_SELECTED / PUBLIC_RELEASE_CONTRACT_PENDING / PRODUCT_RUNTIME_AUDIO_GATED`
 - Authorization: `HOSTED_CLOSED_BODY_FREE_SYNTHETIC_AND_TECHNICAL_PREVIEW_FOUNDATION / OWNER_VOICE_PRODUCTION_EFFECTS_REQUIRE_FRESH_AUTHORITY`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Exact allocation base: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
@@ -57,6 +57,16 @@ acceptance all remain separate fresh Gates. They require exact runtime/path
 Evidence, current Consent and rights, verified encrypted storage and explicit
 Owner authorization; no merged receipt or Technical Preview artifact is an
 execution capability.
+
+## Owner-selected GPT-SoVITS pair
+
+The Owner confirmed on `2026-09-22` that validation/selection was already
+completed and selected the V2_FRESH e4 SoVITS plus V2_FRESH e15 GPT pair. The
+exact public-safe identities are recorded in
+`owner-model-pair-selection-status-intake-20260922.md` and its Evidence. This
+closes the P-VS-4A Owner pair-selection status only. Public Repository v2.0.0
+modernization, public filename/release finalization, BVP installation/runtime
+admission, narration inference and production use remain separate gates.
 
 ## Product boundaries
 

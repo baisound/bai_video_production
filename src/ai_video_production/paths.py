@@ -5,6 +5,7 @@ import ntpath
 import os
 from pathlib import Path, PureWindowsPath
 import re
+import stat
 from typing import Literal
 
 from .errors import ProductError, ProductErrorCategory
@@ -128,6 +129,62 @@ class LogicalPathResolver:
         if not _is_canonically_contained(root, candidate):
             raise ProductError("ERR_SECURITY_PATH_DENIED", "resolved path escapes allowlisted root", ProductErrorCategory.SECURITY)
         return candidate
+
+    def resolve_existing_regular_file(self, logical_uri: str) -> Path:
+        """Resolve one local logical file while rejecting every symlink component."""
+
+        mapping, relative = self._mapping(logical_uri)
+        configured_root = mapping.wsl_root
+        try:
+            root_status = configured_root.lstat()
+        except OSError as exc:
+            raise ProductError(
+                "ERR_SECURITY_PATH_UNRESOLVED",
+                "configured logical root is unavailable",
+                ProductErrorCategory.SECURITY,
+            ) from exc
+        if stat.S_ISLNK(root_status.st_mode) or not stat.S_ISDIR(root_status.st_mode):
+            raise ProductError(
+                "ERR_SECURITY_PATH_DENIED",
+                "configured logical root must be a regular directory",
+                ProductErrorCategory.SECURITY,
+            )
+        root = configured_root.resolve(strict=True)
+        candidate = configured_root
+        parts = relative.split("/")
+        for index, part in enumerate(parts):
+            candidate = candidate / part
+            try:
+                status = candidate.lstat()
+            except OSError as exc:
+                raise ProductError(
+                    "ERR_INPUT_SOURCE_NOT_FOUND",
+                    "logical file does not exist",
+                    ProductErrorCategory.VALIDATION,
+                ) from exc
+            if stat.S_ISLNK(status.st_mode):
+                raise ProductError(
+                    "ERR_SECURITY_PATH_DENIED",
+                    "logical file path contains a symlink",
+                    ProductErrorCategory.SECURITY,
+                )
+            final = index == len(parts) - 1
+            if (final and not stat.S_ISREG(status.st_mode)) or (
+                not final and not stat.S_ISDIR(status.st_mode)
+            ):
+                raise ProductError(
+                    "ERR_INPUT_SOURCE_NOT_FILE",
+                    "logical file path is not a regular file",
+                    ProductErrorCategory.VALIDATION,
+                )
+        resolved = candidate.resolve(strict=True)
+        if not _is_canonically_contained(root, resolved):
+            raise ProductError(
+                "ERR_SECURITY_PATH_DENIED",
+                "resolved path escapes allowlisted root",
+                ProductErrorCategory.SECURITY,
+            )
+        return resolved
 
 
 @dataclass(frozen=True, slots=True)

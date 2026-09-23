@@ -43,3 +43,41 @@ def test_windows_extended_length_prefix_does_not_relax_containment():
     root = Path(r"C:\Users\user\jobs")
     candidate = Path(r"\\?\C:\Users\user\jobs-escape\file.json")
     assert not _is_canonically_contained(root, candidate, os_name="nt")
+
+
+def test_resolve_existing_regular_file_rejects_symlink_component(tmp_path):
+    root = tmp_path / "assets"
+    job_id = "JOB-" + "0" * 26
+    job = root / job_id
+    target = root / "target"
+    job.mkdir(parents=True)
+    target.mkdir()
+    (target / "source.wav").write_bytes(b"wav")
+    link = job / "source"
+    try:
+        link.symlink_to(target, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    resolver = LogicalPathResolver([PathMapping("asset://", root)])
+    with pytest.raises(ProductError) as exc:
+        resolver.resolve_existing_regular_file(
+            f"asset://{job_id}/source/source.wav"
+        )
+    assert exc.value.code == "ERR_SECURITY_PATH_DENIED"
+
+
+def test_resolve_existing_regular_file_accepts_only_regular_file(tmp_path):
+    root = tmp_path / "assets"
+    job_id = "JOB-" + "0" * 26
+    source = root / job_id / "source" / "source.wav"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"wav")
+    resolver = LogicalPathResolver([PathMapping("asset://", root)])
+    assert resolver.resolve_existing_regular_file(
+        f"asset://{job_id}/source/source.wav"
+    ) == source.resolve(strict=True)
+    with pytest.raises(ProductError) as exc:
+        resolver.resolve_existing_regular_file(
+            f"asset://{job_id}/source"
+        )
+    assert exc.value.code == "ERR_INPUT_SOURCE_NOT_FILE"

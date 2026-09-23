@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/task098-faster-whisper-model-directory.schema.json",
+  "$ref": "#/$defs/inspection",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "file_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size_bytes", "sha256"],
+      "properties": {
+        "name": {
+          "enum": [
+            "config.json",
+            "model.bin",
+            "tokenizer.json",
+            "vocabulary.txt",
+            "vocabulary.json",
+            "preprocessor_config.json"
+          ]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 34359738368
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"name": {"enum": ["config.json", "preprocessor_config.json"]}}},
+          "then": {"properties": {"size_bytes": {"maximum": 4194304}}}
+        },
+        {
+          "if": {"properties": {"name": {"enum": ["tokenizer.json", "vocabulary.txt", "vocabulary.json"]}}},
+          "then": {"properties": {"size_bytes": {"maximum": 134217728}}}
+        },
+        {
+          "if": {"properties": {"name": {"const": "model.bin"}}},
+          "then": {"properties": {"size_bytes": {"maximum": 34359738368}}}
+        }
+      ]
+    },
+    "inspection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "outcome",
+        "reason_codes",
+        "model_id",
+        "required_files_present",
+        "optional_preprocessor_config_present",
+        "private_locator_sha256",
+        "model_manifest_sha256",
+        "files",
+        "model_download_authorized",
+        "model_load_started",
+        "inference_started",
+        "network_used",
+        "execution_authorized",
+        "record_sha256"
+      ],
+      "properties": {
+        "record_type": {"const": "FasterWhisperModelDirectoryInspectionV1"},
+        "schema_version": {"const": "1.0.0"},
+        "outcome": {"enum": ["READY", "BLOCKED"]},
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "MODEL_DIRECTORY_VALID",
+              "PATH_NOT_DIRECTORY",
+              "PATH_ALIAS_UNSAFE",
+              "DIRECTORY_SCAN_FAILED",
+              "DIRECTORY_ENTRY_LIMIT_EXCEEDED",
+              "REQUIRED_FILE_MISSING",
+              "FILE_NOT_REGULAR",
+              "FILE_ALIAS_UNSAFE",
+              "FILE_SIZE_INVALID",
+              "FILE_HASH_INVALID",
+              "VOCABULARY_SET_INVALID",
+              "REQUIRED_JSON_INVALID"
+            ]
+          }
+        },
+        "model_id": {
+          "type": ["string", "null"],
+          "pattern": "^local-model-[0-9a-f]{12}$"
+        },
+        "required_files_present": {"type": "boolean"},
+        "optional_preprocessor_config_present": {"type": "boolean"},
+        "private_locator_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "model_manifest_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "files": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/file_observation"}
+        },
+        "model_download_authorized": {"const": false},
+        "model_load_started": {"const": false},
+        "inference_started": {"const": false},
+        "network_used": {"const": false},
+        "execution_authorized": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"outcome": {"const": "READY"}}},
+          "then": {
+            "properties": {
+              "reason_codes": {"const": ["MODEL_DIRECTORY_VALID"]},
+              "model_id": {"type": "string", "pattern": "^local-model-[0-9a-f]{12}$"},
+              "required_files_present": {"const": true},
+              "private_locator_sha256": {"$ref": "#/$defs/sha256"},
+              "model_manifest_sha256": {"$ref": "#/$defs/sha256"},
+              "files": {"minItems": 4}
+            },
+            "allOf": [
+              {"properties": {"files": {"contains": {"properties": {"name": {"const": "config.json"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}}},
+              {"properties": {"files": {"contains": {"properties": {"name": {"const": "model.bin"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}}},
+              {"properties": {"files": {"contains": {"properties": {"name": {"const": "tokenizer.json"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}}},
+              {
+                "oneOf": [
+                  {"properties": {"files": {"contains": {"properties": {"name": {"const": "vocabulary.txt"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}}},
+                  {"properties": {"files": {"contains": {"properties": {"name": {"const": "vocabulary.json"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}}}
+                ]
+              }
+            ]
+          },
+          "else": {
+            "properties": {
+              "reason_codes": {
+                "items": {
+                  "enum": [
+                    "PATH_NOT_DIRECTORY",
+                    "PATH_ALIAS_UNSAFE",
+                    "DIRECTORY_SCAN_FAILED",
+                    "DIRECTORY_ENTRY_LIMIT_EXCEEDED",
+                    "REQUIRED_FILE_MISSING",
+                    "FILE_NOT_REGULAR",
+                    "FILE_ALIAS_UNSAFE",
+                    "FILE_SIZE_INVALID",
+                    "FILE_HASH_INVALID",
+                    "VOCABULARY_SET_INVALID",
+                    "REQUIRED_JSON_INVALID"
+                  ]
+                }
+              },
+              "model_id": {"type": "null"},
+              "required_files_present": {"const": false},
+              "optional_preprocessor_config_present": {"const": false},
+              "private_locator_sha256": {"type": "null"},
+              "model_manifest_sha256": {"type": "null"},
+              "files": {"maxItems": 0}
+            }
+          }
+        }
+      ]
+    },
+    "public_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "outcome",
+        "reason_codes",
+        "model_id",
+        "required_files_present",
+        "optional_preprocessor_config_present",
+        "model_download_authorized",
+        "model_load_started",
+        "inference_started",
+        "network_used",
+        "execution_authorized"
+      ],
+      "properties": {
+        "record_type": {"const": "FasterWhisperModelDirectoryInspectionPublicV1"},
+        "schema_version": {"const": "1.0.0"},
+        "outcome": {"enum": ["READY", "BLOCKED"]},
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "MODEL_DIRECTORY_VALID",
+              "PATH_NOT_DIRECTORY",
+              "PATH_ALIAS_UNSAFE",
+              "DIRECTORY_SCAN_FAILED",
+              "DIRECTORY_ENTRY_LIMIT_EXCEEDED",
+              "REQUIRED_FILE_MISSING",
+              "FILE_NOT_REGULAR",
+              "FILE_ALIAS_UNSAFE",
+              "FILE_SIZE_INVALID",
+              "FILE_HASH_INVALID",
+              "VOCABULARY_SET_INVALID",
+              "REQUIRED_JSON_INVALID"
+            ]
+          }
+        },
+        "model_id": {
+          "type": ["string", "null"],
+          "pattern": "^local-model-[0-9a-f]{12}$"
+        },
+        "required_files_present": {"type": "boolean"},
+        "optional_preprocessor_config_present": {"type": "boolean"},
+        "model_download_authorized": {"const": false},
+        "model_load_started": {"const": false},
+        "inference_started": {"const": false},
+        "network_used": {"const": false},
+        "execution_authorized": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"outcome": {"const": "READY"}}},
+          "then": {
+            "properties": {
+              "reason_codes": {"const": ["MODEL_DIRECTORY_VALID"]},
+              "model_id": {"type": "string", "pattern": "^local-model-[0-9a-f]{12}$"},
+              "required_files_present": {"const": true}
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_codes": {"not": {"contains": {"const": "MODEL_DIRECTORY_VALID"}}},
+              "model_id": {"type": "null"},
+              "required_files_present": {"const": false},
+              "optional_preprocessor_config_present": {"const": false}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

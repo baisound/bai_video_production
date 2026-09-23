@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai-video-production.local/schemas/task098-runtime-transcription-control.schema.json",
+  "oneOf": [
+    {"$ref": "#/$defs/cancel_request"},
+    {"$ref": "#/$defs/cancel_outcome"},
+    {"$ref": "#/$defs/adjudication_decision"},
+    {"$ref": "#/$defs/commit_barrier"},
+    {"$ref": "#/$defs/generation_absence"},
+    {"$ref": "#/$defs/terminal_commit"}
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "operation_id": {"type": "string", "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "job_id": {"type": "string", "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "source_digest": {"$ref": "#/$defs/digest"},
+    "admission_ref": {"type": "string", "pattern": "^task098-runtime-admission:v2:[0-9a-f]{64}:[0-9a-f]{64}$"},
+    "base_coordinates": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "expected_attempt": {"type": "integer", "minimum": 1}
+      },
+      "required": ["contract_version", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "expected_attempt"]
+    },
+    "cancel_request": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "cancel_request_id": {"$ref": "#/$defs/operation_id"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "runtime_request_sha256": {"$ref": "#/$defs/digest"},
+        "runtime_decision_sha256": {"$ref": "#/$defs/digest"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "requested_at": {"$ref": "#/$defs/timestamp"},
+        "no_replay": {"const": true},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "cancel_request_id", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "runtime_request_sha256", "runtime_decision_sha256", "expected_attempt", "requested_at", "no_replay", "record_sha256"],
+      "additionalProperties": false
+    },
+    "cancel_outcome": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "cancel_request_sha256": {"$ref": "#/$defs/digest"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "runtime_request_sha256": {"$ref": "#/$defs/digest"},
+        "runtime_decision_sha256": {"$ref": "#/$defs/digest"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "outcome": {"enum": ["CANCELLED_BEFORE_PROVIDER_EFFECT", "CANCELLED_AFTER_COOPERATIVE_BOUNDARY", "STOP_NOT_CONFIRMED"]},
+        "provider_execution_started": {"type": "boolean"},
+        "provider_stop_confirmed": {"type": "boolean"},
+        "stop_evidence": {"enum": ["PRE_PROVIDER", "COOPERATIVE_CHECKPOINT", "NONE"]},
+        "acknowledged_at": {"$ref": "#/$defs/timestamp"},
+        "no_replay": {"const": true},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "cancel_request_sha256", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "runtime_request_sha256", "runtime_decision_sha256", "expected_attempt", "outcome", "provider_execution_started", "provider_stop_confirmed", "stop_evidence", "acknowledged_at", "no_replay", "record_sha256"],
+      "additionalProperties": false,
+      "allOf": [{"oneOf": [
+        {"properties": {"outcome": {"const": "CANCELLED_BEFORE_PROVIDER_EFFECT"}, "provider_execution_started": {"const": false}, "provider_stop_confirmed": {"const": true}, "stop_evidence": {"const": "PRE_PROVIDER"}}},
+        {"properties": {"outcome": {"const": "CANCELLED_AFTER_COOPERATIVE_BOUNDARY"}, "provider_execution_started": {"const": true}, "provider_stop_confirmed": {"const": true}, "stop_evidence": {"const": "COOPERATIVE_CHECKPOINT"}}},
+        {"properties": {"outcome": {"const": "STOP_NOT_CONFIRMED"}, "provider_stop_confirmed": {"const": false}, "stop_evidence": {"const": "NONE"}}}
+      ]}]
+    },
+    "adjudication_decision": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "adjudication_id": {"$ref": "#/$defs/operation_id"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "runtime_request_sha256": {"$ref": "#/$defs/digest"},
+        "runtime_decision_sha256": {"$ref": "#/$defs/digest"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "decision": {"const": "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY"},
+        "provider_stop_attested": {"const": true},
+        "stop_evidence": {"const": "HUMAN_ATTESTATION"},
+        "decided_at": {"$ref": "#/$defs/timestamp"},
+        "no_replay": {"const": true},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "adjudication_id", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "runtime_request_sha256", "runtime_decision_sha256", "expected_attempt", "decision", "provider_stop_attested", "stop_evidence", "decided_at", "no_replay", "record_sha256"],
+      "additionalProperties": false
+    },
+    "commit_barrier": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "barrier_owner": {"enum": ["PUBLICATION", "TERMINAL_CLOSURE"]},
+        "closure_record_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/digest"}]},
+        "acquired_at": {"$ref": "#/$defs/timestamp"},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "expected_attempt", "barrier_owner", "closure_record_sha256", "acquired_at", "record_sha256"],
+      "additionalProperties": false,
+      "allOf": [{"oneOf": [
+        {"properties": {"barrier_owner": {"const": "PUBLICATION"}, "closure_record_sha256": {"const": null}}},
+        {"properties": {"barrier_owner": {"const": "TERMINAL_CLOSURE"}, "closure_record_sha256": {"$ref": "#/$defs/digest"}}}
+      ]}]
+    },
+    "generation_absence": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "commit_barrier_sha256": {"$ref": "#/$defs/digest"},
+        "observation": {"enum": ["EXACT_GENERATION_ABSENT", "PRESENT_PARTIAL_OR_UNKNOWN"]},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "runtime_admission_ref", "expected_attempt", "commit_barrier_sha256", "observation", "observed_at", "record_sha256"],
+      "additionalProperties": false
+    },
+    "terminal_commit": {
+      "type": "object",
+      "properties": {
+        "contract_version": {"const": "1.0.0"},
+        "runtime_operation_id": {"$ref": "#/$defs/operation_id"},
+        "slot_operation_id": {"$ref": "#/$defs/operation_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "prior_runtime_admission_ref": {"$ref": "#/$defs/admission_ref"},
+        "expected_attempt": {"type": "integer", "minimum": 1},
+        "closure_kind": {"enum": ["CONFIRMED_CANCEL", "HUMAN_ADJUDICATED_FAILED"]},
+        "closure_record_sha256": {"$ref": "#/$defs/digest"},
+        "commit_barrier_sha256": {"$ref": "#/$defs/digest"},
+        "generation_absence_observation_sha256": {"$ref": "#/$defs/digest"},
+        "terminal_status": {"const": "FAILED"},
+        "terminal_result_ref": {"type": "string", "pattern": "^task098-runtime-(?:cancelled|adjudicated-failed):v1:[0-9a-f]{64}$"},
+        "operation_cas_committed": {"const": true},
+        "slot_owner_verified": {"const": true},
+        "committed_at": {"$ref": "#/$defs/timestamp"},
+        "no_replay": {"const": true},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["contract_version", "runtime_operation_id", "slot_operation_id", "source_asset_sha256", "prior_runtime_admission_ref", "expected_attempt", "closure_kind", "closure_record_sha256", "commit_barrier_sha256", "generation_absence_observation_sha256", "terminal_status", "terminal_result_ref", "operation_cas_committed", "slot_owner_verified", "committed_at", "no_replay", "record_sha256"],
+      "additionalProperties": false
+    },
+    "lease_fact": {
+      "type": "object",
+      "properties": {
+        "production_job_id": {"$ref": "#/$defs/job_id"},
+        "project_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$"},
+        "source_asset_id": {"$ref": "#/$defs/asset_id"},
+        "source_asset_sha256": {"$ref": "#/$defs/source_digest"},
+        "operation_id": {"$ref": "#/$defs/operation_id"},
+        "command_type": {"type": "string", "minLength": 1},
+        "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 200},
+        "status": {"type": "string", "minLength": 1},
+        "attempt": {"type": "integer", "minimum": 0},
+        "result_ref": {"type": ["string", "null"]}
+      },
+      "required": ["production_job_id", "project_id", "source_asset_id", "source_asset_sha256", "operation_id", "command_type", "idempotency_key", "status", "attempt", "result_ref"],
+      "additionalProperties": false
+    },
+    "public_projection": {
+      "type": "object",
+      "properties": {
+        "control_mode": {"const": "PHASE_ONLY_V1"},
+        "phase": {"enum": ["NOT_STARTED", "ADMISSION", "PROVIDER_STARTING", "PROVIDER_RUNNING", "PUBLICATION_VALIDATING", "PUBLICATION_COMMITTING", "COMPLETED", "UNKNOWN_AFTER_DISCONNECT", "BLOCKED"]},
+        "cancel_state": {"enum": ["NOT_REQUESTED", "CANCEL_REQUESTED", "CANCELLED_BEFORE_PROVIDER_EFFECT", "CANCELLED_AFTER_COOPERATIVE_BOUNDARY", "STOP_NOT_CONFIRMED"]},
+        "adjudication_state": {"enum": ["NOT_REQUIRED", "REQUIRED", "CLOSED_FAILED_NO_REPLAY"]},
+        "available_action": {"enum": ["NONE", "REQUEST_CANCEL", "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY"]},
+        "status_label": {"enum": ["状態が不正なため操作できません", "結果の確定処理が開始されています", "キャンセル終了処理を安全に確定できません", "Human終了処理を安全に確定できません", "Provider開始前にキャンセルしました", "協調停止を確認してキャンセルしました", "Human確認により失敗終了しました（再実行なし）", "キャンセルを要求しました。停止確認中です", "Provider停止を確認できません", "Provider停止のHuman確認が必要です", "既存結果の復旧が必要です", "音声認識は完了しています", "実行許可を確認中です", "音声認識を開始しています", "音声認識を実行中です", "結果を検証中です", "結果確定の排他状態を確認できません", "実行状態を確認できません", "開始待ちです", "音声認識は開始されていません", "失敗状態を確認してください"]},
+        "provider_execution_started": {"type": "boolean"},
+        "provider_execution_known": {"type": "boolean"},
+        "provider_stop_confirmed": {"type": "boolean"},
+        "stop_evidence": {"enum": ["NONE", "PRE_PROVIDER", "COOPERATIVE_CHECKPOINT", "HUMAN_ATTESTATION"]},
+        "slot_release_allowed": {"type": "boolean"},
+        "no_replay": {"const": true}
+      },
+      "required": ["control_mode", "phase", "cancel_state", "adjudication_state", "available_action", "status_label", "provider_execution_started", "provider_execution_known", "provider_stop_confirmed", "stop_evidence", "slot_release_allowed", "no_replay"],
+      "additionalProperties": false
+    }
+  }
+}

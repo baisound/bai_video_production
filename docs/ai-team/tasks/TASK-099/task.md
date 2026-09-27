@@ -1,13 +1,13 @@
 # TASK-099 — Project / Job Currentness V2 successor
 
-- Status: `DESIGN_ONLY_ALLOCATION / CANONICAL_INTEGRATION_PENDING`.
+- Status: `JCV_D_R0_DESIGN_ACCEPTED / JCV_I_PURE_IMPLEMENTATION_ELIGIBLE / JCV_N_NATIVE_NOT_AUTHORIZED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-043 hosted-closed; historical implementation is not reopened.
 - Coordinator: TASK-073 delivery plan. Canonical responsibility: Product Project currentness, not Job event ownership.
 - Delivery owner: this voice-integration thread `01a054d9-2cf9-71e2-a486-351727c13150`, by the Owner's explicit two-contract takeover instruction. Own design -> implementation -> tests/review -> canonical handoff; no reassignment gate. Implementation intent is authorized, but exact files/unit and native authority must be bound before effects.
 - Allocation serialization: ID99 is unused in bound main `e41110c8`; fresh ID/lock audit before integration. No source/runtime authority is created.
-- Allowed now: this task definition only. Prospective source/schema/tests require a separately reviewed exact-files implementation allocation.
+- JCV-D R0 exact design files: this task definition and `jcv-d-project-job-currentness-v2-r0.md`. No source/native/runtime effect. Prospective source/schema/tests require independent JCV-D acceptance and the exact-files allocation recorded below.
 
 ## Required design
 
@@ -30,10 +30,19 @@ The backend is not available just because the legacy `product_project_store.py` 
 ## Atomic Units / exit
 
 1. JCV-D: freeze schema, physical security/transaction/trusted-time ports, complete crash/recovery matrix and exact source allocation; independent Critic/Tester/Judge.
-2. JCV-I: proposed exact implementation files are `src/ai_video_production/task099_project_job_currentness.py`, `schemas/task099-project-job-currentness.schema.json`, its `src/ai_video_production/schema_resources/` mirror and `tests/test_task099_project_job_currentness.py`. Pure schema/parser and fake-port fault/concurrency tests only. JCV-D independent acceptance/fresh-main audit binds this exact4 before mutation. Legacy Project manifest/store/native backend and consuming owners remain outside that first source unit.
+2. JCV-I: proposed exact implementation payload is four files: `src/ai_video_production/task099_project_job_currentness.py`, `schemas/task099-project-job-currentness.schema.json`, its `src/ai_video_production/schema_resources/` mirror and `tests/test_task099_project_job_currentness.py`; this Task record is the fifth allowed completion-status carrier. Pure schema/parser and fake-port fault/concurrency tests only. JCV-D independent acceptance/fresh-main audit binds this exact5 before mutation. Legacy Project manifest/store/native backend and consuming owners remain outside that first source unit.
 3. JCV-N: separately authorized secure native backend, physical identity/reparse/replace/ABA/concurrent writers/expiry/currentness tests; persist/read back Evidence.
 4. JCV-C: TASK-076/074/072 consumer amendment and current canonical readback; no canonical owner transfer.
 
 Exit: required V2 producer source and schema mirrors, independent DEV-4 review, exact-version consumer negatives, same-head required tests/checks and observed native transaction/readback. Design-only completion is not this Task's delivery completion. Forbidden: inference, playback, training, model custody, paid/cloud, installation, release/deploy/Production, OS mutation and historical TASK-043 edits.
 
 See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for scope, gates and order.
+
+## JCV-D R0 independent decision
+
+- Accepted design: `jcv-d-project-job-currentness-v2-r0.md`.
+- Accepted design SHA-256: `80cc45d14c6251a1f3c6b90b77f8ce764fc4b3a0851750732ff9ff9b66f2a99d`.
+- Independent DEV-4 Critic/Judge after one bounded correction cycle: `ACCEPT`, final C/H/M/L `0/0/0/0`.
+- Independent design Tester: `PASS`; both frozen NUL-domain digest vectors were independently reproduced and all prior High/Medium findings were closed.
+- Closed findings: missing profile/predecessor/operation/build/security comparison fields; undefined first-index transition; unsafe superseded-commit NO_WRITE classification; post-commit drift contradiction; exact successor-manifest preservation; fixture/live separation; committed-state versus observation freshness; proposal-validation phase; nested envelope bounds; normative digest preimages.
+- JCV-I is eligible only for the exact five paths recorded above and pure/fake-port behavior. Legacy Project manifest/store changes, path/native backend, migration, live currentness, JCV-C consumers and all Product/native effects remain unverified and separately gated.

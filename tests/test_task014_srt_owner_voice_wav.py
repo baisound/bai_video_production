@@ -97,7 +97,11 @@ def test_gpt_sovits_renderer_configures_selected_pair_then_renders_canonical_wav
         payload=json.loads(request.data.decode('utf-8'))
         assert payload['text']=='生成テキスト'
         assert payload['prompt_text']=='参照テキスト'
-        assert payload['ref_audio_path'].startswith('/mnt/')
+        expected=reference.wav_path.resolve()
+        if expected.drive:
+            assert payload['ref_audio_path'].startswith('/mnt/')
+        else:
+            assert payload['ref_audio_path']==expected.as_posix()
         return FakeHttpResponse(server_wav,'audio/wav',len(server_wav))
     def run(argv,**kwargs):
         wav(Path(argv[-1]),0.2)

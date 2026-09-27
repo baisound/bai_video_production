@@ -64,3 +64,7 @@ Excluded: new recording, training, model download, ACL/service installation, rea
 After the exact Master WAV was presented with the explicit choices `ACCEPT`, `RETEST` or `REJECT`, the Owner replied `つぎへ`. In that direct decision context this is recorded as `ACCEPT` for Master SHA-256 `d43ced220c301a850d44093d6c8e6b4cb17340f7d3f70f814a72c4b298b20e3f`.
 
 TASK-103 is complete as a local single-user functional MVP: the Owner-selected model pair generated one expression-changing Master WAV, the bounded native technical checks passed, and the Owner accepted the exact output. This completion does not claim Production security, packaged-runtime identity, canonical Project/Asset adoption, Release, Deploy or Production Activation. Those remain separate later responsibilities, including TASK-102 Production hardening.
+
+## Hosted Linux CI corrective R1 — 2026-09-27
+
+PR #586's Ubuntu 3.11 full suite reached `8726 PASS / 126 SKIP` but failed the two new GPT-SoVITS renderer tests because Linux `tmp_path` is already a POSIX path and has no Windows drive letter. The bounded correction preserves Windows-drive-to-`/mnt/<drive>/` translation while allowing an already-resolved POSIX absolute reference path to pass through unchanged for a same-POSIX-host loopback server. The test now verifies the platform-appropriate exact path instead of imposing a Windows mount prefix on Linux. Focused TASK-014/TASK-073/TASK-100 regression is `226 PASS`; no private/native/Provider effect occurred.

@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_R1_DESIGN_ACCEPTED / PMST_D1_RECOVERY_R1_DESIGN_ACCEPTED / PMST_I1_REQUIRES_FRESH_ALLOWED_FILES / SOURCE_NATIVE_NOT_AUTHORIZED`.
+- Status: `PMST_D0_R1_DESIGN_ACCEPTED / PMST_D1_RECOVERY_R1_DESIGN_ACCEPTED / PMST_I1_RECOVERY_R1_ACCEPTED / SOURCE_NATIVE_NOT_AUTHORIZED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -80,3 +80,61 @@ On 2026-09-27 the Owner answered `つぎへtugih` directly to the explicit PMST-
 - Closed findings: participant phase/status/effect is an exact tuple union with monotonic known outcomes and UNKNOWN barrier closure; read/query evidence failures have distinct closed variants with exact witness/readback nullability and public-result mappings.
 - Acceptance is documentation-contract acceptance only. Windows/native feasibility remains `NOT_CONFIRMED`, and implementation/native/Product effects remain unauthorized.
 - The status and this decision block are the only post-review administrative changes to the reviewed exact3. PMST-I1 requires a fresh exact Allowed Files allocation before any implementation mutation.
+
+## PMST-I1 authority and exact scope
+
+On 2026-09-27 the Owner explicitly authorized TASK-102 PMST-I1 to design its exact Allowed Files and implement the pure state machine, fake backend, schema and unit tests through independent review. Windows service installation, ACL mutation, real Project writes, native QA, Release, Deploy and Production use were explicitly excluded.
+
+Exact Allowed Files:
+
+1. `docs/ai-team/current-state.md`
+2. `docs/ai-team/tasks/TASK-102/task.md`
+3. `docs/ai-team/tasks/TASK-102/pmst-d1-protocol-journal-migration-r0.md`
+4. `src/ai_video_production/task102_project_manifest_transaction.py`
+5. `schemas/task102-project-manifest-transaction.schema.json`
+6. `src/ai_video_production/schema_resources/task102-project-manifest-transaction.schema.json`
+7. `tests/test_task102_project_manifest_transaction.py`
+
+PMST-I1 may implement only strict body-free protocol parsers, immutable operation profiles, a deterministic pure transition machine, an injected fake port, public-safe projections and focused schema/unit tests. It must not import filesystem, subprocess, socket, Windows/native, installer, ACL or existing Project writer/store modules; must not create a live backend; and must expose no path or arbitrary-byte operation. Exit requires exact7 scope verification, root/mirror schema identity, focused tests, targeted regression, independent DEV-4 Critic/Tester acceptance with unresolved Critical/High findings zero, commit-ready state and external Evidence readback.
+
+## PMST-I1 Builder checkpoint
+
+- Added strict parsers for intent, request, enrollment, participant plan/receipt, profile-validation receipt, phase result, journal, witness and public status records with domain-separated canonical digests, exact fields, byte/depth/time/ID bounds and duplicate-key rejection.
+- Added immutable closed operation profiles, ACTIVE-enrollment/install/trusted-time binding, process/session/security-bound single-use nonce consumption, profile-specific journal routes, monotonic phase/effect/manifest observation checks, validated journal/witness/participant/readback evidence lookup, cross-record predecessor/successor/read/query/witness binding, admission-barrier rules and public-safe projection.
+- Added only `ScriptedFakePmstPort`; `run_operation` rejects every non-fake port. The module imports no filesystem/process/socket/native/Project store implementation and performs no external write.
+- Root/package schema bytes are identical and cover all external PMST-I1 records, participant tuples, phase/status/payload unions and public nullability/recovery mappings.
+- Initial independent review returned Critic/Judge `REVISE` with C/H/M/L `0/5/2/0` and Tester `FAIL / REVISE` with C/H/M/L `0/1/0/0`. The bounded correction closes contradictory terminal/effect acceptance, unused evidence validators, missing admission/profile enforcement, known-outcome reconciliation projection, undeclared phase null acceptance and fake-port subclass acceptance.
+- Focused WSL test after correction: `53 passed`.
+- TASK-102 plus direct consumer TASK-099 regression after correction: `75 passed`.
+- Runnable TASK-043 Project/Job/History regression: `66 passed`.
+- `tests/test_task043_project_save_recovery.py`: `NOT_CONFIRMED`; collection stopped before code execution because the existing WSL environment lacks the already-declared `referencing` package. No dependency installation was attempted.
+- Windows/native feasibility and real Project effects remain `NOT_CONFIRMED / UNAUTHORIZED`.
+- Next gate: frozen corrected exact7 second and final independent DEV-4 Critic/Tester review. A remaining Critical/High finding stops this I1 cycle under the DEV-4 two-cycle budget.
+
+## PMST-I1 final rereview and Recovery boundary
+
+- Corrected exact7 independent rereview matched every frozen hash and the schema mirror. Critic/Judge returned `REVISE`, C/H/M/L `0/4/0/0`; Tester returned `FAIL / REVISE`, C/H/M/L `0/1/1/0`.
+- Remaining High findings are: successor/committed-witness/readback/currentness content is not fully cross-bound; participant identity/sequence/observation is not fully bound to its plan and phase history; a committed result can open the barrier without a `TERMINAL` journal; and a participant-bearing non-manifest route can skip `RECONCILE`.
+- Tester additionally found a Medium parser/schema differential for nullable `OPEN/CURRENT_NO_EFFECT.manifest_physical_identity_ref`.
+- PMST-I1 is not accepted, not commit-ready and not eligible for native continuation. The DEV-4 two-cycle autonomous review/fix budget is exhausted, so no third implementation correction is started under the present authority. Resume requires an explicit Owner Recovery authorization that preserves this exact responsibility boundary and reopens a bounded correction plus fresh independent review.
+- No Windows service, ACL, real Project, native QA, Release, Deploy or Production effect occurred.
+
+## PMST-I1 Recovery R1 authority
+
+On 2026-09-27 the Owner answered `つぎへ` directly to the explicit Recovery authorization request recorded above. This reopens one bounded correction for the four recorded High findings and one Medium parser/schema differential, followed by a fresh independent review. The exact seven Allowed Files and pure-only responsibility boundary are unchanged. Windows service installation, ACL mutation, real Project writes, native QA, Release, Deploy and Production use remain excluded.
+
+Recovery R1 now separates commit and terminal witness revisions, binds journal prior/successor commitments to the pinned OPEN state and exact intent payload, binds committed manifest digest/physical identity to the COMMIT result, binds terminal/readback manifest content, derives query CURRENT/SUPERSEDED from the committed witness plus readback, verifies query witness-state/journal-phase consistency, and requires a validated `TERMINAL` journal before opening the admission barrier. Participant receipts now match exact plan identity, ordered object commitments and phase sequence; all accepted receipt/object observations must be present in the corresponding witness. Participant-bearing non-manifest and unknown-object routes enter RECONCILE before TERMINAL. A manifest operation quarantined before the manifest effect preserves `manifest_commit_observation=NOT_OBSERVED` through its closed terminal result instead of fabricating a manifest attempt. Parser and schema now both reject a null current manifest physical identity.
+
+- Focused PMST-I1: `65 PASS`.
+- PMST-I1 plus direct TASK-099 currentness: `87 PASS`.
+- Runnable TASK-043 Project / durable Job / history-autosave-backup regression: `66 PASS`.
+- `tests/test_task043_project_save_recovery.py` remains `NOT_CONFIRMED` for the already recorded missing WSL `referencing` dependency; no installation was attempted.
+- Next gate: fresh independent DEV-4 Critic/Judge and Tester review of the frozen Recovery R1 exact7.
+
+## PMST-I1 Recovery R1 acceptance
+
+- Final frozen source/schema/test correction hashes were source `a0cdce814f970425fa3dcdd76c15e608b4b9ee4a7c1fad0c2e1280b2210f750f`, root/mirror schema `011a17bc6dc27eff81c549f5c03f18e7d80a93f4e50e5bf1415bf1a9bfa7bd3c`, and tests `4eef1c0aa70245e10f86c9b19689998312ee2c55d9e0adcd376346120d38fdba`.
+- Independent Critic/Judge: `ACCEPT`, C/H/M/L `0/0/0/0`. Independent Tester: `PASS / ACCEPT`, C/H/M/L `0/0/0/0`. Both matched exact7 and schema mirror and performed no edit, dependency installation, native or external effect.
+- Accepted local Evidence is focused `65 PASS`, TASK-102 plus direct TASK-099 `87 PASS`, and runnable TASK-043 Project/Job/History `66 PASS`. The separately recorded save-recovery route remains `NOT_CONFIRMED` only because the existing WSL environment lacks `referencing`; no dependency was installed.
+- PMST-I1 is accepted only as a pure protocol/state-machine/fake-port/schema unit. It proves no Windows service, ACL, filesystem CAS/durability, real Project mutation, installer, native QA, Release, Deploy or Production behavior.
+- Next unit is PMST-N1 feasibility/native design and requires its own explicit Human Gate; it is not authorized by this acceptance.

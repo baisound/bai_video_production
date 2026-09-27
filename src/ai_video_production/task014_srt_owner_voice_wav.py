@@ -178,6 +178,8 @@ def _server_reference_path(path:Path,mode:str)->str:
     if mode=="native": return str(resolved)
     if mode!="wsl": raise ValueError("server path mode is invalid")
     drive=resolved.drive
+    if not drive and resolved.is_absolute() and resolved.anchor=="/":
+        return resolved.as_posix()
     if not drive or len(drive)!=2 or drive[1] != ":":
         raise ValueError("WSL path translation requires a local drive path")
     relative=resolved.as_posix()[3:]

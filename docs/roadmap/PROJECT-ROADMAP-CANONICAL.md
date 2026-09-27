@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.96
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.97
 - Project: `ai-video-production`
 - Date: 2026-08-23
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -2775,3 +2775,13 @@ TASK-066 is a prerequisite for TASK-036 P-UX-2E, packaged DbD acceptance, TASK-0
 The installer assumes no pre-existing `E:\BAI_AI`. Immutable Product-private runtimes live beneath `binary_root`; writable settings, logs and runtime-cache live beneath the TASK-066 InstallLayout-bound `data_root`, including the ProgramData instance root for system-wide installs. GPU DLLs may be bundled only from immutable official artifacts with hashes, dependency closure, notices and proven redistribution rights; display drivers and global system-runtime mutations are prohibited.
 
 Logging must be useful and bounded. Judge-frozen limits are 16 KiB/record, one 4 MiB active file per application/process family, active plus four generations per family, 32 MiB shared cap, 14 days, bounded event rates, 512 records/4 MiB queue, 2 second lock, 15 minute cleanup and a max(512 MiB, 5% free) disk guard. Rotation, deterministic eviction, active-only-cap suspension, duplicate aggregation, redaction, concurrency/crash recovery and recursive-failure suppression are mandatory. Current state is `DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`: GF-E deltas 1-4, including journal-first cross-volume recovery and uninstall preservation, are accepted; delta-4 Critic `0/0/0/0`, Judge `ACCEPT`. TASK-063 post-repair native terminal handoff remains required before GF-E installer mutation. This addendum creates no download, native execution, final DLL package seal, Release, Deploy or Production authority.
+
+## Addendum XCVII - TASK-102 Secure Project Manifest Transaction Broker
+
+Date: `2026-09-27`
+
+The Owner accepted the TASK-099 JCV-N-D service-SID architecture prerequisite and allocated TASK-102 as a new DEV-4 direct dependency. TASK-102 owns the generic secure mutation boundary for the existing canonical `.bai-project/project.json`: authenticated local service/client protocol, protected enrollment topology, exact predecessor-CAS, durable non-selector operation witnesses, restart recovery and migration of every canonical manifest writer/recovery route.
+
+TASK-102 does not reopen TASK-043 history, change the canonical Project schema/path, create a second selector, or absorb TASK-068 immutable publication, TASK-099 currentness semantics or caller-owned Asset/Timeline/Job/voice behavior. No partial enrollment is allowed. Existing Projects retain current behavior until a separately authorized complete migration and Product gate; old/unmigrated writers must become deterministically read-only before enrollment.
+
+The expression Master WAV delivery count advances from the preserved R0 total of 17 to the current R1 total of 18 outstanding responsibility lanes: 10 outcome, 6 platform and 2 connection lanes. TASK-102 is the added platform lane and does not replace TASK-068. PMST-D0 R1 is independently accepted with final C/H/M/L `0/0/0/0`; PMST-D1 protocol and complete migration-matrix design is next. Service installation, ACL/owner mutation, Project enrollment, native QA, private media/model handling, Release, Deploy and Production remain separately gated.

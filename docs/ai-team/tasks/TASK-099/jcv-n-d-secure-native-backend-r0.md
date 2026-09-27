@@ -1,6 +1,6 @@
 # TASK-099 JCV-N-D — Secure native Project currentness backend R0
 
-Status: `DESIGN_R1_ACCEPTED / OWNER_ARCHITECTURE_DECISION_REQUIRED / NATIVE_EFFECT_NOT_AUTHORIZED`
+Status: `DESIGN_R1_ACCEPTED / OWNER_ARCHITECTURE_ACCEPTED / TASK102_DEPENDENCY_ALLOCATED / NATIVE_EFFECT_NOT_AUTHORIZED`
 
 ## 1. Decision and responsibility boundary
 
@@ -136,11 +136,11 @@ Every result keeps retry, blind replay, Job effect, cleanup, release/deploy/Prod
 
 Allowed files are this document and `docs/ai-team/tasks/TASK-099/task.md`. No source, test, ACL, service, installer or filesystem effect.
 
-Independent DEV-4 rereview accepted R1 with Critic/Judge and Tester C/H/M/L both `0/0/0/0`. The design/review portion is complete. The remaining exit is an explicit Owner architecture decision accepting or rejecting the service-SID broker prerequisite.
+Independent DEV-4 rereview accepted R1 with Critic/Judge and Tester C/H/M/L both `0/0/0/0`. The Owner then answered `つぎへ` directly to the explicit architecture/allocation Human Gate. The service-SID broker prerequisite is accepted for allocation/design and assigned to TASK-102. Native feasibility and effects remain unapproved.
 
-### PMST-D / PMST-I — new direct dependency Task
+### PMST-D / PMST-I — TASK-102 direct dependency
 
-Only after JCV-N0 acceptance and Owner architecture acceptance, allocate a new unused Task ID for the Project Manifest Secure Transaction responsibility. It owns the generic service/client/enrollment protocol, service-SID ACL and long-lived sharing-barrier model, exact predecessor CAS, non-selector operation witnesses, migration of every canonical Project manifest writer, compatibility/read-only behavior and its own native assurance. It must not own TASK-099 semantic keys, index compilation or currentness decisions.
+TASK-102 is allocated as the Project Manifest Secure Transaction responsibility. It owns the generic service/client/enrollment protocol, service-SID ACL and long-lived sharing-barrier model, exact predecessor CAS, non-selector operation witnesses, migration of every canonical Project manifest writer, compatibility/read-only behavior and its own native assurance. It must not own TASK-099 semantic keys, index compilation or currentness decisions.
 
 No Project may be enrolled until all of its manifest writers are routed or explicitly blocked by the accepted migration plan. Partial enrollment is prohibited.
 
@@ -173,4 +173,4 @@ Only after accepted native evidence and complete generic-writer migration. It ad
 
 ## 13. Human decision
 
-The Owner must explicitly choose whether BAI VIDEO PRODUCTION may introduce the service-SID Secure Project Manifest Transaction Broker and allocate its generic canonical-store responsibility as a new direct dependency Task. Rejecting that prerequisite leaves JCV-N blocked unless a different independently reviewed kernel/architecture mechanism supplies equivalent exclusive-writer and identity-CAS guarantees. Acceptance authorizes only allocation/design of the new dependency and subsequent bounded pure adapters; it does not authorize service installation, ACL mutation, native QA, release, deploy or Production.
+The Owner accepted introduction of the service-SID Secure Project Manifest Transaction Broker and allocation of its generic canonical-store responsibility as TASK-102 by answering `つぎへ` directly to this explicit Human Gate. This authorizes allocation/design of TASK-102 and subsequent separately bounded pure adapters only. It does not authorize service installation, ACL mutation, native QA, release, deploy or Production. JCV-N native implementation remains blocked until TASK-102 completes its independently accepted protocol, native feasibility and full-writer migration gates.

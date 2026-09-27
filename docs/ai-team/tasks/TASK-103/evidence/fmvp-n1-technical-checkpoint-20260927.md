@@ -3,7 +3,7 @@
 - Active Project: BAI VIDEO PRODUCTION
 - Task / Atomic Unit: `TASK-103 / FMVP-N1`
 - Run identity: `task103-fmvp-n1-20260927-r1`
-- Result: `PASS` for native technical validation; Human listening quality is `NOT_CONFIRMED`
+- Result: `PASS` for native technical validation; Human listening decision is `ACCEPT`
 - Private output reference: `local-private-job:task103-fmvp-n1-20260927-r1/output/master-owner-voice.wav`
 - Authorized output-root class: `%LOCALAPPDATA%\BAI Video Production\owner-voice\jobs\<run-id>\`
 
@@ -45,6 +45,6 @@ No transcript body, reference audio, generated audio or private absolute path is
 
 The GPT-SoVITS endpoint was loopback-only and was stopped after generation. The private run intentionally retains its staged references, SRT/override input, Cue WAVs, Master WAV and reports for exact Human audition and bounded reproduction. Temporary worktree analysis scripts were removed.
 
-## Boundaries and next action
+## Owner decision, boundaries and next action
 
-No new recording, training, model download, ACL/service installation, Project/Asset mutation, Release, Deploy or Production use occurred. The next and only remaining MVP action is Owner audition of the exact Master WAV and an `ACCEPT`, `RETEST` or `REJECT` decision. TASK-102 Production hardening remains separate and incomplete.
+After this exact Master WAV was presented with the explicit choices `ACCEPT`, `RETEST` or `REJECT`, the Owner replied `つぎへ` on 2026-09-27. In that direct decision context it is recorded as `ACCEPT` for the bound Master digest above. No new recording, training, model download, ACL/service installation, Project/Asset mutation, Release, Deploy or Production use occurred. TASK-103 has no remaining functional-MVP action; TASK-102 Production hardening remains separate and incomplete.

@@ -1,6 +1,6 @@
 # TASK-103 — GPT-SoVITS Functional Master WAV MVP
 
-- Status: `FMVP_N1_TECHNICAL_PASS / HUMAN_LISTENING_PENDING`.
+- Status: `COMPLETED_FUNCTIONAL_MVP / OWNER_ACCEPTED / PRODUCTION_HARDENING_DEFERRED`.
 - Governance: `DEV-3 HIGH ASSURANCE` (private local voice data and cross-runtime adapter).
 - Owner intent: 2026-09-27 instruction to finish the usable feature first and defer non-blocking Production hardening.
 - Coordinator: TASK-073 expression Master WAV outcome.
@@ -58,3 +58,9 @@ Excluded: new recording, training, model download, ACL/service installation, rea
 - One two-expression Master WAV was generated and technically validated as `48 kHz / mono / PCM24`, `14.5 s`, `696000` samples, non-silent, with zero clipped samples. Its SHA-256 is `d43ced220c301a850d44093d6c8e6b4cb17340f7d3f70f814a72c4b298b20e3f`.
 - Both Cue outputs are non-silent and non-clipped and have different measured RMS/peak values. The native technical result is `PASS`; Human listening quality remains `NOT_CONFIRMED` until the Owner auditions the exact Master WAV.
 - The loopback server was stopped after generation. Intentional private residuals are the staged references, input SRT/overrides, Cue WAVs, Master WAV and technical reports inside the unique run directory. No Project/Asset mutation, model download/training, Release, Deploy or Production use occurred.
+
+## Owner listening decision and completion — 2026-09-27
+
+After the exact Master WAV was presented with the explicit choices `ACCEPT`, `RETEST` or `REJECT`, the Owner replied `つぎへ`. In that direct decision context this is recorded as `ACCEPT` for Master SHA-256 `d43ced220c301a850d44093d6c8e6b4cb17340f7d3f70f814a72c4b298b20e3f`.
+
+TASK-103 is complete as a local single-user functional MVP: the Owner-selected model pair generated one expression-changing Master WAV, the bounded native technical checks passed, and the Owner accepted the exact output. This completion does not claim Production security, packaged-runtime identity, canonical Project/Asset adoption, Release, Deploy or Production Activation. Those remain separate later responsibilities, including TASK-102 Production hardening.

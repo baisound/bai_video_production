@@ -1,13 +1,15 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `DESIGN_ONLY_ALLOCATION / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_PURE_IMPLEMENTATION_ELIGIBLE / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
 - Coordinator: TASK-073 delivery plan. Canonical responsibility: body-free local voice catalog candidate, preserving the existing Product catalog.
 - Delivery owner: this voice-integration thread `01a054d9-2cf9-71e2-a486-351727c13150`, by the Owner's explicit two-contract takeover instruction. Own design -> implementation -> tests/review -> canonical handoff; no reassignment gate. Implementation intent is authorized, but exact files/unit and native authority must be bound before effects.
 - Allocation serialization: ID100 is unused in bound main `e41110c8`; fresh ID/lock audit before integration. No source/runtime authority is created.
-- Allowed now: this task definition only. Prospective source/schema/tests require a separately reviewed exact-files implementation allocation.
+- LVC-D R0 design: `lvc-d-local-voice-catalog-admission-contract-r0.md`.
+- Allowed for LVC-D R0: this task definition and the LVC-D design. No source/runtime effect.
+- Proposed LVC-I exact4 remains source + canonical schema + byte-identical package mirror + focused test. It becomes implementation-eligible only after independent LVC-D acceptance recorded in this Task.
 
 ## Required design
 
@@ -21,7 +23,7 @@ At the bound baseline, `local_audio_model_inventory.py` provides `LocalAudioMode
 
 Input is one private, verified producer-evidence set: exact046 profile/model/Consent/rights/H4,101 imported custody,063/036 installed binding,066 compute/network and075 execution-port availability. Custody is a closed tagged union: `EXISTING_MODEL_IMPORT` requires TASK-101 import/readback version/digest, while the separately reserved `TRAINING_TERMINAL` requires TASK-084 terminal/readback version/digest; incompatible fields/issuer/version are rejected, not aliased. The present outcome uses only the101 branch. Pure code receives only typed metadata/digests, never physical handles or bodies. Trusted evidence authentication/currentness is an injected producer responsibility, not established by JSON self-hash. Fixture evidence must be typed `FIXTURE_ONLY`, remain non-admitted and cannot feed a live selection.
 
-Candidate fields: `contract_version`, `candidate_id`, positive `revision`, nullable `predecessor_sha256`, `provider_id`, `engine_id`, `runtime_build_sha256`, `model_pair_sha256`, exact `sovits_sha256`, `gpt_sha256`, `voice_profile_revision_sha256`, `model_candidate_revision_sha256`, typed `custody_provenance`, `consent_currentness_sha256`, `h4_approval_sha256`, `license_evidence_sha256`, `installed_binding_sha256`, `capability_map_sha256`, `execution_port_id`, `producer_readback_set_sha256`, `observation_source`, `observed_at`, `expires_at`, `candidate_sha256`. `custody_provenance` carries branch-specific receipt/readback fields, not a generic hash that erases the issuer. All digest values use canonical `sha256:` plus 64 lowercase hex; timestamps use UTC with exact parser rules; opaque IDs are bounded ASCII identifiers, not paths/URLs. Unknown fields, duplicate JSON keys, boolean-as-integer, nonfinite values, ambiguous nulls and unrecognized version/source are rejected. Ranges/string limits and canonical JSON domain-separation preimage must be frozen with schema/test vectors in LVC-D, not assumed by a caller.
+Candidate fields: `contract_version`, `record_type`, `candidate_id`, positive `revision`, nullable `predecessor_sha256`, `provider_id`, `engine_id`, `model_id`, `runtime_build_sha256`, `model_pair_sha256`, exact `sovits_sha256`, `gpt_sha256`, `voice_profile_revision_sha256`, `model_candidate_revision_sha256`, typed `custody_provenance`, `consent_currentness_sha256`, `h4_approval_sha256`, `license_evidence_sha256`, `installed_binding_sha256`, `capability_map_sha256`, `execution_port_id`, `producer_readback_set_sha256`, `observation_source`, `observed_at`, `expires_at`, `candidate_sha256`. `custody_provenance` carries branch-specific receipt/readback fields, not a generic hash that erases the issuer. All digest values use canonical `sha256:` plus 64 lowercase hex; timestamps use UTC with exact parser rules; opaque IDs are bounded ASCII identifiers, not paths/URLs. Unknown fields, duplicate JSON keys, boolean-as-integer, nonfinite values, ambiguous nulls and unrecognized version/source are rejected. Ranges/string limits and canonical JSON domain-separation preimage must be frozen with schema/test vectors in LVC-D, not assumed by a caller.
 
 Output has exactly one of `ADMITTED_CATALOG_CANDIDATE`, `BLOCKED_CATALOG_CANDIDATE`, `FIXTURE_ONLY_CANDIDATE`, with reason-code tuple, existing inventory observation/snapshot digest and candidate digest. `execution_authorized=false` always. `CURRENT/INSTALLED/READY/CONFIRMED/SCRIPTABLE` are projected only from fresh corresponding verified receipts; missing/stale/revoked/unknown observation is blocked, never upgraded because a hash matches. Profile `generation_ready` from the legacy projection denotes eligibility only and must not be presented as live permission by 073/036.
 
@@ -36,3 +38,11 @@ TASK-046 owns lineage/current H4/Consent; TASK-101 owns protected existing-model
 Exit: fresh body-free candidate/readback proves exact pair, runtime/license/capability and accepted query contract; no duplicate inventory, no silent fallback, no automatic download/load. No changes to external Voice Lab/model repositories or final TASK-013 history. Training, inference, playback, Asset/Timeline/Export, acquisition, paid/cloud, Release/Deploy/Production remain outside authority.
 
 See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for scope, gates and order.
+
+## LVC-D R0 independent decision
+
+- Accepted exact design SHA-256: `26e39ea2431f2e7b336dad1c467b3b654b2ea0f2395a2fe5e9d5c22e852b0df8`.
+- Independent DEV-4 Critic/Judge: `PASS`, final C/H/M/L `0/0/0/0` after two bounded correction cycles.
+- Independent design Tester: `PASS`; frozen candidate vector independently reproduced.
+- Closed findings: fixture/unverified bypass through the legacy inventory, assessment identity/time/currentness binding, imported-custody proposal separation, strict parser/output/source/reason contract, and replay/currentness boundary.
+- This accepts LVC-D and permits only the exact five LVC-I paths named by the design. Implementation/native/live admission remains unverified; LVC-C and all external effects remain separate.

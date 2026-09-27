@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_PURE_IMPLEMENTATION_ELIGIBLE / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C_PENDING / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -46,3 +46,13 @@ See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for s
 - Independent design Tester: `PASS`; frozen candidate vector independently reproduced.
 - Closed findings: fixture/unverified bypass through the legacy inventory, assessment identity/time/currentness binding, imported-custody proposal separation, strict parser/output/source/reason contract, and replay/currentness boundary.
 - This accepts LVC-D and permits only the exact five LVC-I paths named by the design. Implementation/native/live admission remains unverified; LVC-C and all external effects remain separate.
+
+## LVC-I R0 implementation decision
+
+- Pure implementation payload: `src/ai_video_production/task100_local_voice_catalog_admission.py`, canonical schema and byte-identical package mirror, plus `tests/test_task100_local_voice_catalog_admission.py`. This Task record is the allowed fifth completion carrier; no existing inventory, TASK-074, TASK-073 or runtime source was modified.
+- Implementation SHA-256: `6685d21fed499682331aee81c19de68ddecdf6dc47443a0fe3e685667ac02f84`.
+- Canonical/package schema SHA-256: `639404a8650c9285413a623c5065d70a8ccbdf502b3a52f0d8a515fc817e6d5b` (byte-identical).
+- Focused test source SHA-256: `2badfb10968fbe97b793fb1be8541d6c3d8c0a869241c44fcfa3962f69232860`.
+- Primary focused + direct dependency regression: `PASS`, 120 tests. Independent Tester: `PASS`, 63 tests plus 61 in-memory adversarial assertions; schema self-validation/mirror, five ECMAScript patterns and nine calendar vectors also passed.
+- Independent DEV-4 Critic/Judge after one bounded correction cycle: `ACCEPT`, final C/H/M/L `0/0/0/0`. Closed findings were typed-record constructor/compiler validation bypass, missing cross-field schema conditions/calendar grammar, and excessive-depth `RecursionError` normalization.
+- The implementation is deterministic, body-free and effect-free. It creates no file/model/runtime/network/process/audio effect and grants no load, inference, replay or consumer-live authority. Native installed-model identity, private audio, LVC-C consumer currentness/readback and canonical Product integration remain `NOT_CONFIRMED` and outside this unit.

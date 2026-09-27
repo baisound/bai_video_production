@@ -21,8 +21,14 @@ param(
     [string]$ReferenceWav,
     [string]$ReferenceText,
     [Parameter(Mandatory = $true)][switch]$ConfirmOwnerApproved,
+    [ValidateSet('gpt-sovits', 'qwen3')][string]$Backend = 'gpt-sovits',
+    [string]$CueOverrides,
     [string]$Python,
     [string]$ModelRoot,
+    [string]$GptSoVitsUrl = 'http://127.0.0.1:9880',
+    [string]$GptWeights = $env:BAISOUND_GPT_SOVITS_GPT_WEIGHTS,
+    [string]$SoVitsWeights = $env:BAISOUND_GPT_SOVITS_SOVITS_WEIGHTS,
+    [ValidateSet('wsl', 'native')][string]$ServerPathMode = 'wsl',
     [string]$JobsRoot,
     [string]$ConfigPath
 )
@@ -42,17 +48,24 @@ function Resolve-InputFile([string]$Value, [string]$Label, [string]$Extension) {
     return $resolved
 }
 
-function Test-Python([string]$Candidate) {
+function Test-Python([string]$Candidate, [string]$SelectedBackend) {
     if ([string]::IsNullOrWhiteSpace($Candidate) -or -not (Test-Path -LiteralPath $Candidate -PathType Leaf)) {
         return $false
     }
-    $null = & $Candidate -c "import numpy, soundfile, torch, qwen_tts" 2>$null
+    $probe = if ($SelectedBackend -eq 'qwen3') { "import numpy, soundfile, torch, qwen_tts" } else { "import json, jsonschema, urllib.request" }
+    $null = & $Candidate -c $probe 2>$null
     return $LASTEXITCODE -eq 0
 }
 
 $Srt = Resolve-InputFile $Srt '-Srt' '.srt'
+if (-not [string]::IsNullOrWhiteSpace($CueOverrides)) {
+    $CueOverrides = Resolve-InputFile $CueOverrides '-CueOverrides' '.json'
+}
 if (-not $ConfirmOwnerApproved) {
     throw '-ConfirmOwnerApproved が必要です。本人の声であり、使用権と音質・文字起こしを確認してから指定してください。'
+}
+if ($Backend -eq 'gpt-sovits' -and ([string]::IsNullOrWhiteSpace($GptWeights) -or [string]::IsNullOrWhiteSpace($SoVitsWeights))) {
+    throw '-GptWeights と -SoVitsWeights（または対応するBAISOUND_GPT_SOVITS_*環境変数）が必要です。'
 }
 if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest) -and
     (-not [string]::IsNullOrWhiteSpace($ReferenceWav) -or -not [string]::IsNullOrWhiteSpace($ReferenceText))) {
@@ -82,7 +95,7 @@ $Ffmpeg = 'ffmpeg'
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Join-Path $env:LOCALAPPDATA 'BAI Video Production\owner-voice\runtime-config.json'
 }
-if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
+if ($Backend -eq 'qwen3' -and (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
     $runtimeConfig = Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
     if ($runtimeConfig.schema_version -ne 1 -or $runtimeConfig.status -ne 'READY' -or
         $runtimeConfig.model_revision -ne '5d83992436eae1d760afd27aff78a71d676296fc') {
@@ -95,29 +108,36 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
     Write-Host "インストーラーで準備済みの本人声環境を使用します。" -ForegroundColor Cyan
 }
 
-if (-not (Test-Python $Python)) {
+if (-not (Test-Python $Python $Backend)) {
     $pythonCandidates = @(
         'E:\BAI_AI\envs\qwen3-tts-06b-base\Scripts\python.exe',
         'E:\BAI_AI\envs\task046-qwen3-tts-windows-native\Scripts\python.exe',
         'E:\BAI_AI\envs\task014-qwen3-tts-probe\Scripts\python.exe'
     )
-    $Python = $pythonCandidates | Where-Object { Test-Python $_ } | Select-Object -First 1
+    if ($Backend -eq 'gpt-sovits') {
+        $repoPython = Join-Path $repoRoot '.venv\Scripts\python.exe'
+        $pathPython = (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
+        $pythonCandidates = @($repoPython, $pathPython) + $pythonCandidates
+    }
+    $Python = $pythonCandidates | Where-Object { Test-Python $_ $Backend } | Select-Object -First 1
 }
 if ([string]::IsNullOrWhiteSpace($Python)) {
     throw '本人声生成用Python環境が見つかりません。初回セットアップが必要です。'
 }
 
-if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
+if ($Backend -eq 'qwen3' -and [string]::IsNullOrWhiteSpace($ModelRoot)) {
     $modelCandidates = @(
         'E:\BAI_AI\models\Qwen3-TTS-12Hz-0.6B-Base\5d83992436eae1d760afd27aff78a71d676296fc',
         'D:\BAI\BAI_VIDEO_PRODUCTION_20260914\models\Qwen3-TTS-12Hz-0.6B-Base'
     )
     $ModelRoot = $modelCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Container } | Select-Object -First 1
 }
-if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
+if ($Backend -eq 'qwen3' -and [string]::IsNullOrWhiteSpace($ModelRoot)) {
     throw 'Qwen3-TTS 0.6B Baseモデルが見つかりません。初回セットアップが必要です。'
 }
-$ModelRoot = (Resolve-Path -LiteralPath $ModelRoot).Path
+if ($Backend -eq 'qwen3') {
+    $ModelRoot = (Resolve-Path -LiteralPath $ModelRoot).Path
+}
 
 if ([string]::IsNullOrWhiteSpace($JobsRoot)) {
     if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest)) {
@@ -168,12 +188,20 @@ try {
     if (Test-Path -LiteralPath $sourceRoot -PathType Container) {
         $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($previousPythonPath)) { $sourceRoot } else { "$sourceRoot;$previousPythonPath" }
     }
-    & $Python -m ai_video_production.task014_srt_owner_voice_wav preflight --model-root $ModelRoot --reference-wav $ReferenceWav --reference-text $referenceTextFile --ffmpeg $Ffmpeg --output $preflightFile
+    $preflightArgs = @('-m', 'ai_video_production.task014_srt_owner_voice_wav', 'preflight', '--backend', $Backend, '--reference-wav', $ReferenceWav, '--reference-text', $referenceTextFile, '--ffmpeg', $Ffmpeg, '--output', $preflightFile)
+    if ($Backend -eq 'qwen3') {
+        $preflightArgs += @('--model-root', $ModelRoot)
+    } else {
+        $preflightArgs += @('--gpt-sovits-url', $GptSoVitsUrl, '--gpt-weights', $GptWeights, '--sovits-weights', $SoVitsWeights)
+    }
+    & $Python @preflightArgs
     if ($LASTEXITCODE -ne 0) { throw '生成前チェックに失敗しました。preflight.jsonを確認してください。' }
     $preflight = Get-Content -Raw -LiteralPath $preflightFile | ConvertFrom-Json
     if ($preflight.state -ne 'READY') { throw "GPUを含む生成準備が完了していません: $($preflight.state)" }
 
-    & $Python -m ai_video_production.task014_srt_owner_voice_wav plan --srt $Srt --output $planFile
+    $planArgs = @('-m', 'ai_video_production.task014_srt_owner_voice_wav', 'plan', '--srt', $Srt, '--output', $planFile)
+    if (-not [string]::IsNullOrWhiteSpace($CueOverrides)) { $planArgs += @('--cue-overrides', $CueOverrides) }
+    & $Python @planArgs
     if ($LASTEXITCODE -ne 0) { throw 'SRTの確認に失敗しました。' }
 
     if ([string]::IsNullOrWhiteSpace($ReferenceManifest)) {
@@ -182,7 +210,14 @@ try {
     }
 
     Write-Host '本人声WAVを生成しています。字幕数により時間がかかります…' -ForegroundColor Cyan
-    & $Python -m ai_video_production.task014_srt_owner_voice_wav render --srt $Srt --model-root $ModelRoot --references $referencesFile --work-dir $workRoot --output $outputFile --ffmpeg $Ffmpeg --report $reportFile
+    $renderArgs = @('-m', 'ai_video_production.task014_srt_owner_voice_wav', 'render', '--backend', $Backend, '--srt', $Srt, '--references', $referencesFile, '--work-dir', $workRoot, '--output', $outputFile, '--ffmpeg', $Ffmpeg, '--report', $reportFile)
+    if ($Backend -eq 'qwen3') {
+        $renderArgs += @('--model-root', $ModelRoot)
+    } else {
+        $renderArgs += @('--gpt-sovits-url', $GptSoVitsUrl, '--gpt-weights', $GptWeights, '--sovits-weights', $SoVitsWeights, '--server-path-mode', $ServerPathMode)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CueOverrides)) { $renderArgs += @('--cue-overrides', $CueOverrides) }
+    & $Python @renderArgs
     if ($LASTEXITCODE -ne 0) { throw 'WAV生成に失敗しました。reportと直前のエラーを確認してください。' }
 } finally {
     $env:PYTHONPATH = $previousPythonPath

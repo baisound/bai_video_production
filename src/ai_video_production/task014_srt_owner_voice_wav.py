@@ -8,14 +8,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Mapping, Protocol, Sequence
-import argparse, hashlib, importlib, importlib.util, json, math, shutil, subprocess, tempfile
+from typing import Any, Callable, Mapping, Protocol, Sequence
+import argparse, hashlib, importlib, importlib.util, json, math, shutil, subprocess
+import urllib.error, urllib.parse, urllib.request
 
 from .subtitle_workspace import SrtWorkspaceCodec
 from .owner_voice_wav import SAMPLE_RATE_HZ, SAMPLE_WIDTH_BYTES, copy_pcm24_range, new_canonical_writer, read_pcm_wav_info
 from .voice_reference_selector import VoiceReferenceCandidate, build_reference_manifest, select_reference, sha256_file
 
 DEFAULT_MAX_TOTAL_SPEED=1.35
+DEFAULT_GPT_SOVITS_URL="http://127.0.0.1:9880"
+DEFAULT_GPT_SOVITS_MAX_RESPONSE_BYTES=128*1024*1024
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,req,fp,code,msg,headers,newurl):
+        raise urllib.error.HTTPError(req.full_url,code,"GPT-SoVITS redirects are disabled",headers,fp)
+
+_NO_REDIRECT_OPENER=urllib.request.build_opener(_NoRedirectHandler())
+
+def _loopback_urlopen(request:urllib.request.Request,*,timeout:float):
+    return _NO_REDIRECT_OPENER.open(request,timeout=timeout)
 
 @dataclass(frozen=True, slots=True)
 class OwnerVoiceCuePlan:
@@ -43,11 +55,38 @@ class OwnerVoiceCuePlan:
 def build_srt_plan(srt_path:str|Path, *, style_id:str="NORMAL", emotion_id:str="NORMAL", speaking_rate:float=1.0,
                    cue_overrides:Mapping[str,Mapping[str,Any]]|None=None)->tuple[OwnerVoiceCuePlan,...]:
     ws=SrtWorkspaceCodec.import_path(srt_path); out=[]; overrides=cue_overrides or {}
+    cue_ids={cue.cue_id for cue in ws.cues}
+    if set(overrides)-cue_ids: raise ValueError("cue overrides contain unknown cue ids")
     for cue in ws.cues:
         ov=overrides.get(cue.cue_id,{})
         out.append(OwnerVoiceCuePlan(cue.cue_id, cue.start_ms*48, cue.end_ms*48, cue.text,
                     str(ov.get("style_id",style_id)),str(ov.get("emotion_id",emotion_id)),float(ov.get("speaking_rate",speaking_rate))))
     return tuple(out)
+
+
+def load_cue_overrides(path:str|Path|None)->dict[str,dict[str,Any]]:
+    if path is None: return {}
+    value=json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(value,dict): raise ValueError("cue overrides must be a JSON object")
+    result:dict[str,dict[str,Any]]={}
+    for cue_id,raw in value.items():
+        if not isinstance(cue_id,str) or not cue_id or len(cue_id)>200 or not isinstance(raw,dict):
+            raise ValueError("cue override entry is invalid")
+        unknown=set(raw)-{"style_id","emotion_id","speaking_rate"}
+        if unknown: raise ValueError("cue override contains unknown fields")
+        normalized:dict[str,Any]={}
+        for key in ("style_id","emotion_id"):
+            if key in raw:
+                if not isinstance(raw[key],str) or not raw[key].strip():
+                    raise ValueError(f"cue override {key} is invalid")
+                normalized[key]=raw[key].strip()
+        if "speaking_rate" in raw:
+            rate=raw["speaking_rate"]
+            if isinstance(rate,bool) or not isinstance(rate,(int,float)) or not math.isfinite(float(rate)):
+                raise ValueError("cue override speaking_rate is invalid")
+            normalized["speaking_rate"]=float(rate)
+        result[cue_id]=normalized
+    return result
 
 
 def _ffmpeg_tempo(source:Path,target:Path,speed:float,ffmpeg:str)->None:
@@ -122,6 +161,115 @@ class Qwen3OwnerVoiceRenderer:
         read_pcm_wav_info(output_path,require_canonical=True)
 
 
+def _validated_loopback_url(value:str)->str:
+    parsed=urllib.parse.urlsplit(value)
+    if parsed.scheme!="http" or parsed.hostname not in {"127.0.0.1","::1"}:
+        raise ValueError("GPT-SoVITS URL must use loopback HTTP")
+    if parsed.username is not None or parsed.password is not None or parsed.query or parsed.fragment:
+        raise ValueError("GPT-SoVITS URL contains unsupported components")
+    if parsed.path not in {"","/"}: raise ValueError("GPT-SoVITS URL must not contain a path")
+    try: _=parsed.port
+    except ValueError as exc: raise ValueError("GPT-SoVITS URL port is invalid") from exc
+    return value.rstrip("/")
+
+
+def _server_reference_path(path:Path,mode:str)->str:
+    resolved=path.resolve(strict=True)
+    if mode=="native": return str(resolved)
+    if mode!="wsl": raise ValueError("server path mode is invalid")
+    drive=resolved.drive
+    if not drive or len(drive)!=2 or drive[1] != ":":
+        raise ValueError("WSL path translation requires a local drive path")
+    relative=resolved.as_posix()[3:]
+    return f"/mnt/{drive[0].lower()}/{relative}"
+
+
+class GptSoVitsHttpRenderer:
+    """Render one Cue through a Human-started loopback GPT-SoVITS v2 API."""
+    def __init__(self,base_url:str=DEFAULT_GPT_SOVITS_URL,*,gpt_weights_path:str,sovits_weights_path:str,
+                 server_path_mode:str="wsl",ffmpeg:str="ffmpeg",timeout_seconds:float=180.0,
+                 max_response_bytes:int=DEFAULT_GPT_SOVITS_MAX_RESPONSE_BYTES,
+                 opener:Callable[...,Any]=_loopback_urlopen):
+        self.base_url=_validated_loopback_url(base_url)
+        if not isinstance(gpt_weights_path,str) or not gpt_weights_path.strip(): raise ValueError("GPT weights path is required")
+        if not isinstance(sovits_weights_path,str) or not sovits_weights_path.strip(): raise ValueError("SoVITS weights path is required")
+        if server_path_mode not in {"native","wsl"}: raise ValueError("server path mode is invalid")
+        if not isinstance(timeout_seconds,(int,float)) or timeout_seconds<=0: raise ValueError("timeout must be positive")
+        if isinstance(max_response_bytes,bool) or not isinstance(max_response_bytes,int) or max_response_bytes<=0:
+            raise ValueError("response limit must be positive")
+        self.gpt_weights_path=gpt_weights_path.strip(); self.sovits_weights_path=sovits_weights_path.strip()
+        self.server_path_mode=server_path_mode; self.ffmpeg=ffmpeg; self.timeout_seconds=float(timeout_seconds)
+        self.max_response_bytes=max_response_bytes; self._opener=opener; self._configured=False
+
+    def _read(self,request:urllib.request.Request,*,limit:int)->tuple[bytes,str]:
+        try:
+            with self._opener(request,timeout=self.timeout_seconds) as response:
+                length=response.headers.get("Content-Length")
+                try: declared_length=None if length is None else int(length)
+                except ValueError as exc: raise RuntimeError("GPT-SoVITS response length is invalid") from exc
+                if declared_length is not None and declared_length>limit: raise RuntimeError("GPT-SoVITS response exceeded the size limit")
+                data=response.read(limit+1)
+                if len(data)>limit: raise RuntimeError("GPT-SoVITS response exceeded the size limit")
+                return data,response.headers.get_content_type()
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"GPT-SoVITS request failed with HTTP {exc.code}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError("GPT-SoVITS loopback server is unavailable") from exc
+
+    def _set_weights(self,endpoint:str,path:str)->None:
+        url=f"{self.base_url}/{endpoint}?{urllib.parse.urlencode({'weights_path':path})}"
+        body,content_type=self._read(urllib.request.Request(url,method="GET"),limit=64*1024)
+        try: value=json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError,json.JSONDecodeError) as exc: raise RuntimeError("GPT-SoVITS weight response is invalid") from exc
+        if content_type!="application/json" or value!={"message":"success"}:
+            raise RuntimeError("GPT-SoVITS rejected the selected weights")
+
+    def configure(self)->None:
+        if self._configured: return
+        self._set_weights("set_sovits_weights",self.sovits_weights_path)
+        self._set_weights("set_gpt_weights",self.gpt_weights_path)
+        self._configured=True
+
+    def render(self,*,text:str,reference:VoiceReferenceCandidate,output_path:Path)->None:
+        self.configure()
+        prompt_text=reference.transcript_path.read_text(encoding="utf-8").strip()
+        if not prompt_text: raise ValueError("reference transcript is empty")
+        payload={"text":text,"text_lang":"ja","ref_audio_path":_server_reference_path(reference.wav_path,self.server_path_mode),
+                 "prompt_text":prompt_text,"prompt_lang":"ja","text_split_method":"cut5","batch_size":1,
+                 "speed_factor":1.0,"seed":-1,"media_type":"wav","streaming_mode":False}
+        request=urllib.request.Request(f"{self.base_url}/tts",data=json.dumps(payload,ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type":"application/json","Accept":"audio/wav"},method="POST")
+        body,content_type=self._read(request,limit=self.max_response_bytes)
+        if content_type not in {"audio/wav","audio/x-wav","application/octet-stream"} or not body.startswith(b"RIFF"):
+            raise RuntimeError("GPT-SoVITS returned invalid WAV audio")
+        output_path.parent.mkdir(parents=True,exist_ok=True)
+        temporary=output_path.with_suffix(".gpt-sovits.wav")
+        temporary.write_bytes(body)
+        try:
+            proc=subprocess.run([self.ffmpeg,"-nostdin","-hide_banner","-loglevel","error","-y","-i",str(temporary),
+                "-ar","48000","-ac","1","-c:a","pcm_s24le",str(output_path)],stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,check=False,timeout=180,shell=False)
+            if proc.returncode!=0: raise RuntimeError("GPT-SoVITS output normalization failed")
+            read_pcm_wav_info(output_path,require_canonical=True)
+        finally: temporary.unlink(missing_ok=True)
+
+
+def gpt_sovits_preflight(*,base_url:str,gpt_weights_path:str,sovits_weights_path:str,ffmpeg:str="ffmpeg",
+                         opener:Callable[...,Any]=_loopback_urlopen)->dict[str,Any]:
+    checks={"loopback_url":False,"ffmpeg":shutil.which(ffmpeg) is not None,"server_contract":False,
+            "gpt_weights_path":bool(gpt_weights_path.strip()),"sovits_weights_path":bool(sovits_weights_path.strip())}
+    try:
+        url=_validated_loopback_url(base_url); checks["loopback_url"]=True
+        request=urllib.request.Request(f"{url}/openapi.json",method="GET")
+        with opener(request,timeout=10.0) as response:
+            raw=response.read(2*1024*1024+1)
+        if len(raw)<=2*1024*1024:
+            contract=json.loads(raw.decode("utf-8")); paths=contract.get("paths",{})
+            checks["server_contract"]=all(path in paths for path in ("/tts","/set_gpt_weights","/set_sovits_weights"))
+    except (ValueError,urllib.error.URLError,urllib.error.HTTPError,UnicodeDecodeError,json.JSONDecodeError): pass
+    return {"state":"READY" if all(checks.values()) else "BLOCKED","checks":checks,"model_loaded":False,"generation_started":False}
+
+
 def render_srt_to_wav(srt_path:str|Path,*,renderer:CueRenderer,candidates:Sequence[VoiceReferenceCandidate],work_dir:str|Path,output:str|Path,
                       style_id:str="NORMAL",emotion_id:str="NORMAL",speaking_rate:float=1.0,cue_overrides:Mapping[str,Mapping[str,Any]]|None=None,
                       allow_neutral_fallback:bool=False,ffmpeg:str="ffmpeg")->dict[str,Any]:
@@ -187,20 +335,25 @@ def prepare_reference_manifest(*, reference_wav:str|Path, reference_text:str|Pat
 
 def main(argv:Sequence[str]|None=None)->int:
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest='cmd',required=True)
-    planp=sub.add_parser('plan'); planp.add_argument('--srt',required=True); planp.add_argument('--output',required=True); planp.add_argument('--style',default='NORMAL'); planp.add_argument('--emotion',default='NORMAL'); planp.add_argument('--speaking-rate',type=float,default=1.0)
+    planp=sub.add_parser('plan'); planp.add_argument('--srt',required=True); planp.add_argument('--output',required=True); planp.add_argument('--style',default='NORMAL'); planp.add_argument('--emotion',default='NORMAL'); planp.add_argument('--speaking-rate',type=float,default=1.0); planp.add_argument('--cue-overrides')
     asmp=sub.add_parser('assemble'); asmp.add_argument('--srt',required=True); asmp.add_argument('--cue-dir',required=True); asmp.add_argument('--output',required=True); asmp.add_argument('--report')
-    prep=sub.add_parser('preflight'); prep.add_argument('--model-root',required=True); prep.add_argument('--reference-wav'); prep.add_argument('--reference-text'); prep.add_argument('--ffmpeg',default='ffmpeg'); prep.add_argument('--output')
+    prep=sub.add_parser('preflight'); prep.add_argument('--backend',choices=('qwen3','gpt-sovits'),default='qwen3'); prep.add_argument('--model-root'); prep.add_argument('--reference-wav'); prep.add_argument('--reference-text'); prep.add_argument('--ffmpeg',default='ffmpeg'); prep.add_argument('--output'); prep.add_argument('--gpt-sovits-url',default=DEFAULT_GPT_SOVITS_URL); prep.add_argument('--gpt-weights'); prep.add_argument('--sovits-weights')
     refp=sub.add_parser('prepare-reference'); refp.add_argument('--reference-wav',required=True); refp.add_argument('--reference-text',required=True); refp.add_argument('--output',required=True); refp.add_argument('--confirm-owner-approved',action='store_true'); refp.add_argument('--confirm-quality-pass',action='store_true'); refp.add_argument('--confirm-transcript-verified',action='store_true')
-    rnd=sub.add_parser('render'); rnd.add_argument('--srt',required=True); rnd.add_argument('--model-root',required=True); rnd.add_argument('--references',required=True); rnd.add_argument('--work-dir',required=True); rnd.add_argument('--output',required=True); rnd.add_argument('--report'); rnd.add_argument('--ffmpeg',default='ffmpeg'); rnd.add_argument('--style',default='NORMAL'); rnd.add_argument('--emotion',default='NORMAL'); rnd.add_argument('--speaking-rate',type=float,default=1.0); rnd.add_argument('--allow-neutral-fallback',action='store_true')
+    rnd=sub.add_parser('render'); rnd.add_argument('--backend',choices=('qwen3','gpt-sovits'),default='qwen3'); rnd.add_argument('--srt',required=True); rnd.add_argument('--model-root'); rnd.add_argument('--references',required=True); rnd.add_argument('--work-dir',required=True); rnd.add_argument('--output',required=True); rnd.add_argument('--report'); rnd.add_argument('--ffmpeg',default='ffmpeg'); rnd.add_argument('--style',default='NORMAL'); rnd.add_argument('--emotion',default='NORMAL'); rnd.add_argument('--speaking-rate',type=float,default=1.0); rnd.add_argument('--cue-overrides'); rnd.add_argument('--allow-neutral-fallback',action='store_true'); rnd.add_argument('--gpt-sovits-url',default=DEFAULT_GPT_SOVITS_URL); rnd.add_argument('--gpt-weights'); rnd.add_argument('--sovits-weights'); rnd.add_argument('--server-path-mode',choices=('native','wsl'),default='wsl')
     a=p.parse_args(argv)
     if a.cmd=='plan':
-        value=[x.to_public_dict() for x in build_srt_plan(a.srt,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate)]; Path(a.output).write_text(json.dumps(value,ensure_ascii=False,indent=2),encoding='utf-8'); return 0
+        value=[x.to_public_dict() for x in build_srt_plan(a.srt,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,cue_overrides=load_cue_overrides(a.cue_overrides))]; Path(a.output).write_text(json.dumps(value,ensure_ascii=False,indent=2),encoding='utf-8'); return 0
     if a.cmd=='assemble':
         plan=build_srt_plan(a.srt); d=Path(a.cue_dir); report=assemble_cue_wavs(plan,{x.cue_id:d/f"{x.cue_id}.wav" for x in plan},a.output);
         if a.report: Path(a.report).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         return 0
     if a.cmd=='preflight':
-        report=qwen_preflight(model_root=a.model_root,reference_wav=a.reference_wav,reference_text=a.reference_text,ffmpeg=a.ffmpeg)
+        if a.backend=='qwen3':
+            if not a.model_root: p.error('--model-root is required for qwen3')
+            report=qwen_preflight(model_root=a.model_root,reference_wav=a.reference_wav,reference_text=a.reference_text,ffmpeg=a.ffmpeg)
+        else:
+            if not a.gpt_weights or not a.sovits_weights: p.error('--gpt-weights and --sovits-weights are required for gpt-sovits')
+            report=gpt_sovits_preflight(base_url=a.gpt_sovits_url,gpt_weights_path=a.gpt_weights,sovits_weights_path=a.sovits_weights,ffmpeg=a.ffmpeg)
         if a.output: Path(a.output).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         else: print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0 if report['state']!='BLOCKED' else 2
@@ -209,7 +362,14 @@ def main(argv:Sequence[str]|None=None)->int:
             owner_approved=a.confirm_owner_approved,quality_pass=a.confirm_quality_pass,
             transcript_verified=a.confirm_transcript_verified)
         return 0
-    refs=_load_candidates(Path(a.references)); report=render_srt_to_wav(a.srt,renderer=Qwen3OwnerVoiceRenderer(a.model_root,ffmpeg=a.ffmpeg),candidates=refs,work_dir=a.work_dir,output=a.output,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,allow_neutral_fallback=a.allow_neutral_fallback,ffmpeg=a.ffmpeg)
+    refs=_load_candidates(Path(a.references))
+    if a.backend=='qwen3':
+        if not a.model_root: p.error('--model-root is required for qwen3')
+        renderer:CueRenderer=Qwen3OwnerVoiceRenderer(a.model_root,ffmpeg=a.ffmpeg)
+    else:
+        if not a.gpt_weights or not a.sovits_weights: p.error('--gpt-weights and --sovits-weights are required for gpt-sovits')
+        renderer=GptSoVitsHttpRenderer(a.gpt_sovits_url,gpt_weights_path=a.gpt_weights,sovits_weights_path=a.sovits_weights,server_path_mode=a.server_path_mode,ffmpeg=a.ffmpeg)
+    report=render_srt_to_wav(a.srt,renderer=renderer,candidates=refs,work_dir=a.work_dir,output=a.output,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,cue_overrides=load_cue_overrides(a.cue_overrides),allow_neutral_fallback=a.allow_neutral_fallback,ffmpeg=a.ffmpeg)
     if a.report: Path(a.report).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     return 0
 

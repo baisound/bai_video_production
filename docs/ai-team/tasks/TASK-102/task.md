@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_R1_DESIGN_ACCEPTED / PMST_D1_RECOVERY_R1_DESIGN_ACCEPTED / PMST_I1_RECOVERY_R1_ACCEPTED / SOURCE_NATIVE_NOT_AUTHORIZED`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1A_PASS / PMST_N1B_BLOCKED_PRIVILEGE / PMST_N1_NOT_CONFIRMED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -138,3 +138,30 @@ Recovery R1 now separates commit and terminal witness revisions, binds journal p
 - Accepted local Evidence is focused `65 PASS`, TASK-102 plus direct TASK-099 `87 PASS`, and runnable TASK-043 Project/Job/History `66 PASS`. The separately recorded save-recovery route remains `NOT_CONFIRMED` only because the existing WSL environment lacks `referencing`; no dependency was installed.
 - PMST-I1 is accepted only as a pure protocol/state-machine/fake-port/schema unit. It proves no Windows service, ACL, filesystem CAS/durability, real Project mutation, installer, native QA, Release, Deploy or Production behavior.
 - Next unit is PMST-N1 feasibility/native design and requires its own explicit Human Gate; it is not authorized by this acceptance.
+
+## PMST-N1 authority and bounded execution plan — 2026-09-27
+
+The Owner explicitly instructed `TASK-102 PMST-N1を承認` immediately after the bounded Windows Production-foundation proof was described as service/ACL/safe-save/recovery validation in a dedicated temporary root without touching a real Project. This authorizes the PMST-N1 feasibility lane only.
+
+PMST-N1 is decomposed into two ordered native proof units:
+
+1. **PMST-N1A — non-elevated native primitive proof.** Prove unique-Temp containment, local NTFS/topology admission, physical identity, root/control/manifest sharing barriers, staged replacement, file and directory flush, crash-seam witness classification, a protected task-owned DACL, first-instance local named-pipe behavior and server/client PID readback. No service registration or existing path mutation.
+2. **PMST-N1B — dedicated service-SID exclusion proof.** Only after N1A PASS and only if an elevated execution route exists. Create one uniquely named temporary test service, bind its service SID to the task-owned control root and pipe, prove ordinary-user mutation rejection plus service-owned mutation, then remove the exact service and task root. Absence of elevation is `NOT_CONFIRMED / BLOCKED_PRIVILEGE`, not a reason to weaken the service-SID design.
+
+Exact Allowed Files for PMST-N1A/N1B implementation and completion synchronization:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-n1-windows-feasibility-plan-r0.md`
+3. `src/ai_video_production/task102_windows_feasibility.py`
+4. `tools/windows/test-task102-pmst-n1.ps1`
+5. `tests/test_task102_windows_feasibility.py`
+6. bounded Evidence under `docs/ai-team/tasks/TASK-102/evidence/` or the canonical external TASK-102 Evidence root
+7. completion-only synchronization in `docs/ai-team/current-state.md` and `docs/ai-team/task-index.md`
+
+Every native run must use one new run-specific directory beneath the OS system temporary root, validate exact physical containment before effects, reject existing/foreign roots, record all resolved roots and residuals, and remove only artifacts created by that run after identity revalidation. Existing Projects, repository content outside Allowed Files, existing services, existing ACLs, private voice/model data, Release, Deploy and Production remain prohibited. PMST-N1 may prove feasibility or a precise unavailable boundary; it may not represent partial proof as Product readiness.
+
+## PMST-N1A result and PMST-N1B boundary — 2026-09-27
+
+PMST-N1A is technically `PASS` on the supported Windows host. Run `20260927-n1a-final-007` proved a unique system-Temp child on fixed NTFS, non-inheritable root/control/manifest barriers with five second-process rejection observations, a DELETE-capable handle-bound same-volume replacement with changed physical identity, file plus directory flush, closed recovery classification across three process-termination seams, a protected and stable task-owned control DACL, and an explicit local named-pipe descriptor with first-instance-specific rejection, remote-client rejection configuration and mutual process-ID readback. Focused TASK-102 tests are `78 PASS` including direct PMST-I1 regression. The native report file SHA-256 is `3eba567cc83001211174f34e06924de91f67cda8a0bcbcd726ca27c44e867692`; the public-safe summary is under this Task's `evidence/` directory.
+
+This is not a physical power-loss proof and creates no Product enrollment or writer authority. PMST-N1B was not executed because both the sandbox and host execution token were non-elevated. No service-create effect was attempted, no existing service or ACL was changed, and the exact result is `NOT_CONFIRMED / BLOCKED_PRIVILEGE`. Therefore PMST-N1 as a whole is not accepted complete and PMST-I2 remains blocked until a separately elevated, exact N1B run proves service-SID exclusion and cleanup.

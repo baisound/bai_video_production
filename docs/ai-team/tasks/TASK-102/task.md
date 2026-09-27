@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_R1_DESIGN_ACCEPTED / PMST_D1_NEXT / SOURCE_NATIVE_NOT_AUTHORIZED`.
+- Status: `PMST_D0_R1_DESIGN_ACCEPTED / PMST_D1_RECOVERY_R1_DESIGN_ACCEPTED / PMST_I1_REQUIRES_FRESH_ALLOWED_FILES / SOURCE_NATIVE_NOT_AUTHORIZED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -57,3 +57,26 @@ Source, schema, test, installer, service, ACL, Product runtime, private media/mo
 - R1 rereview: Critic/Judge `ACCEPT`, C/H/M/L `0/0/0/0`; Tester `PASS / ACCEPT`, C/H/M/L `0/0/0/0`.
 - Accepted scope: responsibility allocation, inventory classes, security floor, design order and proof gates only. Full machine-checked inventory, protocol ABI, source implementation and Windows/native feasibility are not accepted by D0.
 - Next unit: PMST-D1 pure protocol/journal/witness and complete migration-matrix design. No service/ACL/filesystem effect.
+
+## PMST-D1 exact scope
+
+Allowed files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-d1-protocol-journal-migration-r0.md`
+3. `docs/ai-team/tasks/TASK-102/pmst-d1-protected-control-mutation-matrix-r0.json`
+
+D1 is documentation-only. It must choose one broker-owned journal model, freeze closed private protocol records and operation profiles, inventory every current `.bai-project` physical mutation/lock surface and bind each route to delegation, redesign or deterministic block. Source/schema/test/service/installer/ACL/native/Product mutations remain prohibited. Exit requires independent DEV-4 review with unresolved Critical/High findings zero and external Evidence readback.
+
+## PMST-D1 Recovery R1 authority
+
+On 2026-09-27 the Owner answered `つぎへtugih` directly to the explicit PMST-D1 Recovery R1 Human Gate. Recovery authority is limited to closing the two final-review High findings: exact participant phase/status/effect tuples and closed read/query evidence-unavailable result variants, followed by one fresh independent final review. It does not authorize source/schema/test/service/installer/ACL/native/Product, private media/model, Release, Deploy or Production effects.
+
+## PMST-D1 Recovery R1 final decision
+
+- Reviewed exact3 SHA256: `task.md` `3463db8dbf6b7034bfd478c98eb6392024de0756de0bf90989c29b144fe22313`; protocol design `a0e90cc03eb9078b616916af5d3771d3cdb06cd6c0f892d84ede18b705872447`; migration matrix `ad7f4a22a560b84c8e317b2e450c3097110877e04f25f0352cc62651439a8dd5`.
+- Independent Critic/Judge: `ACCEPT`, C/H/M/L `0/0/0/0`.
+- Independent Tester: `PASS / ACCEPT`, C/H/M/L `0/0/0/0`.
+- Closed findings: participant phase/status/effect is an exact tuple union with monotonic known outcomes and UNKNOWN barrier closure; read/query evidence failures have distinct closed variants with exact witness/readback nullability and public-result mappings.
+- Acceptance is documentation-contract acceptance only. Windows/native feasibility remains `NOT_CONFIRMED`, and implementation/native/Product effects remain unauthorized.
+- The status and this decision block are the only post-review administrative changes to the reviewed exact3. PMST-I1 requires a fresh exact Allowed Files allocation before any implementation mutation.

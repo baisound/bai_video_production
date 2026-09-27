@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/task100-local-voice-catalog-admission.schema.json",
+  "title": "TASK-100 Local Voice Catalog Admission V1",
+  "description": "Body-free pure contracts for provenance-gated conversion into the existing local audio model inventory.",
+  "oneOf": [
+    { "$ref": "#/$defs/Candidate" },
+    { "$ref": "#/$defs/Assessment" },
+    { "$ref": "#/$defs/Admission" }
+  ],
+  "$defs": {
+    "Sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "PublicId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "ModelId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?![A-Za-z]:)(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z$"
+    },
+    "CustodyProvenance": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["variant", "producer_task", "receipt_type", "receipt_sha256", "readback_type", "readback_sha256"],
+          "properties": {
+            "variant": { "const": "EXISTING_MODEL_IMPORT" },
+            "producer_task": { "const": "TASK-101" },
+            "receipt_type": { "const": "ExistingModelImportCustodyReceiptV1" },
+            "receipt_sha256": { "$ref": "#/$defs/Sha256" },
+            "readback_type": { "const": "ExistingModelImportCustodyReadbackV1" },
+            "readback_sha256": { "$ref": "#/$defs/Sha256" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["variant", "producer_task", "receipt_type", "receipt_sha256", "readback_type", "readback_sha256"],
+          "properties": {
+            "variant": { "const": "TRAINING_TERMINAL" },
+            "producer_task": { "const": "TASK-084" },
+            "receipt_type": { "const": "Task084ModelArtifactCustodyReceiptV1" },
+            "receipt_sha256": { "$ref": "#/$defs/Sha256" },
+            "readback_type": { "const": "Task084CustodyReadbackV1" },
+            "readback_sha256": { "$ref": "#/$defs/Sha256" }
+          }
+        }
+      ]
+    },
+    "Candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "candidate_id", "revision", "predecessor_sha256",
+        "provider_id", "engine_id", "model_id", "runtime_build_sha256", "model_pair_sha256",
+        "sovits_sha256", "gpt_sha256", "voice_profile_revision_sha256",
+        "model_candidate_revision_sha256", "custody_provenance", "consent_currentness_sha256",
+        "h4_approval_sha256", "license_evidence_sha256", "installed_binding_sha256",
+        "capability_map_sha256", "execution_port_id", "producer_readback_set_sha256",
+        "observation_source", "observed_at", "expires_at", "candidate_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "LOCAL_VOICE_CATALOG_CANDIDATE_V1" },
+        "record_type": { "const": "LocalVoiceCatalogCandidateV1" },
+        "candidate_id": { "$ref": "#/$defs/PublicId" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "predecessor_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/Sha256" }] },
+        "provider_id": { "$ref": "#/$defs/PublicId" },
+        "engine_id": { "$ref": "#/$defs/PublicId" },
+        "model_id": { "$ref": "#/$defs/ModelId" },
+        "runtime_build_sha256": { "$ref": "#/$defs/Sha256" },
+        "model_pair_sha256": { "$ref": "#/$defs/Sha256" },
+        "sovits_sha256": { "$ref": "#/$defs/Sha256" },
+        "gpt_sha256": { "$ref": "#/$defs/Sha256" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/Sha256" },
+        "model_candidate_revision_sha256": { "$ref": "#/$defs/Sha256" },
+        "custody_provenance": { "$ref": "#/$defs/CustodyProvenance" },
+        "consent_currentness_sha256": { "$ref": "#/$defs/Sha256" },
+        "h4_approval_sha256": { "$ref": "#/$defs/Sha256" },
+        "license_evidence_sha256": { "$ref": "#/$defs/Sha256" },
+        "installed_binding_sha256": { "$ref": "#/$defs/Sha256" },
+        "capability_map_sha256": { "$ref": "#/$defs/Sha256" },
+        "execution_port_id": { "$ref": "#/$defs/PublicId" },
+        "producer_readback_set_sha256": { "$ref": "#/$defs/Sha256" },
+        "observation_source": { "enum": ["VERIFIED_PRODUCER_READBACK", "FIXTURE_ONLY"] },
+        "observed_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "candidate_sha256": { "$ref": "#/$defs/Sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "revision": { "const": 1 } }, "required": ["revision"] },
+          "then": { "properties": { "predecessor_sha256": { "type": "null" } } },
+          "else": { "properties": { "predecessor_sha256": { "$ref": "#/$defs/Sha256" } } }
+        }
+      ]
+    },
+    "RequiredProducerCurrentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["LINEAGE", "CUSTODY", "CONSENT", "H4_APPROVAL", "INSTALLED_BINDING", "CAPABILITY_MAP", "EXECUTION_PORT"],
+      "properties": {
+        "LINEAGE": { "$ref": "#/$defs/ProducerCurrentness" },
+        "CUSTODY": { "$ref": "#/$defs/ProducerCurrentness" },
+        "CONSENT": { "$ref": "#/$defs/ProducerCurrentness" },
+        "H4_APPROVAL": { "$ref": "#/$defs/ProducerCurrentness" },
+        "INSTALLED_BINDING": { "$ref": "#/$defs/ProducerCurrentness" },
+        "CAPABILITY_MAP": { "$ref": "#/$defs/ProducerCurrentness" },
+        "EXECUTION_PORT": { "$ref": "#/$defs/ProducerCurrentness" }
+      }
+    },
+    "ProducerCurrentness": { "enum": ["CURRENT", "STALE", "REVOKED", "UNKNOWN"] },
+    "Assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assessment_version", "candidate_sha256", "producer_readback_set_sha256", "evaluated_at",
+        "installed_state", "runtime_readiness", "runtime_instance_id", "inventory_currentness",
+        "license_state", "automation_readiness", "producer_authenticity", "custody_contract_state",
+        "required_producer_currentness", "assessment_sha256"
+      ],
+      "properties": {
+        "assessment_version": { "const": "LOCAL_VOICE_CATALOG_ASSESSMENT_V1" },
+        "candidate_sha256": { "$ref": "#/$defs/Sha256" },
+        "producer_readback_set_sha256": { "$ref": "#/$defs/Sha256" },
+        "evaluated_at": { "$ref": "#/$defs/Timestamp" },
+        "installed_state": { "enum": ["INSTALLED", "NOT_INSTALLED", "UNKNOWN"] },
+        "runtime_readiness": { "enum": ["READY", "STOPPED", "UNKNOWN"] },
+        "runtime_instance_id": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/PublicId" }] },
+        "inventory_currentness": { "enum": ["CURRENT", "STALE", "UNKNOWN"] },
+        "license_state": { "enum": ["CONFIRMED", "UNKNOWN"] },
+        "automation_readiness": { "enum": ["SCRIPTABLE", "DISPLAY_ONLY", "UNSUPPORTED"] },
+        "producer_authenticity": { "enum": ["VERIFIED", "NOT_VERIFIED"] },
+        "custody_contract_state": { "enum": ["ACCEPTED", "PROPOSED_FIXTURE_ONLY"] },
+        "required_producer_currentness": { "$ref": "#/$defs/RequiredProducerCurrentness" },
+        "assessment_sha256": { "$ref": "#/$defs/Sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "runtime_readiness": { "const": "READY" } }, "required": ["runtime_readiness"] },
+          "then": { "properties": { "runtime_instance_id": { "$ref": "#/$defs/PublicId" } } },
+          "else": { "properties": { "runtime_instance_id": { "type": "null" } } }
+        }
+      ]
+    },
+    "Admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "candidate_sha256", "producer_readback_set_sha256",
+        "assessment_sha256", "candidate_observed_at", "evaluated_at", "candidate_expires_at",
+        "admission_state", "reason_codes", "inventory_candidate_sha256", "inventory_sha256",
+        "consumer_live_eligible", "consumer_currentness_required", "replayable_authority",
+        "execution_authorized", "load_lease_created", "runtime_started", "model_downloaded",
+        "host_path_persisted", "private_body_persisted", "resource_effect_count", "admission_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "LOCAL_VOICE_CATALOG_ADMISSION_V1" },
+        "record_type": { "const": "LocalVoiceCatalogAdmissionV1" },
+        "candidate_sha256": { "$ref": "#/$defs/Sha256" },
+        "producer_readback_set_sha256": { "$ref": "#/$defs/Sha256" },
+        "assessment_sha256": { "$ref": "#/$defs/Sha256" },
+        "candidate_observed_at": { "$ref": "#/$defs/Timestamp" },
+        "evaluated_at": { "$ref": "#/$defs/Timestamp" },
+        "candidate_expires_at": { "$ref": "#/$defs/Timestamp" },
+        "admission_state": { "enum": ["ADMITTED_CATALOG_CANDIDATE", "BLOCKED_CATALOG_CANDIDATE", "FIXTURE_ONLY_CANDIDATE"] },
+        "reason_codes": {
+          "type": "array", "minItems": 0, "maxItems": 16, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,95}$" }
+        },
+        "inventory_candidate_sha256": { "$ref": "#/$defs/Sha256" },
+        "inventory_sha256": { "$ref": "#/$defs/Sha256" },
+        "consumer_live_eligible": { "const": false },
+        "consumer_currentness_required": { "const": true },
+        "replayable_authority": { "const": false },
+        "execution_authorized": { "const": false },
+        "load_lease_created": { "const": false },
+        "runtime_started": { "const": false },
+        "model_downloaded": { "const": false },
+        "host_path_persisted": { "const": false },
+        "private_body_persisted": { "const": false },
+        "resource_effect_count": { "const": 0 },
+        "admission_sha256": { "$ref": "#/$defs/Sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "admission_state": { "const": "ADMITTED_CATALOG_CANDIDATE" } }, "required": ["admission_state"] },
+          "then": { "properties": { "reason_codes": { "maxItems": 0 } } },
+          "else": { "properties": { "reason_codes": { "minItems": 1 } } }
+        }
+      ]
+    }
+  }
+}

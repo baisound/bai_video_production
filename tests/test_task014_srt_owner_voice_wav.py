@@ -1,4 +1,5 @@
 from pathlib import Path
+from email.message import Message
 import json, math, wave, shutil, sys
 from types import SimpleNamespace
 import pytest
@@ -58,6 +59,88 @@ def test_neutral_fallback_is_opt_in(tmp_path):
     with pytest.raises(ValueError,match='NO_APPROVED_REFERENCE'):
         render_srt_to_wav(p,renderer=r,candidates=refs,work_dir=tmp_path/'a',output=tmp_path/'a.wav',style_id='WHISPER',emotion_id='SAD')
     render_srt_to_wav(p,renderer=r,candidates=refs,work_dir=tmp_path/'b',output=tmp_path/'b.wav',style_id='WHISPER',emotion_id='SAD',allow_neutral_fallback=True)
+
+
+def test_cue_overrides_are_strict_and_drive_two_expressions(tmp_path):
+    override=tmp_path/'overrides.json'
+    override.write_text(json.dumps({'cue-000002':{'style_id':'SPORTS_COMMENTARY','emotion_id':'EXCITED','speaking_rate':1.1}}),encoding='utf-8')
+    loaded=load_cue_overrides(override)
+    p=tmp_path/'x.srt'; srt(p)
+    plan=build_srt_plan(p,cue_overrides=loaded)
+    assert (plan[0].style_id,plan[0].emotion_id)==('NORMAL','NORMAL')
+    assert (plan[1].style_id,plan[1].emotion_id,plan[1].speaking_rate)==('SPORTS_COMMENTARY','EXCITED',1.1)
+    override.write_text(json.dumps({'cue-000001':{'private_path':'x'}}),encoding='utf-8')
+    with pytest.raises(ValueError,match='unknown fields'): load_cue_overrides(override)
+    override.write_text(json.dumps({'cue-missing':{'emotion_id':'SAD'}}),encoding='utf-8')
+    with pytest.raises(ValueError,match='unknown cue ids'):
+        build_srt_plan(p,cue_overrides=load_cue_overrides(override))
+
+
+class FakeHttpResponse:
+    def __init__(self,body:bytes,content_type:str,content_length:int|None=None):
+        self.body=body; self.headers=Message()
+        self.headers['Content-Type']=content_type
+        if content_length is not None: self.headers['Content-Length']=str(content_length)
+    def __enter__(self): return self
+    def __exit__(self,*args): return False
+    def read(self,size=-1): return self.body if size<0 else self.body[:size]
+
+
+def test_gpt_sovits_renderer_configures_selected_pair_then_renders_canonical_wav(tmp_path,monkeypatch):
+    reference=candidate(tmp_path)
+    source=tmp_path/'server.wav'; wav(source,0.2)
+    server_wav=source.read_bytes(); calls=[]
+    def opener(request,timeout):
+        calls.append((request.full_url,request.data,timeout))
+        if '/set_' in request.full_url: return FakeHttpResponse(b'{"message":"success"}','application/json')
+        assert request.full_url.endswith('/tts')
+        payload=json.loads(request.data.decode('utf-8'))
+        assert payload['text']=='生成テキスト'
+        assert payload['prompt_text']=='参照テキスト'
+        assert payload['ref_audio_path'].startswith('/mnt/')
+        return FakeHttpResponse(server_wav,'audio/wav',len(server_wav))
+    def run(argv,**kwargs):
+        wav(Path(argv[-1]),0.2)
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr('ai_video_production.task014_srt_owner_voice_wav.subprocess.run',run)
+    renderer=GptSoVitsHttpRenderer(gpt_weights_path='/models/selected.ckpt',sovits_weights_path='/models/selected.pth',opener=opener)
+    output=tmp_path/'out.wav'
+    renderer.render(text='生成テキスト',reference=reference,output_path=output)
+    renderer.render(text='生成テキスト',reference=reference,output_path=tmp_path/'out2.wav')
+    assert [x[0].split('/')[-1].split('?')[0] for x in calls]==['set_sovits_weights','set_gpt_weights','tts','tts']
+    assert read_pcm_wav_info(output,require_canonical=True).sample_count>0
+    assert not output.with_suffix('.gpt-sovits.wav').exists()
+
+
+def test_gpt_sovits_renderer_rejects_non_loopback_and_weight_failure(tmp_path):
+    with pytest.raises(ValueError,match='loopback'):
+        GptSoVitsHttpRenderer('http://example.com:9880',gpt_weights_path='g',sovits_weights_path='s')
+    with pytest.raises(ValueError,match='loopback'):
+        GptSoVitsHttpRenderer('http://localhost:9880',gpt_weights_path='g',sovits_weights_path='s')
+    def opener(request,timeout): return FakeHttpResponse(b'{"message":"failed"}','application/json')
+    renderer=GptSoVitsHttpRenderer(gpt_weights_path='g',sovits_weights_path='s',opener=opener)
+    with pytest.raises(RuntimeError,match='rejected'):
+        renderer.configure()
+
+
+def test_gpt_sovits_renderer_bounds_audio_response(tmp_path):
+    replies=iter((
+        FakeHttpResponse(b'{"message":"success"}','application/json'),
+        FakeHttpResponse(b'{"message":"success"}','application/json'),
+        FakeHttpResponse(b'RIFFtoolarge','audio/wav'),
+    ))
+    renderer=GptSoVitsHttpRenderer(gpt_weights_path='g',sovits_weights_path='s',max_response_bytes=4,opener=lambda *a,**k:next(replies))
+    with pytest.raises(RuntimeError,match='size limit'):
+        renderer.render(text='x',reference=candidate(tmp_path),output_path=tmp_path/'out.wav')
+
+
+def test_gpt_sovits_preflight_requires_exact_loopback_api_contract(monkeypatch):
+    contract=json.dumps({'paths':{'/tts':{},'/set_gpt_weights':{},'/set_sovits_weights':{}}}).encode()
+    monkeypatch.setattr('ai_video_production.task014_srt_owner_voice_wav.shutil.which',lambda value:'ffmpeg')
+    ready=gpt_sovits_preflight(base_url='http://127.0.0.1:9880',gpt_weights_path='g',sovits_weights_path='s',opener=lambda *a,**k:FakeHttpResponse(contract,'application/json'))
+    assert ready['state']=='READY'
+    blocked=gpt_sovits_preflight(base_url='http://remote.invalid:9880',gpt_weights_path='g',sovits_weights_path='s',opener=lambda *a,**k:FakeHttpResponse(contract,'application/json'))
+    assert blocked['state']=='BLOCKED'
 
 
 def test_qwen_renderer_uses_generated_sample_rate_not_reference_rate(tmp_path, monkeypatch):
@@ -145,11 +228,16 @@ def test_installed_windows_wrapper_is_explicit_noninteractive_command():
         'runtime-config.json',
         'prepare-reference',
         'preflight',
-        ' plan ',
-        ' render ',
+        "'plan'",
+        "'render'",
+        'gpt-sovits',
+        'CueOverrides',
+        'GptWeights',
+        'SoVitsWeights',
         'master-owner-voice.wav',
     ):
         assert required in script
     assert 'Read-Host' not in script
     assert 'D:\\BAI\\BAI_VIDEO_PRODUCTION_20260914\\owner-voice-jobs' not in script
+    assert '/home/baisound/' not in script
     assert "Join-Path $datasetRoot 'master-wav-jobs'" in script

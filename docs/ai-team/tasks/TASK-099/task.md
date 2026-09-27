@@ -1,6 +1,6 @@
 # TASK-099 — Project / Job Currentness V2 successor
 
-- Status: `JCV_D_R0_DESIGN_ACCEPTED / JCV_I_RECOVERY_R1_ACCEPTED_COMPLETE / JCV_N_NATIVE_NOT_AUTHORIZED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `JCV_D_R0_DESIGN_ACCEPTED / JCV_I_RECOVERY_R1_ACCEPTED_COMPLETE / JCV_N_D_R1_DESIGN_ACCEPTED_OWNER_DECISION_REQUIRED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-043 hosted-closed; historical implementation is not reopened.
@@ -74,3 +74,13 @@ See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for s
 - Independent Critic/Judge: `ACCEPT`, C/H/M/L `0/0/0/0`; independent memory probes 10 PASS and focused pytest 22 PASS.
 - Accepted responsibility: strict bounded JCV-I schemas/parsers, deterministic currentness-index compilation, result/public projection and side-effect-injected fake-port orchestration only.
 - Explicit non-acceptance: no JCV-N secure native backend, filesystem/path/lock/replace implementation, live trusted currentness, Product consumer integration, private voice/media processing, model/training, release, deploy or Production authorization. TASK-099 remains open for separately authorized JCV-N and JCV-C.
+
+## JCV-N-D R0 design unit
+
+- Owner continuation: 2026-09-27 `つぎへ`, interpreted as authority to perform the next design/review gate only after JCV-I acceptance; no native/service/ACL/filesystem effect authority is inferred.
+- Design: `jcv-n-d-secure-native-backend-r0.md`.
+- Exact design files: this Task record and the design document. Source/tests/native effects remain prohibited until design acceptance and the recorded Human architecture decision.
+- Current feasibility finding: TASK-068 is immutable-only and the legacy TASK-043 store cannot prove the required physical predecessor CAS against an uncooperative same-user writer. R1 therefore proposes a service-SID Secure Project Manifest Transaction Broker while retaining `.bai-project/project.json` as the sole canonical selector. Because protecting `.bai-project` affects every manifest writer, this generic broker cannot belong to TASK-099; Owner architecture acceptance and a new direct dependency Task are required before JCV-N implementation allocation.
+- R0 independent review was `REVISE`: Critic/Judge C/H/M/L `0/2/1/0`, Tester `0/4/2/0`. R1 adds operation-bound durable non-selector witnesses with restart reconciliation before later writes, protected owner/DACL plus long-lived sharing barriers, mutually pinned pipe process identity and connection-local capability, an API-specific Windows feasibility gate, explicit private IPC/public projection separation, and full manifest-writer/TASK-068 security inventory requirements. No native feasibility is claimed until R1 rereview and the dependency's own proof gates pass.
+- R1 independent rereview: Critic/Judge `ACCEPT`, C/H/M/L `0/0/0/0`; Tester `PASS / ACCEPT`, C/H/M/L `0/0/0/0`. Accepted scope is the architecture contract, responsibility separation and feasibility/test gates only. Windows CAS/durability, service/ACL behavior, TASK-068 native composition, enrollment and runtime remain `NOT_CONFIRMED` and unauthorized.
+- Current Human decision: accept or reject introduction of the service-SID Secure Project Manifest Transaction Broker and allocation of one new direct dependency Task for its generic canonical-store responsibility. Acceptance authorizes allocation/design and bounded pure work only; it does not authorize service installation, ACL mutation, native QA, release, deploy or Production.

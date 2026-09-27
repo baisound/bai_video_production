@@ -1,6 +1,6 @@
 # TASK-099 — Project / Job Currentness V2 successor
 
-- Status: `JCV_D_R0_DESIGN_ACCEPTED / JCV_I_PURE_IMPLEMENTATION_ELIGIBLE / JCV_N_NATIVE_NOT_AUTHORIZED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `JCV_D_R0_DESIGN_ACCEPTED / JCV_I_RECOVERY_R1_ACCEPTED_COMPLETE / JCV_N_NATIVE_NOT_AUTHORIZED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-043 hosted-closed; historical implementation is not reopened.
@@ -46,3 +46,31 @@ See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for s
 - Independent design Tester: `PASS`; both frozen NUL-domain digest vectors were independently reproduced and all prior High/Medium findings were closed.
 - Closed findings: missing profile/predecessor/operation/build/security comparison fields; undefined first-index transition; unsafe superseded-commit NO_WRITE classification; post-commit drift contradiction; exact successor-manifest preservation; fixture/live separation; committed-state versus observation freshness; proposal-validation phase; nested envelope bounds; normative digest preimages.
 - JCV-I is eligible only for the exact five paths recorded above and pure/fake-port behavior. Legacy Project manifest/store changes, path/native backend, migration, live currentness, JCV-C consumers and all Product/native effects remain unverified and separately gated.
+
+## JCV-I cycle-2 recovery checkpoint — 2026-09-27
+
+- Worktree: `C:\home\baisound\projects\bai-video-production\.task047-status-sync-20260924`; branch `codex/task-073-expression-master-wav-plan`; base/current HEAD `b43339e7592864548ee39c33095e05ff657482d9`; bound main `e41110c85ba4ab098c591378cb1b2eaae3cc3cb7`.
+- Exact4 frozen SHA-256: source `0d5813c8cd579ce654fb9974d47629d1af080d7c953c89a4521e361d2ebb4faf`; canonical schema and package mirror `121b107f4fc4b30f28d8a827661e6b2bb6236abdaa8786a702fd44a23621ebf9`; tests `fe803ba1f4481fc15f8c3042e8bad1d8a8350944d732a1e0e8d408ef7d05a86c`.
+- Parent verification: `83 passed` for TASK-099 plus three direct TASK-043 suites; Python compilation, JSON/schema self-check within pytest, mirror equality and `git diff --check` passed. No native, Product, filesystem backend, private voice, model, release, deploy or Production effect occurred.
+- Independent cycle-2 Tester: `REJECT`, C/H/M/L `0/1/0/0`; prior five High probes repaired, 16 focused functions passed. Remaining High: COMMIT `SAME_OPERATION_NOT_COMMITTED` plus `no_manifest_write_proven=true` can be classified no-write even when the same envelope says `manifest_commit_observation=COMMITTED`; contradictory evidence must query or become UNKNOWN.
+- Independent cycle-2 Critic/Judge: `REJECT`. In addition to the same commit-observation contradiction, it reproduced PUBLISH status/payload contradiction reaching commit, known committed/superseded history being downgraded by a later no-commit query, and release failure masking a determined commit result.
+- DEV-4 maximum two review/fix cycles is exhausted. JCV-I is not commit-ready or complete. No commit was created. JCV-N/JCV-C remain unauthorized. Resume only through an explicit Recovery unit that freezes phase-envelope cross-field invariants, monotonic same-operation knowledge and release-warning result behavior before another implementation/review decision.
+
+## JCV-I Recovery R1 authority and frozen correction design
+
+- Owner authorization: 2026-09-27, explicit approval to start `Recovery R1` after the cycle-2 rejection checkpoint.
+- Scope remains the accepted JCV-I exact5. This is not JCV-N, native/backend implementation, Product integration, audio/model work, release, deploy or Production authority.
+- Phase cross-field invariant: phase status, payload discriminator, `manifest_commit_observation`, `no_manifest_write_proven` and nullable successor identities must form one accepted combination. Contradictory combinations fail closed before any later mutation phase.
+- Same-operation knowledge is monotonic. Once COMMIT or QUERY provides authenticated evidence that the operation committed, no later no-commit response may downgrade it to `CONFLICT_NO_WRITE`; superseded commit remains `COMMIT_OUTCOME_UNKNOWN / COMMITTED / SUPERSEDED_PRESERVED`.
+- Release is cleanup evidence, not permission to erase an already determined transaction outcome. Release failure or `RELEASE_WARNING` appends `LEASE_RELEASE_WARNING` while preserving the determined committed/unknown/no-write result and fixed false authority flags.
+- Initial request admission may compare the request timestamp with the opened observation interval. REREAD and successor evidence acquired later must not be rejected merely because `observed_at` is after `requested_at`; JCV-I instead requires non-regressing authenticated observation sequence/time and relies on the admitted trusted backend/currentness capability. Native trusted-now enforcement remains JCV-N responsibility.
+- Recovery R1 acceptance requires focused cross-field/monotonic/release/fresh-observation negatives, direct TASK-043 regression, exact4 freeze, and a fresh independent DEV-4 Critic/Tester/Judge decision.
+
+## JCV-I Recovery R1 final acceptance
+
+- Frozen exact4 SHA-256: source `9d2a3bd5c0e5b225f650e283a8e65df79b31b52f0ef8933287317faa8c3ee523`; canonical schema and package mirror `8a72e5a6fcc528faa12b56ab944a97fda697ac7354961cc9702a934e2d43897b`; tests `a23ab77df21c14aebd258fcc09af16b0a8e28bb09188709ff95e6a09e03bb6aa`.
+- Parent verification: TASK-099 focused plus direct TASK-043 regression `88 passed`; Python compilation, schema validation/mirror equality and `git diff --check` PASS.
+- Independent Tester: `PASS / ACCEPT`, C/H/M/L `0/0/0/0`; focused functions 21 PASS plus bounded contradiction, monotonicity, release and observation probes.
+- Independent Critic/Judge: `ACCEPT`, C/H/M/L `0/0/0/0`; independent memory probes 10 PASS and focused pytest 22 PASS.
+- Accepted responsibility: strict bounded JCV-I schemas/parsers, deterministic currentness-index compilation, result/public projection and side-effect-injected fake-port orchestration only.
+- Explicit non-acceptance: no JCV-N secure native backend, filesystem/path/lock/replace implementation, live trusted currentness, Product consumer integration, private voice/media processing, model/training, release, deploy or Production authorization. TASK-099 remains open for separately authorized JCV-N and JCV-C.

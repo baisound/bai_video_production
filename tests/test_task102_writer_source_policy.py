@@ -109,7 +109,7 @@ def _accepted_route_ids() -> set[str]:
 def _guard_route_ids(
     node: ast.AST,
     *,
-    inherited_bindings: dict[str, str] | None = None,
+    inherited_bindings: dict[str, str | None] | None = None,
 ) -> set[str]:
     accepted = _accepted_route_ids()
     if isinstance(node, (ast.Module, ast.ClassDef)):
@@ -155,6 +155,31 @@ def _guard_route_ids(
     return routes
 
 
+def _explicit_call_bindings(
+    helper: ast.FunctionDef | ast.AsyncFunctionDef,
+    call: ast.Call,
+) -> dict[str, str | None]:
+    positional = [*helper.args.posonlyargs, *helper.args.args]
+    if positional and positional[0].arg in {"self", "cls"}:
+        positional = positional[1:]
+    bindings: dict[str, str | None] = {}
+    for argument, value in zip(positional, call.args):
+        bindings[argument.arg] = (
+            value.value
+            if isinstance(value, ast.Constant) and isinstance(value.value, str)
+            else None
+        )
+    for keyword in call.keywords:
+        if keyword.arg is None:
+            continue
+        bindings[keyword.arg] = (
+            keyword.value.value
+            if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str)
+            else None
+        )
+    return bindings
+
+
 def _route_markers_in_text(text: str, symbol: str, *, filename: str) -> set[str]:
     node = _node_for_text(text, symbol, filename=filename)
     markers = _guard_route_ids(node)
@@ -190,13 +215,8 @@ def _route_markers_in_text(text: str, symbol: str, *, filename: str) -> set[str]
             )
         except AssertionError:
             continue
-        helper_bindings = {
-            keyword.arg: keyword.value.value
-            for keyword in helper_call.keywords
-            if keyword.arg is not None
-            and isinstance(keyword.value, ast.Constant)
-            and isinstance(keyword.value.value, str)
-        }
+        assert isinstance(helper, (ast.FunctionDef, ast.AsyncFunctionDef))
+        helper_bindings = _explicit_call_bindings(helper, helper_call)
         markers.update(_guard_route_ids(helper, inherited_bindings=helper_bindings))
     return markers
 
@@ -545,4 +565,52 @@ def unsafe(root, router):
         "synthetic.py:unsafe",
         set(),
         text=read_only_guard,
+    )
+
+
+def test_helper_guard_uses_explicit_arguments_and_never_restores_an_overridden_default() -> None:
+    text = """
+class Example:
+    def _guard(self, root, access_kind='MUTATION'):
+        self.router.require_legacy_access(
+            root,
+            route_id='PMST-R003',
+            access_kind=access_kind,
+        )
+
+    def positional_read_only(self, root):
+        self._guard(root, 'READ_ONLY')
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+
+    def variable_read_only(self, root, selected_kind):
+        self._guard(root, access_kind=selected_kind)
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+
+    def default_mutation(self, root):
+        self._guard(root)
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+
+    def positional_lock(self, root):
+        self._guard(root, 'LOCK')
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+"""
+    assert not _is_registered_or_guarded(
+        "synthetic.py:Example.positional_read_only",
+        set(),
+        text=text,
+    )
+    assert not _is_registered_or_guarded(
+        "synthetic.py:Example.variable_read_only",
+        set(),
+        text=text,
+    )
+    assert _is_registered_or_guarded(
+        "synthetic.py:Example.default_mutation",
+        set(),
+        text=text,
+    )
+    assert _is_registered_or_guarded(
+        "synthetic.py:Example.positional_lock",
+        set(),
+        text=text,
     )

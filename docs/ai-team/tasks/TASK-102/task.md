@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_COMMITTED / PMST_I2C2_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_I2C2_COMMITTED / PMST_I2C3_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -260,3 +260,14 @@ I2C-C2 exact Allowed Files are this Task record, the I2 plan, `src/ai_video_prod
 - I2C2 guard plus existing Autosave/Backup regression: `20 PASS`.
 - I2A through I2C2 focused regression: `31 PASS`.
 - No real Project, protected-control directory, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.
+
+### PMST-I2C3 recovery/read-lock/participant checkpoint
+
+I2C-C3 exact Allowed Files are this Task record, the I2 plan, `interactive_timeline_application.py`, `planning_application.py`, `creative_generation_execution_application.py`, `generation_output_adoption_application.py`, `montage_learning_canonical_admission_transaction.py`, `tests/test_task102_project_writer_migration_locks.py`, and bounded external TASK-102 Evidence.
+
+R008 now rechecks enrollment before Timeline recovery-object writes/removal, participant planning/reconciliation, apply/recovery mutation and legacy recovery-status reads. R009's three read-associated lock callers stop before creating the Project lock; output adoption does not consume its confirmation when blocked. R010 stops TASK-029 construction before its legacy Project lock/directories and rechecks enrollment at each exact/generic public lock route so a long-lived instance cannot bypass a later enrollment change. These are deterministic feature blocks; closed read-lease/participant request adapters remain I2D work.
+
+- I2C3 focused guards: `7 PASS`; I2A through I2C3 focused regression: `39 PASS`.
+- Runnable Timeline, Planning, creative-generation execution and TASK-029 direct-consumer regression: `168 PASS / 5 Windows-only SKIP`.
+- Generation-output adoption regression is `NOT_CONFIRMED` at collection because the existing WSL `cryptography` build lacks `hazmat.primitives.kdf.argon2.Argon2id`; no dependency installation/update occurred. The changed adoption module compiled and its pre-lock/non-consumption behavior passed the focused C3 test.
+- No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred.

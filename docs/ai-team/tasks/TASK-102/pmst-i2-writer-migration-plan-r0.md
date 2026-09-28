@@ -1,6 +1,6 @@
 # TASK-102 PMST-I2 — Product Writer Migration Plan R0
 
-Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C1_COMMITTED / PMST_I2C2_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
+Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C1_I2C2_COMMITTED / PMST_I2C3_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
 
 ## 1. Bound outcome
 
@@ -44,6 +44,8 @@ I2C is executed as C1 (`R003/R004/R007` object stores), C2 (`R005/R006` snapshot
 C1 adds only injected legacy-route guards. All valid enrollment states reject Job, history and VoiceProfile legacy locks/writes before `.bai-project` creation. Direct Job/history internal writer calls are guarded separately. Unenrolled behavior remains unchanged, and C1 does not expose a broker write path that lacks semantic-owner request/readback validation.
 
 C2 guards the mutating R005/R006 snapshot-set entrypoints. Enrolled Autosave mutation, Backup create and Backup restore stop before legacy locks, manifest save, snapshot reads or snapshot writes. Autosave's non-mutating timing skips and Backup's verified read-only preview remain compatible. Closed snapshot request/readback adapters remain I2D work, so enrolled snapshot mutation is unavailable rather than partially routed.
+
+C3 guards R008 Timeline recovery and participant paths, all three R009 read-associated Project lock callers, and R010 TASK-029 constructor plus exact/generic public lock routes. Guards are evaluated before confirmation consumption, Project/control lock creation, recovery-object effects or TASK-029 authority-directory initialization. Long-lived TASK-029 instances recheck enrollment on every public lock route. Exact read-lease and participant request composition remains I2D work; there is no legacy fallback for an injected enrolled composition.
 
 ## 5. I2A acceptance
 

@@ -32,6 +32,10 @@ from .serialization import canonical_json_bytes, sha256_bytes
 from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
 from .project_save import ProductProjectSaveCoordinator
 from .schema_contracts import validate_instance
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 TokenFactory = Callable[[], str]
@@ -271,6 +275,7 @@ class Task027GenerationOutputAdoptionApplication:
         prompt_evidence: Any,
         asset_port: Task027GeneratedOutputAssetPort,
         token_factory: TokenFactory | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         root = Path(project_root)
         if root.is_symlink() or not root.is_dir():
@@ -294,6 +299,7 @@ class Task027GenerationOutputAdoptionApplication:
         self.prompt_evidence = prompt_evidence
         self.asset_port = asset_port
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
         self._confirmations: dict[str, _PendingAdoption] = {}
 
     def _empty(self) -> dict[str, Any]:
@@ -824,6 +830,11 @@ class Task027GenerationOutputAdoptionApplication:
         pending = self._confirmations.get(confirmation_id)
         if pending is None or pending.consumed:
             raise ProductError("ERR_OUTPUT_ADOPTION_CONFIRMATION_INVALID", "Output-adoption confirmation is missing or already used", ProductErrorCategory.AUTHORIZATION)
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R009",
+            access_kind="LOCK",
+        )
         pending.consumed = True
         project_guard = (
             nullcontext()

@@ -33,6 +33,10 @@ from .production_control_store import _exclusive_snapshot_lock
 from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
 from .project_save import ProductProjectSaveCoordinator
 from .serialization import canonical_json_bytes, sha256_bytes
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 TokenFactory = Callable[[], str]
@@ -200,6 +204,7 @@ class Task013CreativeGenerationExecutionApplication:
         availability_factory: AvailabilityFactory,
         execution_port_selector: LocalGenerationExecutionPortSelector | None = None,
         token_factory: TokenFactory | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         root = Path(project_root)
         if root.is_symlink() or not root.is_dir():
@@ -222,6 +227,7 @@ class Task013CreativeGenerationExecutionApplication:
         self.snapshot_path = root / _STORE_NAME
         self.private_prompt_root = root / "private" / "prompts"
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
         self._confirmations: dict[str, _PendingExecution] = {}
         self._confirmation_lock = Lock()
 
@@ -615,6 +621,11 @@ class Task013CreativeGenerationExecutionApplication:
     def apply_execution(self, *, confirmation_id: str) -> dict[str, Any]:
         if not isinstance(confirmation_id, str) or not confirmation_id.strip():
             raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation is invalid", ProductErrorCategory.AUTHORIZATION)
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R009",
+            access_kind="LOCK",
+        )
         with self._confirmation_lock:
             pending = self._confirmations.pop(confirmation_id, None)
         if pending is None:

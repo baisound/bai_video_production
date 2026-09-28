@@ -106,7 +106,11 @@ def _accepted_route_ids() -> set[str]:
     }
 
 
-def _guard_route_ids(node: ast.AST) -> set[str]:
+def _guard_route_ids(
+    node: ast.AST,
+    *,
+    inherited_bindings: dict[str, str] | None = None,
+) -> set[str]:
     accepted = _accepted_route_ids()
     if isinstance(node, (ast.Module, ast.ClassDef)):
         routes: set[str] = set()
@@ -114,15 +118,15 @@ def _guard_route_ids(node: ast.AST) -> set[str]:
             if isinstance(child, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                 routes.update(_guard_route_ids(child))
         return routes
-    default_routes: dict[str, str] = {}
+    bound_values = dict(inherited_bindings or {})
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         positional = [*node.args.posonlyargs, *node.args.args]
         for argument, default in zip(positional[-len(node.args.defaults) :], node.args.defaults):
             if isinstance(default, ast.Constant) and isinstance(default.value, str):
-                default_routes[argument.arg] = default.value
+                bound_values.setdefault(argument.arg, default.value)
         for argument, default in zip(node.args.kwonlyargs, node.args.kw_defaults):
             if isinstance(default, ast.Constant) and isinstance(default.value, str):
-                default_routes[argument.arg] = default.value
+                bound_values.setdefault(argument.arg, default.value)
     routes: set[str] = set()
     for call in ast.walk(node):
         if not isinstance(call, ast.Call):
@@ -133,14 +137,20 @@ def _guard_route_ids(node: ast.AST) -> set[str]:
         if name is None or name.rsplit(".", 1)[-1] != "require_legacy_access":
             continue
         route_keyword = next((item for item in call.keywords if item.arg == "route_id"), None)
-        if route_keyword is None:
+        access_keyword = next((item for item in call.keywords if item.arg == "access_kind"), None)
+        if route_keyword is None or access_keyword is None:
             continue
         route_value: str | None = None
         if isinstance(route_keyword.value, ast.Constant) and isinstance(route_keyword.value.value, str):
             route_value = route_keyword.value.value
         elif isinstance(route_keyword.value, ast.Name):
-            route_value = default_routes.get(route_keyword.value.id)
-        if route_value in accepted:
+            route_value = bound_values.get(route_keyword.value.id)
+        access_value: str | None = None
+        if isinstance(access_keyword.value, ast.Constant) and isinstance(access_keyword.value.value, str):
+            access_value = access_keyword.value.value
+        elif isinstance(access_keyword.value, ast.Name):
+            access_value = bound_values.get(access_keyword.value.id)
+        if route_value in accepted and access_value in {"MUTATION", "LOCK"}:
             routes.add(route_value)
     return routes
 
@@ -148,19 +158,30 @@ def _guard_route_ids(node: ast.AST) -> set[str]:
 def _route_markers_in_text(text: str, symbol: str, *, filename: str) -> set[str]:
     node = _node_for_text(text, symbol, filename=filename)
     markers = _guard_route_ids(node)
+    if isinstance(node, ast.ClassDef):
+        for child in node.body:
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                markers.update(
+                    _route_markers_in_text(
+                        text,
+                        f"{symbol}.{child.name}",
+                        filename=filename,
+                    )
+                )
+        return markers
     parts = symbol.split(".")
     if len(parts) != 2 or not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return markers
     class_name = parts[0]
-    helper_names = {
-        call.func.attr
+    helper_calls = [
+        (call.func.attr, call)
         for call in ast.walk(node)
         if isinstance(call, ast.Call)
         and isinstance(call.func, ast.Attribute)
         and isinstance(call.func.value, ast.Name)
         and call.func.value.id in {"self", "cls"}
-    }
-    for helper_name in helper_names:
+    ]
+    for helper_name, helper_call in helper_calls:
         try:
             helper = _node_for_text(
                 text,
@@ -169,7 +190,14 @@ def _route_markers_in_text(text: str, symbol: str, *, filename: str) -> set[str]
             )
         except AssertionError:
             continue
-        markers.update(_guard_route_ids(helper))
+        helper_bindings = {
+            keyword.arg: keyword.value.value
+            for keyword in helper_call.keywords
+            if keyword.arg is not None
+            and isinstance(keyword.value, ast.Constant)
+            and isinstance(keyword.value.value, str)
+        }
+        markers.update(_guard_route_ids(helper, inherited_bindings=helper_bindings))
     return markers
 
 
@@ -344,8 +372,15 @@ def test_every_d1_source_has_a_machine_checked_route_closure() -> None:
             if ":" not in source:
                 markers = FILE_ROUTE_CLOSURES[source]
                 text = (SOURCE_ROOT / source).read_text(encoding="utf-8-sig")
-                tree = ast.parse(text, filename=source)
-                guarded = _guard_route_ids(tree)
+                guarded: set[str] = set()
+                for exact_source, _ in _iter_function_sources(source, text):
+                    guarded.update(
+                        _route_markers_in_text(
+                            text,
+                            exact_source.split(":", 1)[1],
+                            filename=source,
+                        )
+                    )
                 assert all(marker in guarded for marker in markers), source
                 continue
             if _contains_route_marker(source, route_id):
@@ -486,6 +521,11 @@ def guarded(root, router):
     router.require_legacy_access(root, route_id='PMST-R003', access_kind='MUTATION')
     AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
 """
+    read_only_guard = """
+def unsafe(root, router):
+    router.require_legacy_access(root, route_id='PMST-R003', access_kind='READ_ONLY')
+    AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+"""
     assert not _is_registered_or_guarded(
         "synthetic.py:unsafe",
         set(),
@@ -500,4 +540,9 @@ def guarded(root, router):
         "synthetic.py:guarded",
         set(),
         text=accepted_guard,
+    )
+    assert not _is_registered_or_guarded(
+        "synthetic.py:unsafe",
+        set(),
+        text=read_only_guard,
     )

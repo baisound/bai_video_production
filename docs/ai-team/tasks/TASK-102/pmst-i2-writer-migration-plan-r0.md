@@ -1,6 +1,6 @@
 # TASK-102 PMST-I2 — Product Writer Migration Plan R0
 
-Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C1_I2C2_COMMITTED / PMST_I2C3_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
+Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
 
 ## 1. Bound outcome
 
@@ -46,6 +46,10 @@ C1 adds only injected legacy-route guards. All valid enrollment states reject Jo
 C2 guards the mutating R005/R006 snapshot-set entrypoints. Enrolled Autosave mutation, Backup create and Backup restore stop before legacy locks, manifest save, snapshot reads or snapshot writes. Autosave's non-mutating timing skips and Backup's verified read-only preview remain compatible. Closed snapshot request/readback adapters remain I2D work, so enrolled snapshot mutation is unavailable rather than partially routed.
 
 C3 guards R008 Timeline recovery and participant paths, all three R009 read-associated Project lock callers, and R010 TASK-029 constructor plus exact/generic public lock routes. Guards are evaluated before confirmation consumption, Project/control lock creation, recovery-object effects or TASK-029 authority-directory initialization. Long-lived TASK-029 instances recheck enrollment on every public lock route. Exact read-lease and participant request composition remains I2D work; there is no legacy fallback for an injected enrolled composition.
+
+### I2D semantic and source-policy closure
+
+R011 bootstrap/import and the remaining R012 semantic callers accept the same injected router used by their store/coordinator and deterministically reject an enrolled composition before consuming Human confirmation or starting a protected mutation. Callers already feature-blocked by R005/R006/R008/R010 retain that stronger closure. The source policy parses the accepted D1 matrix and Python ASTs, verifies every direct/delegated source closure, scans bounded protected mutation signals for files outside the matrix, and includes a synthetic unregistered-writer rejection test. The policy does not authorize Product enrollment or substitute a broad arbitrary-file scanner for the exact protected-control boundary.
 
 ## 5. I2A acceptance
 

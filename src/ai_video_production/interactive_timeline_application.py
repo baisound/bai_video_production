@@ -428,7 +428,9 @@ class Task044TimelineEditApplication:
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_id != project_id:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_MISMATCH", "Project identity differs", ProductErrorCategory.SECURITY)
-        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator()
+        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator(
+            pmst_router=self._pmst_router
+        )
         self._participant = _TimelineHistoryParticipant(
             project_id=project_id,
             recovery_path=ProductProjectManifestStore.path(self.project_root).with_name(

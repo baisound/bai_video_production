@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 import ai_video_production.montage_learning_canonical_admission_transaction as montage_module
+from ai_video_production.audio_placement_application import Task026AudioPlacementApplication
 from ai_video_production.creative_generation_execution_application import (
     Task013CreativeGenerationExecutionApplication,
 )
@@ -22,11 +23,17 @@ from ai_video_production.montage_learning_canonical_admission_transaction import
     MontageLearningCanonicalAdmissionTransactionStore,
 )
 from ai_video_production.planning_application import Task027PlanningApplication
+from ai_video_production.project_migration_application import ProductProjectMigrationApplication
 from ai_video_production.serialization import sha256_bytes
 from ai_video_production.task102_project_manifest_transaction import PROTOCOL_VERSION, seal_record
 from ai_video_production.task102_project_writer_migration import (
     ACCEPTED_WRITER_MIGRATION_MATRIX_SHA256,
     PmstWriterMigrationRouter,
+)
+from ai_video_production.timeline_audio_application import Task042TimelineAudioApplication
+from ai_video_production.voice_quality_meter_policy_store import (
+    MeterPolicyProjectStore,
+    MeterPolicyStoreError,
 )
 
 
@@ -154,7 +161,6 @@ def test_enrolled_timeline_recovery_status_does_not_read_legacy_journal(tmp_path
 
     assert captured.value.code == "ERR_PMST_LEGACY_WRITER_BLOCKED"
 
-
 def test_enrolled_task029_store_blocks_before_project_lock_or_directory_creation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -214,3 +220,61 @@ def test_task029_existing_instance_rechecks_enrollment_before_each_lock_path(tmp
         with pytest.raises(MontageLearningCanonicalAdmissionError, match="requires the PMST TASK-029 adapter"):
             attempt()
     assert not (root / ".bai-project").exists()
+
+
+@pytest.mark.parametrize(
+    "application_type",
+    [Task026AudioPlacementApplication, Task042TimelineAudioApplication],
+)
+def test_enrolled_r012_callers_block_without_consuming_confirmation(
+    tmp_path: Path,
+    application_type: type,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    application = application_type.__new__(application_type)
+    pending = SimpleNamespace(consumed=False)
+    application.project_root = root
+    application._pmst_router = _router()
+    application._pending = {"confirmation-1": pending}
+
+    method = (
+        application.apply_compilation
+        if application_type is Task026AudioPlacementApplication
+        else application.apply_plan
+    )
+    with pytest.raises(ProductError) as captured:
+        method(confirmation_id="confirmation-1")
+
+    assert captured.value.code == "ERR_PMST_LEGACY_WRITER_BLOCKED"
+    assert pending.consumed is False
+
+
+def test_enrolled_meter_policy_caller_returns_domain_error_before_request_parse(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    store = MeterPolicyProjectStore.__new__(MeterPolicyProjectStore)
+    store._root = root
+    store._pmst_router = _router()
+
+    with pytest.raises(MeterPolicyStoreError) as captured:
+        store.apply({})
+
+    assert captured.value.reason == "PMST_ADAPTER_REQUIRED"
+
+
+@pytest.mark.parametrize("method_name", ["apply_legacy_import", "apply_lossless_migration"])
+def test_enrolled_project_migration_blocks_before_confirmation_consumption(
+    tmp_path: Path,
+    method_name: str,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    application = ProductProjectMigrationApplication.__new__(ProductProjectMigrationApplication)
+    application.project_root = root
+    application._pmst_router = _router()
+
+    with pytest.raises(ProductError) as captured:
+        getattr(application, method_name)(confirmation_id="confirmation-1")
+
+    assert captured.value.code == "ERR_PMST_LEGACY_WRITER_BLOCKED"

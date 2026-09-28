@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_I2C2_COMMITTED / PMST_I2C3_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -271,3 +271,28 @@ R008 now rechecks enrollment before Timeline recovery-object writes/removal, par
 - Runnable Timeline, Planning, creative-generation execution and TASK-029 direct-consumer regression: `168 PASS / 5 Windows-only SKIP`.
 - Generation-output adoption regression is `NOT_CONFIRMED` at collection because the existing WSL `cryptography` build lacks `hazmat.primitives.kdf.argon2.Argon2id`; no dependency installation/update occurred. The changed adoption module compiled and its pre-lock/non-consumption behavior passed the focused C3 test.
 - No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred.
+
+## PMST-I2D semantic caller and source-policy checkpoint — 2026-09-29
+
+I2D exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/audio_placement_application.py`
+4. `src/ai_video_production/interactive_timeline_application.py`
+5. `src/ai_video_production/project_migration_application.py`
+6. `src/ai_video_production/task036_trusted_launcher.py`
+7. `src/ai_video_production/timeline_audio_application.py`
+8. `src/ai_video_production/voice_quality_meter_policy_store.py`
+9. `tests/test_task102_project_writer_migration_locks.py`
+10. `tests/test_task102_writer_source_policy.py`
+11. bounded Evidence under the canonical external TASK-102 Evidence root
+
+R011 bootstrap/import and remaining R012 Audio Placement, Timeline Audio, migration and Meter Policy callers now receive the injected router and either pass it into their central store/coordinator or stop before confirmation/operation consumption. Timeline's default save coordinator now shares the same router. TASK-036 bootstrap remains valid only before enrollment and uses the explicit R011 route. No Product entrypoint is enrolled by this source work.
+
+The bounded AST plus literal/symbol source-policy test matches every D1 matrix source to a direct route marker or an explicitly verified guarded parent, checks the exact R001–R013 registry closure, scans repository Project lock/manifest-save/coordinator/protected-literal mutation signals for files absent from the matrix, and proves a synthetic unregistered `.bai-project` writer is rejected. It does not treat arbitrary Product JSON writers as protected-control writers.
+
+- Semantic caller guard tests: `13 PASS`; source-policy: `3 PASS`; I2A through I2D focused regression: `47 PASS`.
+- Runnable Audio Placement, Timeline Audio, Meter Policy and Project Migration direct-consumer regression: `202 PASS / 1 Windows-only SKIP`.
+- TASK-036 launcher regression is `NOT_CONFIRMED` at collection for the same pre-existing WSL `Argon2id` dependency gap; no dependency installation/update occurred. The launcher module compiled and its R011 marker/call binding is checked by AST policy.
+- No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred. I2E final integration/review is next.

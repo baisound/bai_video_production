@@ -54,6 +54,10 @@ from .task036_product_ports import (
     _file_sha256,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .task098_review_media_runtime_windows import (
     RegistryBoundReviewMediaRuntimePort,
     WindowsWavePlaybackBackend,
@@ -1054,7 +1058,11 @@ def _handoff_subtitle_path(path: Path) -> Path | None:
         return None
     return path
 
-def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguration) -> bool:
+def _bootstrap_missing_product_manifest(
+    configuration: Task036LaunchConfiguration,
+    *,
+    pmst_router: PmstWriterMigrationRouter | None = None,
+) -> bool:
     """Create only the canonical empty Project manifest needed for local composition."""
     target = ProductProjectManifestStore.path(configuration.project_root)
     if target.exists():
@@ -1069,8 +1077,19 @@ def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguratio
         ),
         child_bindings=(),
     )
+    router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+    router.require_legacy_access(
+        configuration.project_root,
+        route_id="PMST-R011",
+        access_kind="MUTATION",
+    )
     try:
-        ProductProjectManifestStore.save(configuration.project_root, manifest)
+        ProductProjectManifestStore.save(
+            configuration.project_root,
+            manifest,
+            pmst_router=router,
+            pmst_route_id="PMST-R011",
+        )
     except ProductError as exc:
         if exc.code != "ERR_PROJECT_SAVE_CAS_REQUIRED":
             raise

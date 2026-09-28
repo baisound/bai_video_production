@@ -28,6 +28,10 @@ from .project_migration import (
 from .project_save import ProductProjectSaveCoordinator
 from .schema_contracts import SemVer
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 _MAX_LEGACY_CHILD_BYTES = 128 * 1024 * 1024
@@ -264,12 +268,16 @@ class ProductProjectMigrationApplication:
         transformer_registry: MigrationTransformerRegistry | None = None,
         save_coordinator: ProductProjectSaveCoordinator | None = None,
         token_factory: Callable[[], str] | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         self.project_root = _safe_project_root(project_root)
         self.inspector = ProjectCompatibilityInspector(supported_formats)
         self.planner = ProjectMigrationPlanner(migration_registry or MigrationRegistry())
         self.transformers = transformer_registry or MigrationTransformerRegistry()
-        self.save_coordinator = save_coordinator or ProductProjectSaveCoordinator()
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        self.save_coordinator = save_coordinator or ProductProjectSaveCoordinator(
+            pmst_router=self._pmst_router
+        )
         self.token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
         self._legacy_pending: dict[str, _PendingLegacyImport] = {}
         self._migration_pending: dict[str, _PendingMigration] = {}
@@ -312,6 +320,11 @@ class ProductProjectMigrationApplication:
         }
 
     def apply_legacy_import(self, *, confirmation_id: str) -> dict[str, object]:
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R011",
+            access_kind="MUTATION",
+        )
         if confirmation_id in self._completed:
             return dict(self._completed[confirmation_id])
         pending = self._legacy_pending.pop(confirmation_id, None)
@@ -343,7 +356,12 @@ class ProductProjectMigrationApplication:
                 "Legacy Project candidate is no longer readable",
                 ProductErrorCategory.NOT_SUPPORTED,
             )
-        ProductProjectManifestStore.save(self.project_root, manifest)
+        ProductProjectManifestStore.save(
+            self.project_root,
+            manifest,
+            pmst_router=self._pmst_router,
+            pmst_route_id="PMST-R011",
+        )
         reopened = ProductProjectManifestStore.load(self.project_root)
         reopened_report = self.inspector.inspect(reopened, project_root=self.project_root)
         if reopened.project_manifest_sha256 != manifest.project_manifest_sha256 or not reopened_report.can_open_read_only:
@@ -399,6 +417,11 @@ class ProductProjectMigrationApplication:
         }
 
     def apply_lossless_migration(self, *, confirmation_id: str) -> dict[str, object]:
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R012",
+            access_kind="MUTATION",
+        )
         if confirmation_id in self._completed:
             return dict(self._completed[confirmation_id])
         pending = self._migration_pending.pop(confirmation_id, None)
@@ -489,7 +512,10 @@ class ProductProjectMigrationApplication:
             created_at=current.created_at,
             updated_at=max(current.updated_at, utc_now_iso()),
         )
-        backup_id = ProductProjectBackupStore.create(self.project_root)
+        backup_id = ProductProjectBackupStore.create(
+            self.project_root,
+            pmst_router=self._pmst_router,
+        )
         saved = self.save_coordinator.save(
             self.project_root,
             target_manifest,

@@ -13,6 +13,10 @@ from .product_project_store import ProductProjectManifestStore
 from .project_save import ProductProjectSaveCoordinator
 from .production_control import CandidateLifecycle, ProductionControlRegistry, SlotKind
 from .serialization import sha256_bytes, utc_now_iso
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .timeline_audio import AudioFitPolicy, TimelineAudioPlan, TimelineAudioRole
 from .timeline_audio_store import FORMAT_ID, FORMAT_VERSION, RELATIVE_PATH, TimelineAudioHistory, TimelineAudioSnapshotStore
 
@@ -33,13 +37,16 @@ class Task042TimelineAudioApplication:
     """Commits Timeline history through the TASK-043 aggregate save coordinator."""
 
     def __init__(self, *, project_root: str | Path, project_id: str,
-                 token_factory: TokenFactory | None = None) -> None:
+                 token_factory: TokenFactory | None = None,
+                 pmst_router: PmstWriterMigrationRouter | None = None) -> None:
         self.project_root = Path(project_root).resolve(strict=True)
         self.project_id = project_id
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_id != project_id:
             raise ProductError("ERR_TIMELINE_AUDIO_PROJECT_MISMATCH", "Project Manifest identity differs", ProductErrorCategory.SECURITY)
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        self._save_coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._pending: dict[str, _Confirmation] = {}
 
     @property
@@ -122,6 +129,11 @@ class Task042TimelineAudioApplication:
         pending = self._pending.get(confirmation_id)
         if pending is None or pending.consumed:
             raise ProductError("ERR_TIMELINE_AUDIO_CONFIRMATION_INVALID", "Confirmation is missing or consumed", ProductErrorCategory.AUTHORIZATION)
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R012",
+            access_kind="MUTATION",
+        )
         pending.consumed = True
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_manifest_sha256 != pending.expected_manifest_sha256:
@@ -134,7 +146,7 @@ class Task042TimelineAudioApplication:
             project_revision=manifest.project_revision + 1, product_version=manifest.product_version,
             timebase=manifest.timebase, child_bindings=bindings, created_at=manifest.created_at,
             updated_at=max(manifest.updated_at, utc_now_iso()))
-        ProductProjectSaveCoordinator().save(self.project_root, target, {RELATIVE_PATH: data},
+        self._save_coordinator.save(self.project_root, target, {RELATIVE_PATH: data},
             expected_previous_manifest_sha256=manifest.project_manifest_sha256)
         return self.snapshot()
 

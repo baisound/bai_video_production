@@ -100,3 +100,21 @@ Engine-independent Semantic Direction; records Direction loss; stages 48 kHz
 Cue/Master WAV; uses measured alignment/duration; and publishes only after
 whole-output QA. Actual local Model download/generation and paid Cloud calls
 remain separately gated.
+
+## Local Primary current position — 2026-09-27
+
+The zero-shot callable contract and Local Primary call profile V2 are present
+on current main, and their focused suites pass `155 / 155`. This closes the
+body-free call-profile recovery gap only. It does not create a private
+executor, model-load authority, audio output, WAV, Asset, or publication.
+
+The D4 private call/sink source start remains blocked. TASK-074 child-local
+direct transfer, the required TASK-072/TASK-076 child and process owner
+completions, TASK-075 executor acceptance/completion, TASK-046 private
+production port, and TASK-066 native compute proof are not all current and
+canonical. The preserved pre-main D4 documentation is advisory and must be
+rewritten and independently reviewed against the exact landed owner identities
+before any source allocation.
+
+Canonical readiness evidence:
+`local-primary-d4-dependency-readiness-r2-evidence-2026-09-27.md`.

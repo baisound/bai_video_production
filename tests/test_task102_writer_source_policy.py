@@ -158,7 +158,11 @@ def _guard_route_ids(
 def _explicit_call_bindings(
     helper: ast.FunctionDef | ast.AsyncFunctionDef,
     call: ast.Call,
-) -> dict[str, str | None]:
+) -> dict[str, str | None] | None:
+    if any(isinstance(value, ast.Starred) for value in call.args) or any(
+        keyword.arg is None for keyword in call.keywords
+    ):
+        return None
     positional = [*helper.args.posonlyargs, *helper.args.args]
     if positional and positional[0].arg in {"self", "cls"}:
         positional = positional[1:]
@@ -217,6 +221,8 @@ def _route_markers_in_text(text: str, symbol: str, *, filename: str) -> set[str]
             continue
         assert isinstance(helper, (ast.FunctionDef, ast.AsyncFunctionDef))
         helper_bindings = _explicit_call_bindings(helper, helper_call)
+        if helper_bindings is None:
+            continue
         markers.update(_guard_route_ids(helper, inherited_bindings=helper_bindings))
     return markers
 
@@ -593,6 +599,14 @@ class Example:
     def positional_lock(self, root):
         self._guard(root, 'LOCK')
         AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+
+    def expanded_keywords(self, root):
+        self._guard(root, **{'access_kind': 'READ_ONLY'})
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+
+    def expanded_positionals(self, root):
+        self._guard(*(root, 'READ_ONLY'))
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
 """
     assert not _is_registered_or_guarded(
         "synthetic.py:Example.positional_read_only",
@@ -606,6 +620,16 @@ class Example:
     )
     assert _is_registered_or_guarded(
         "synthetic.py:Example.default_mutation",
+        set(),
+        text=text,
+    )
+    assert not _is_registered_or_guarded(
+        "synthetic.py:Example.expanded_keywords",
+        set(),
+        text=text,
+    )
+    assert not _is_registered_or_guarded(
+        "synthetic.py:Example.expanded_positionals",
         set(),
         text=text,
     )

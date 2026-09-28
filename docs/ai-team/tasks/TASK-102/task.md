@@ -1,13 +1,13 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1A_N1B_PASS / PMST_N1_COMPLETE / PMST_I2_NOT_AUTHORIZED`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
 - Direct consumer: TASK-099 JCV-N.
 - Related dependency: TASK-068 immutable publication/readback remains independently owned and is not absorbed.
 - First unused Task-ID audit: `TASK-102` is absent while TASK-100 and TASK-101 are already allocated in this worktree.
-- Current implementation authority: PMST-N1 authority is consumed and complete. PMST-I2 writer migration, Product enrollment, Release, Deploy and Production remain separate gates and are not authorized by N1 completion.
+- Current implementation authority: PMST-N1 authority is consumed and complete. On 2026-09-29 the Owner explicitly authorized `PMST-I2`. This authorizes the bounded source/test writer-migration units recorded below. Product enrollment, service installation/update, ACL mutation, real Project writes, native QA, Release, Deploy and Production remain separate gates.
 
 ## Objective and responsibility boundary
 
@@ -175,3 +175,34 @@ The runner created one random `BvpTask102PmstN1-*` demand-start own-process test
 The final body-free report file SHA-256 is `deea6770c9499d72319dd022dde6dec6d943432251ff836636f7ad86e573e446`. Exact DACL readback confirmed four explicit non-inherited allow ACEs: service SID Full control and interactive user, SYSTEM and Administrators ReadAndExecute plus Synchronize. N1A regression remained `PASS`; PMST-I1 plus N1 focused tests are `85 PASS`. Earlier N1B recovery runs were preserved rather than hidden: one rejected an invalid empty-password `sc config` form, two proved service cleanup after virtual-account service-start access denial, run 004 established the accepted topology, run 005 added configuration readback, and run 006 exposed and corrected the RX/Synchronize comparison.
 
 PMST-N1 is now technically complete within its stated claim. It proves process-termination recovery and Windows primitive/service-SID feasibility, not physical power-loss durability, Product enrollment, writer migration or Production readiness. PMST-I2 may be proposed as the next unit but remains unauthorized until its own bounded authority is recorded.
+
+## PMST-I2 authority and Atomic Unit plan — 2026-09-29
+
+The Owner explicitly answered `PMST-I2 承認します`. PMST-I2 is therefore authorized only for source/test migration of every accepted D1 writer, recovery and protected-lock route behind a disabled-by-default Product composition. Existing unenrolled Projects retain current behavior. No source-only checkpoint can activate enrollment, install/update the Windows service, change an ACL, write a real Project, run native QA, Release, Deploy or activate Production.
+
+PMST-I2 is decomposed into ordered units so each reaches a reviewed commit-ready boundary:
+
+1. **PMST-I2A — writer migration kernel.** Freeze the accepted D1 matrix digest and all 13 route/profile bindings; admit strict PMST requests only for an exact ACTIVE enrollment and complete matrix; block unknown/old/partial routes and every legacy mutation/lock for any enrolled state; retain read-only compatibility. No current writer is connected in I2A.
+2. **PMST-I2B — central manifest/coordinator migration.** Route R001/R002/R011/R012 through the kernel and a closed Product PMST port; keep the legacy path only for a proven unenrolled root; block the legacy journal and direct `_save_unlocked` bypass for enrolled roots.
+3. **PMST-I2C — protected object and lock migration.** Route or explicitly feature-block R003 through R010, including Job, history, autosave, backup, VoiceProfile, Timeline recovery, read leases and TASK-029 participant paths.
+4. **PMST-I2D — semantic caller/source-policy closure.** Bind every D1 caller to an accepted adapter or deterministic unavailable result and make an unregistered protected-control mutation/lock source fail the source-policy test.
+5. **PMST-I2E — integration review and completion.** Run focused, direct-consumer and targeted Project regressions, independent DEV-4 Critic/Tester review, hosted CI and completion Evidence. Enrollment remains disabled until PMST-C is separately authorized.
+
+PMST-I2A exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/task102_project_writer_migration.py`
+4. `tests/test_task102_project_writer_migration.py`
+5. bounded Evidence under `docs/ai-team/tasks/TASK-102/evidence/` or the canonical external TASK-102 Evidence root
+
+I2A must not modify existing Product writer/store modules. Its exit requires exact route/matrix/profile binding, strict request/result binding, fail-closed negative tests, unchanged default Product behavior, focused TASK-102 regression, exact Allowed Files verification and external Evidence readback. I2B may not begin until I2A is commit-ready.
+
+## PMST-I2A Builder checkpoint — 2026-09-29
+
+- Added an effect-free writer-migration kernel with the exact accepted matrix record digest, immutable R001 through R013 registry and closed operation-kind/profile bindings.
+- The default resolver returns no enrollment and preserves existing unenrolled behavior. Every valid enrolled state blocks legacy mutation/lock access; only exact ACTIVE enrollment plus the complete matrix and a bound port can route a strict I1 request. R013 and unknown routes are always blocked.
+- The local Project path remains inside the trusted resolver and is never forwarded to the port. Port results are reparsed and cross-bound to operation, kind, profile, intent and request digests.
+- New I2A focused tests: `15 PASS`. PMST-I1/N1/I2A focused regression: `100 PASS`. Python compile and `git diff --check`: `PASS`.
+- The Windows Python environment stopped at collection because the pre-existing environment lacks `jsonschema`; no dependency was installed. The established WSL environment executed the tests successfully in unique `/tmp` roots.
+- No existing Product writer/store source, real Project, service, ACL, native runtime, private data, Release, Deploy or Production state was changed. PMST-I2B is the next ordered unit after this checkpoint is committed.

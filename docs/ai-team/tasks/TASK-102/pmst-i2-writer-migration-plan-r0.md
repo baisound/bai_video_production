@@ -33,6 +33,10 @@ The default composition has no enrollment resolver result and no live port. Ther
 
 I2B connects the central manifest/coordinator routes. I2C connects or blocks every protected object and lock route. I2D closes semantic callers and source policy. Until those units are complete, no composition may return an ACTIVE enrollment. I2E performs final review and integration; PMST-C alone may later propose enrollment UX and normal Product entrypoint activation.
 
+### I2B central readback rule
+
+Central source migration uses explicit dependency injection. A supplied PMST request never authorizes a legacy fallback. `COMMITTED_WITH_READBACK` is necessary but insufficient: the Product reparses the canonical manifest after the port returns, requires the exact requested successor digest, and for coordinated saves revalidates every selected child. Missing, stale or mismatched readback is `DATA_INTEGRITY`, not success. Until later units supply exact broker query/read-lease and participant recovery adapters, enrolled legacy recovery/status/integrity entrypoints return a deterministic unavailable error before lock/journal mutation.
+
 ## 5. I2A acceptance
 
 I2A is commit-ready only when:

@@ -267,6 +267,13 @@ class PmstWriterMigrationRouter:
             },
         )
 
+    def enrollment_status(self, project_root: str | Path) -> str:
+        """Return the strict enrollment status without creating authority."""
+
+        root = self._project_root(project_root)
+        enrollment = self._enrollment(root)
+        return "UNENROLLED" if enrollment is None else str(enrollment.data["status"])
+
     def execute(
         self,
         project_root: str | Path,

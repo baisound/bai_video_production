@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -206,3 +206,28 @@ I2A must not modify existing Product writer/store modules. Its exit requires exa
 - New I2A focused tests: `15 PASS`. PMST-I1/N1/I2A focused regression: `100 PASS`. Python compile and `git diff --check`: `PASS`.
 - The Windows Python environment stopped at collection because the pre-existing environment lacks `jsonschema`; no dependency was installed. The established WSL environment executed the tests successfully in unique `/tmp` roots.
 - No existing Product writer/store source, real Project, service, ACL, native runtime, private data, Release, Deploy or Production state was changed. PMST-I2B is the next ordered unit after this checkpoint is committed.
+- I2A commit: `32f72ab424cb003c1c8faf0c1346588b5e6e32ec`.
+
+## PMST-I2B exact scope — 2026-09-29
+
+Exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/task102_project_writer_migration.py`
+4. `src/ai_video_production/product_project_store.py`
+5. `src/ai_video_production/project_save.py`
+6. `tests/test_task102_project_writer_migration.py`
+7. `tests/test_task102_project_writer_migration_central.py`
+8. bounded Evidence under `docs/ai-team/tasks/TASK-102/evidence/` or the canonical external TASK-102 Evidence root
+
+I2B may add explicit injected PMST routing to central manifest create/transition and coordinated save. It must preserve existing unenrolled APIs and semantics. For an enrolled root, it must reject missing/mismatched PMST requests before creating the legacy lock or journal; accept only a strict request routed by I2A; and return success only after canonical manifest plus child readback matches the requested successor. Direct `_save_unlocked` and every legacy complete/rollback/orphan recovery entry must be blocked for enrolled roots. An enrolled recovery status or integrity read without a future exact broker query/read-lease adapter must return a deterministic unavailable error, never inspect the legacy journal as authority or fall back. Product enrollment and native effects remain prohibited.
+
+## PMST-I2B Builder checkpoint — 2026-09-29
+
+- `ProductProjectManifestStore.save` now accepts an explicit injected PMST router/request. It preserves the legacy path for a proven unenrolled root, validates create/transition predecessor and successor semantics before the port call, creates no legacy lock on the PMST path, and returns the existing whole-document `AtomicWriteResult` checksum only after exact canonical readback.
+- `ProductProjectSaveCoordinator.save` routes an explicit R002 request without the legacy lock/journal, preserves target/child validation and returns success only after exact manifest and child readback. Participant/commit-guard paths are deterministically unavailable until their closed adapter is added.
+- Enrolled direct `_save_unlocked`, legacy save, complete/rollback/orphan recovery are blocked before mutation. Enrolled legacy recovery-status and integrity-read paths require future broker query/read-lease adapters instead of silently consulting the old journal.
+- Focused I2A/I2B: `23 PASS`. TASK-102 plus runnable central TASK-043 regression: `145 PASS`. Audio Placement, Timeline Audio, Interactive Timeline and Meter Policy consumer regression: `223 PASS / 1 Windows-only SKIP`.
+- `tests/test_task043_project_save_recovery.py` remains `NOT_CONFIRMED` at collection because the established WSL environment lacks the already-declared `referencing` package. No dependency installation was attempted. Equivalent participant/recovery consumer cases initially exposed and then verified the journal-call compatibility correction (`15 PASS`).
+- Python compile and `git diff --check`: `PASS`. No real Project, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.

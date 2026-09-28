@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE / PMST_I2E_RECOVERY_R2_REVIEW_BUDGET_EXHAUSTED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -296,3 +296,13 @@ The bounded AST plus literal/symbol source-policy test matches every D1 matrix s
 - Runnable Audio Placement, Timeline Audio, Meter Policy and Project Migration direct-consumer regression: `202 PASS / 1 Windows-only SKIP`.
 - TASK-036 launcher regression is `NOT_CONFIRMED` at collection for the same pre-existing WSL `Argon2id` dependency gap; no dependency installation/update occurred. The launcher module compiled and its R011 marker/call binding is checked by AST policy.
 - No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred. I2E final integration/review is next.
+
+## PMST-I2E Recovery R2 checkpoint — 2026-09-29
+
+I2E integration reached committed HEAD `da60d103abde4e3c1eb046f04253566c59b8f0a0`. Post-R2 verification is TASK-102 `139 PASS`, central migration/source-policy `18 PASS`, and Timeline/Audio Placement/Compatibility Migration `40 PASS`. The earlier writer-owner and major-consumer integration remains `399 PASS / 6 SKIP`. Product enrollment remains disabled, and no service/ACL mutation, real Project write, native QA, Release, Deploy or Production effect occurred.
+
+The final independent DEV-4 review is `REVISE`: Critic `Critical 0 / High 2 / Medium 0 / Low 0`; Tester `Critical 0 / High 1 / Medium 0 / Low 0`. Both identify the remaining constructor-call shape `ProductProjectSaveCoordinator().save(...)`; Critic additionally identifies that a bare/comment/unknown `PMST-R...` marker can be mistaken for a proven guard. These are source-policy completeness findings, not a newly observed Product runtime failure.
+
+The two permitted review/fix cycles are exhausted. PMST-I2 is not accepted complete, no PR/merge is permitted from this checkpoint, and a bounded Recovery R3 requires explicit Owner authorization. If authorized, R3 may change only the source-policy test/helper needed to recognize the constructor-call receiver and require an accepted D1 route bound to a real `require_legacy_access` guard/delegation, plus exact negative tests and one fresh final independent review.
+
+External Recovery Evidence: `C:\home\baisound\evidence\bai-video-production\TASK-102\pmst-i2e\20260929-i2e-recovery-r2\completion-checkpoint.json`; initial readback SHA-256 `EFE63F41ED28E81051BE27448BAEB9E3575AD57531A8367A7CBE5314542535EE`.

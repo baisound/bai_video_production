@@ -33,6 +33,9 @@ DELEGATIONS = {
     "montage_learning_canonical_admission_transaction.py:_exclusive_existing_project_lock": (
         "montage_learning_canonical_admission_transaction.py:MontageLearningCanonicalAdmissionTransactionStore.__init__",
     ),
+    "project_save.py:ProductProjectSaveCoordinator._internal_path": (
+        "project_save.py:ProductProjectSaveCoordinator.save",
+    ),
 }
 
 FILE_ROUTE_CLOSURES = {
@@ -47,7 +50,6 @@ FILE_ROUTE_CLOSURES = {
 
 MUTATOR_CALLS = {
     "ProductProjectManifestStore.save",
-    "_exclusive_project_lock",
 }
 PROTECTED_LITERALS = {
     ".bai-project",
@@ -63,9 +65,7 @@ def _matrix() -> dict:
     return json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
 
 
-def _node_for(source: str) -> tuple[str, ast.AST]:
-    filename, symbol = source.split(":", 1)
-    text = (SOURCE_ROOT / filename).read_text(encoding="utf-8-sig")
+def _node_for_text(text: str, symbol: str, *, filename: str) -> ast.AST:
     tree = ast.parse(text, filename=filename)
     parts = symbol.split(".")
     nodes: list[ast.AST] = list(tree.body)
@@ -81,22 +81,55 @@ def _node_for(source: str) -> tuple[str, ast.AST]:
             None,
         )
         if selected is None:
-            raise AssertionError(f"matrix source symbol is missing: {source}")
+            raise AssertionError(f"matrix source symbol is missing: {filename}:{symbol}")
         nodes = list(getattr(selected, "body", ()))
-    if len(parts) > 1:
-        selected = next(
-            node
-            for node in tree.body
-            if isinstance(node, ast.ClassDef) and node.name == parts[0]
-        )
     assert selected is not None
+    return selected
+
+
+def _node_for(source: str) -> tuple[str, ast.AST]:
+    filename, symbol = source.split(":", 1)
+    text = (SOURCE_ROOT / filename).read_text(encoding="utf-8-sig")
+    selected = _node_for_text(text, symbol, filename=filename)
     return text, selected
 
 
+def _contains_route_marker_in_text(text: str, symbol: str, route_id: str, *, filename: str) -> bool:
+    node = _node_for_text(text, symbol, filename=filename)
+    segment = ast.get_source_segment(text, node) or ""
+    if route_id in segment:
+        return True
+    parts = symbol.split(".")
+    if len(parts) != 2 or not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return False
+    class_name = parts[0]
+    helper_names = {
+        call.func.attr
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and isinstance(call.func.value, ast.Name)
+        and call.func.value.id in {"self", "cls"}
+    }
+    for helper_name in helper_names:
+        try:
+            helper = _node_for_text(
+                text,
+                f"{class_name}.{helper_name}",
+                filename=filename,
+            )
+        except AssertionError:
+            continue
+        helper_segment = ast.get_source_segment(text, helper) or ""
+        if route_id in helper_segment:
+            return True
+    return False
+
+
 def _contains_route_marker(source: str, route_id: str) -> bool:
-    text, node = _node_for(source)
-    segment = ast.get_source_segment(text, node)
-    return segment is not None and route_id in segment
+    filename, symbol = source.split(":", 1)
+    text = (SOURCE_ROOT / filename).read_text(encoding="utf-8-sig")
+    return _contains_route_marker_in_text(text, symbol, route_id, filename=filename)
 
 
 def _dotted_name(node: ast.AST) -> str | None:
@@ -114,7 +147,10 @@ def _protected_mutation_signals(text: str) -> set[str]:
         name
         for call in ast.walk(tree)
         if isinstance(call, ast.Call)
-        for name in [_dotted_name(call.func)]
+        for name in [
+            _dotted_name(call.func)
+            or (call.func.attr if isinstance(call.func, ast.Attribute) else None)
+        ]
         if name is not None
     }
     imports_coordinator = any(
@@ -130,13 +166,70 @@ def _protected_mutation_signals(text: str) -> set[str]:
     signals = calls & MUTATOR_CALLS
     if imports_coordinator and any(name.endswith(".save") for name in calls):
         signals.add("ProductProjectSaveCoordinator.*.save")
-    if literals & PROTECTED_LITERALS and any(
-        name.endswith((".write", ".unlink", ".mkdir", ".rmdir")) for name in calls
-    ):
+    protected_path_helper = any(
+        isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "with_name"
+        and any(
+            _dotted_name(inner.func) in {"_manifest_path", "ProductProjectManifestStore.path"}
+            for inner in ast.walk(call.func.value)
+            if isinstance(inner, ast.Call)
+            )
+        for call in ast.walk(tree)
+    )
+    protected_target = bool(literals & PROTECTED_LITERALS) or protected_path_helper
+    mutation_calls = {
+        name
+        for name in calls
+        if name.rsplit(".", 1)[-1]
+        in {"write", "write_bytes", "write_text", "replace", "rename", "unlink", "mkdir", "rmdir"}
+    }
+    if protected_target and mutation_calls:
         signals.add("protected-literal-with-mutation")
         if "AtomicJsonWriter.write" in calls:
             signals.add("AtomicJsonWriter.write")
+    if protected_target:
+        signals.update(calls & {"_exclusive_project_lock", "exclusive_file_update_lock"})
     return signals
+
+
+def _registered_sources() -> set[str]:
+    return {
+        source
+        for row in _matrix()["routes"]
+        for source in row["sources"]
+        if ".py:" in source
+    }
+
+
+def _iter_function_sources(filename: str, text: str) -> list[tuple[str, str]]:
+    tree = ast.parse(text, filename=filename)
+    result: list[tuple[str, str]] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            result.append((f"{filename}:{node.name}", ast.get_source_segment(text, node) or ""))
+        elif isinstance(node, ast.ClassDef):
+            for child in node.body:
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    result.append(
+                        (
+                            f"{filename}:{node.name}.{child.name}",
+                            ast.get_source_segment(text, child) or "",
+                        )
+                    )
+    return result
+
+
+def _is_registered_or_guarded(source: str, registered: set[str]) -> bool:
+    if source in registered or source in DELEGATIONS:
+        return True
+    filename, symbol = source.split(":", 1)
+    if any(item == f"{filename}:{symbol.split('.', 1)[0]}" for item in registered):
+        return True
+    return any(
+        _contains_route_marker(source, route_id)
+        for route_id in FILE_ROUTE_CLOSURES.get(filename, ())
+    )
 
 
 def test_every_d1_source_has_a_machine_checked_route_closure() -> None:
@@ -164,17 +257,14 @@ def test_every_d1_source_has_a_machine_checked_route_closure() -> None:
 
 
 def test_repository_has_no_unregistered_protected_mutation_source() -> None:
-    matrix_files = {
-        source.split(":", 1)[0]
-        for row in _matrix()["routes"]
-        for source in row["sources"]
-        if source.endswith(".py") or ".py:" in source
-    }
+    registered = _registered_sources()
     uncovered: dict[str, list[str]] = {}
     for path in sorted(SOURCE_ROOT.glob("*.py")):
-        signals = _protected_mutation_signals(path.read_text(encoding="utf-8-sig"))
-        if signals and path.name not in matrix_files and path.name != "__init__.py":
-            uncovered[path.name] = sorted(signals)
+        text = path.read_text(encoding="utf-8-sig")
+        for source, segment in _iter_function_sources(path.name, text):
+            signals = _protected_mutation_signals(segment)
+            if signals and not _is_registered_or_guarded(source, registered):
+                uncovered[source] = sorted(signals)
     assert uncovered == {}
 
 
@@ -189,3 +279,32 @@ def unsafe(project_root):
         "_exclusive_project_lock",
         "protected-literal-with-mutation",
     }
+
+
+def test_source_policy_detects_every_d1_protected_mutation_shape() -> None:
+    snippets = (
+        "(root / '.bai-project' / 'x').write_text('x')",
+        "source.replace(root / '.bai-project' / 'x')",
+        "source.rename(root / '.bai-project' / 'x')",
+        "AtomicJsonWriter.write(ProductProjectManifestStore.path(root).with_name('x'), {})",
+        "with exclusive_file_update_lock(ProductProjectManifestStore.path(root).with_name('x')): pass",
+    )
+    for snippet in snippets:
+        assert _protected_mutation_signals(f"def unsafe(root, source):\n    {snippet}\n"), snippet
+
+
+def test_source_policy_does_not_accept_a_marker_in_a_sibling_method() -> None:
+    text = """
+class Example:
+    def guarded(self):
+        return 'PMST-R003'
+
+    def unsafe(self, root):
+        AtomicJsonWriter.write(root / '.bai-project' / 'jobs.json', {})
+"""
+    assert not _contains_route_marker_in_text(
+        text,
+        "Example.unsafe",
+        "PMST-R003",
+        filename="synthetic.py",
+    )

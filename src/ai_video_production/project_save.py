@@ -649,6 +649,11 @@ class ProductProjectSaveCoordinator:
         self.failure_injector = failure_injector
         self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
 
+    @property
+    def pmst_router(self) -> PmstWriterMigrationRouter:
+        """Return the exact router governing this coordinator's write boundary."""
+        return self._pmst_router
+
     def save(
         self,
         project_root: str | Path,
@@ -761,6 +766,19 @@ class ProductProjectSaveCoordinator:
                     details={"route_id": pmst_route_id},
                 )
             self._validate_target_children(root, live)
+            for relative_path, expected_bytes in child_documents.items():
+                target = self._safe_child_target(root, relative_path)
+                if (
+                    target.is_symlink()
+                    or not target.is_file()
+                    or sha256_file_exact(target) != sha256_bytes(expected_bytes)
+                ):
+                    raise ProductError(
+                        "ERR_PMST_SELECTED_CHILD_READBACK_INVALID",
+                        "PMST coordinated-save selected child readback does not match",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                        details={"route_id": pmst_route_id, "relative_path": relative_path},
+                    )
         except ProductError as exc:
             if exc.code == "ERR_PMST_MANIFEST_READBACK_MISMATCH":
                 raise

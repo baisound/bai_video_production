@@ -119,10 +119,18 @@ class Task026AudioPlacementApplication:
         self.timeline_path = root / TIMELINE_RELATIVE_PATH
         self.history_path = root / RELATIVE_PATH
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
-        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
-        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator(
-            pmst_router=self._pmst_router
-        )
+        if save_coordinator is not None:
+            if pmst_router is not None and save_coordinator.pmst_router is not pmst_router:
+                raise ProductError(
+                    "ERR_PMST_ROUTER_COMPOSITION_MISMATCH",
+                    "TASK-026 save coordinator and PMST router must share one boundary",
+                    ProductErrorCategory.SECURITY,
+                )
+            self._pmst_router = save_coordinator.pmst_router
+            self._save_coordinator = save_coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._save_coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._pending: dict[str, _CompilationConfirmation] = {}
 
     @staticmethod

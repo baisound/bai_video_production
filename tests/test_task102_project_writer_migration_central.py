@@ -6,10 +6,12 @@ from typing import Callable
 import pytest
 
 from ai_video_production.atomic import AtomicJsonWriter
+from ai_video_production.audio_placement_application import Task026AudioPlacementApplication
 from ai_video_production.errors import ProductError
 from ai_video_production.product_project import ProductProjectManifest, ProjectChildBinding, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.project_save import ProductProjectSaveCoordinator, ProjectSaveJournalStore
+from ai_video_production.project_migration_application import ProductProjectMigrationApplication
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task102_project_manifest_transaction import (
     PROTOCOL_VERSION,
@@ -20,6 +22,7 @@ from ai_video_production.task102_project_writer_migration import (
     ACCEPTED_WRITER_MIGRATION_MATRIX_SHA256,
     PmstWriterMigrationRouter,
 )
+from ai_video_production.voice_quality_meter_policy_store import MeterPolicyProjectStore, MeterPolicyStoreError
 
 
 CREATED = "2026-09-29T00:00:00Z"
@@ -401,6 +404,106 @@ def test_enrolled_coordinator_blocks_legacy_and_requires_child_readback(tmp_path
         ),
     )
     assert len(readback_port.calls) == 1
+
+
+def test_enrolled_coordinator_requires_readback_for_a_selected_optional_child(tmp_path: Path) -> None:
+    current, target, documents = setup_coordinated_project(tmp_path)
+    optional_data = b"selected-optional-child"
+    optional_binding = ProjectChildBinding(
+        "TASK-043",
+        "state/optional.json",
+        "bai.test-child",
+        "1.0.0",
+        sha256_bytes(optional_data),
+        False,
+    )
+    target = manifest(2, *target.child_bindings, optional_binding)
+    documents = {**documents, "state/optional.json": optional_data}
+
+    def omit_optional_child(request: ContractRecord) -> None:
+        (tmp_path / "state/child.json").write_bytes(documents["state/child.json"])
+        AtomicJsonWriter.write(
+            tmp_path / ".bai-project/project.json",
+            request.to_dict()["intent"]["payload"]["successor_manifest"],
+        )
+
+    router, port = active_router(omit_optional_child)
+    request = private_request(
+        target,
+        profile_id="task043-coordinated-save-v1",
+        predecessor_sha256=current.project_manifest_sha256,
+    )
+    assert_error(
+        "ERR_PMST_COORDINATED_SAVE_READBACK_INVALID",
+        lambda: ProductProjectSaveCoordinator(pmst_router=router).save(
+            tmp_path,
+            target,
+            documents,
+            expected_previous_manifest_sha256=current.project_manifest_sha256,
+            pmst_private_request=request,
+        ),
+    )
+    assert len(port.calls) == 1
+
+
+def test_semantic_callers_derive_the_router_from_a_supplied_coordinator(tmp_path: Path) -> None:
+    setup_coordinated_project(tmp_path)
+    router, _ = active_router(lambda request: None)
+    coordinator = ProductProjectSaveCoordinator(pmst_router=router)
+
+    audio = Task026AudioPlacementApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        save_coordinator=coordinator,
+    )
+    migration = ProductProjectMigrationApplication(
+        tmp_path,
+        supported_formats=(),
+        save_coordinator=coordinator,
+    )
+    meter = MeterPolicyProjectStore(
+        tmp_path,
+        "project-1",
+        coordinator=coordinator,
+    )
+
+    assert audio._pmst_router is router
+    assert migration._pmst_router is router
+    assert meter._pmst_router is router
+
+
+def test_semantic_callers_reject_a_split_router_composition(tmp_path: Path) -> None:
+    setup_coordinated_project(tmp_path)
+    coordinator_router, _ = active_router(lambda request: None)
+    explicit_router, _ = active_router(lambda request: None)
+    coordinator = ProductProjectSaveCoordinator(pmst_router=coordinator_router)
+
+    with pytest.raises(ProductError) as audio_error:
+        Task026AudioPlacementApplication(
+            project_root=tmp_path,
+            project_id="project-1",
+            save_coordinator=coordinator,
+            pmst_router=explicit_router,
+        )
+    assert audio_error.value.code == "ERR_PMST_ROUTER_COMPOSITION_MISMATCH"
+
+    with pytest.raises(ProductError) as migration_error:
+        ProductProjectMigrationApplication(
+            tmp_path,
+            supported_formats=(),
+            save_coordinator=coordinator,
+            pmst_router=explicit_router,
+        )
+    assert migration_error.value.code == "ERR_PMST_ROUTER_COMPOSITION_MISMATCH"
+
+    with pytest.raises(MeterPolicyStoreError) as meter_error:
+        MeterPolicyProjectStore(
+            tmp_path,
+            "project-1",
+            coordinator=coordinator,
+            pmst_router=explicit_router,
+        )
+    assert meter_error.value.reason == "PMST_ROUTER_COMPOSITION_MISMATCH"
 
 
 def test_enrolled_legacy_recovery_and_integrity_routes_are_deterministically_unavailable(tmp_path: Path) -> None:

@@ -836,10 +836,14 @@ class MeterPolicyProjectStore:
         self._root = Path(project_root)
         self._pins = _root_pins(self._root)
         self.project_id = _project_id(project_id)
-        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
-        self._coordinator = coordinator if coordinator is not None else ProductProjectSaveCoordinator(
-            pmst_router=self._pmst_router
-        )
+        if coordinator is not None:
+            if pmst_router is not None and coordinator.pmst_router is not pmst_router:
+                raise MeterPolicyStoreError("PMST_ROUTER_COMPOSITION_MISMATCH")
+            self._pmst_router = coordinator.pmst_router
+            self._coordinator = coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._epoch = str(uuid.uuid4())
         self._token = object()
         self._closed = False

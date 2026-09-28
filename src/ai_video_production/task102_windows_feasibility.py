@@ -15,7 +15,9 @@ from typing import Any
 
 
 REPORT_VERSION = "TASK102_PMST_N1A_REPORT_V1"
+N1B_REPORT_VERSION = "TASK102_PMST_N1B_REPORT_V1"
 RUN_PREFIX = "bvp-task102-pmst-n1-"
+SERVICE_PREFIX = "BvpTask102PmstN1-"
 PREDECESSOR = b'{"generation":1,"state":"predecessor"}'
 SUCCESSOR = b'{"generation":2,"state":"successor"}'
 
@@ -73,6 +75,24 @@ def classify_recovery(
         if observed_sha256 == successor_sha256:
             return "COMMITTED_WITH_READBACK"
     return "COMMIT_OUTCOME_UNKNOWN"
+
+
+def validate_service_name(value: str) -> str:
+    suffix = value.removeprefix(SERVICE_PREFIX)
+    if not value.startswith(SERVICE_PREFIX) or not 12 <= len(suffix) <= 32:
+        raise FeasibilityError("SERVICE_NAME_REJECTED")
+    if any(character not in "0123456789abcdef" for character in suffix):
+        raise FeasibilityError("SERVICE_NAME_REJECTED")
+    return value
+
+
+def protected_pipe_sddl(service_sid: str, client_sid: str) -> str:
+    for sid in (service_sid, client_sid):
+        if not sid.startswith("S-1-") or any(
+            character not in "S-0123456789" for character in sid
+        ):
+            raise FeasibilityError("PIPE_SID_REJECTED")
+    return f"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;{service_sid})(A;;GRGW;;;{client_sid})"
 
 
 def _require_windows() -> None:
@@ -747,11 +767,377 @@ def run_n1a(run_root: Path) -> dict[str, object]:
                 _close_handle(handle)
 
 
+class _ServiceStatus(ctypes.Structure):
+    _fields_ = [
+        ("service_type", wintypes.DWORD),
+        ("current_state", wintypes.DWORD),
+        ("controls_accepted", wintypes.DWORD),
+        ("win32_exit_code", wintypes.DWORD),
+        ("service_specific_exit_code", wintypes.DWORD),
+        ("check_point", wintypes.DWORD),
+        ("wait_hint", wintypes.DWORD),
+    ]
+
+
+_CALLBACK = getattr(ctypes, "WINFUNCTYPE", ctypes.CFUNCTYPE)
+_SERVICE_MAIN = _CALLBACK(
+    None, wintypes.DWORD, ctypes.POINTER(wintypes.LPWSTR)
+)
+_SERVICE_HANDLER = _CALLBACK(
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+)
+
+
+class _ServiceTableEntry(ctypes.Structure):
+    _fields_ = [("name", wintypes.LPWSTR), ("callback", _SERVICE_MAIN)]
+
+
+_service_context: dict[str, object] = {}
+_service_status_handle = wintypes.HANDLE()
+_service_status = _ServiceStatus()
+
+
+def _set_service_status(state: int, *, exit_code: int = 0) -> None:
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    advapi.SetServiceStatus.argtypes = [wintypes.HANDLE, ctypes.POINTER(_ServiceStatus)]
+    advapi.SetServiceStatus.restype = wintypes.BOOL
+    _service_status.service_type = 0x10  # SERVICE_WIN32_OWN_PROCESS
+    _service_status.current_state = state
+    _service_status.controls_accepted = 0x1 if state == 0x4 else 0
+    _service_status.win32_exit_code = exit_code
+    _service_status.service_specific_exit_code = 0
+    _service_status.check_point = 0
+    _service_status.wait_hint = 0
+    if not advapi.SetServiceStatus(
+        _service_status_handle, ctypes.byref(_service_status)
+    ):
+        raise FeasibilityError("SERVICE_STATUS_FAILED")
+
+
+@_SERVICE_HANDLER
+def _service_control_handler(
+    control: int,
+    event_type: int,
+    event_data: ctypes.c_void_p,
+    context: ctypes.c_void_p,
+) -> int:
+    del event_type, event_data, context
+    if control in {0x1, 0x5}:  # STOP or SHUTDOWN
+        try:
+            _set_service_status(0x3)  # STOP_PENDING
+        except FeasibilityError:
+            pass
+    return 0
+
+
+def _token_contains_sid(sid_text: str) -> bool:
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    sid = ctypes.c_void_p()
+    advapi.ConvertStringSidToSidW.argtypes = [
+        wintypes.LPCWSTR,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    advapi.ConvertStringSidToSidW.restype = wintypes.BOOL
+    advapi.CheckTokenMembership.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.POINTER(wintypes.BOOL),
+    ]
+    advapi.CheckTokenMembership.restype = wintypes.BOOL
+    if not advapi.ConvertStringSidToSidW(sid_text, ctypes.byref(sid)):
+        raise FeasibilityError("SERVICE_SID_PARSE_FAILED")
+    try:
+        present = wintypes.BOOL()
+        if not advapi.CheckTokenMembership(None, sid, ctypes.byref(present)):
+            raise FeasibilityError("SERVICE_SID_CHECK_FAILED")
+        return bool(present.value)
+    finally:
+        kernel.LocalFree(sid)
+
+
+def _service_pipe_server(
+    pipe_name: str,
+    *,
+    service_sid: str,
+    client_sid: str,
+) -> tuple[int, int]:
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    descriptor = ctypes.c_void_p()
+    advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_void_p,
+    ]
+    advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.restype = wintypes.BOOL
+    kernel.CreateNamedPipeW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(_SecurityAttributes),
+    ]
+    kernel.CreateNamedPipeW.restype = wintypes.HANDLE
+    kernel.ConnectNamedPipe.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+    kernel.ConnectNamedPipe.restype = wintypes.BOOL
+    kernel.GetNamedPipeClientProcessId.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.ULONG),
+    ]
+    kernel.GetNamedPipeClientProcessId.restype = wintypes.BOOL
+    kernel.ReadFile.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.c_void_p,
+    ]
+    kernel.ReadFile.restype = wintypes.BOOL
+    kernel.WriteFile.argtypes = kernel.ReadFile.argtypes
+    kernel.WriteFile.restype = wintypes.BOOL
+    sddl = protected_pipe_sddl(service_sid, client_sid)
+    if not advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        sddl, 1, ctypes.byref(descriptor), None
+    ):
+        raise FeasibilityError("PIPE_DESCRIPTOR_FAILED")
+    attributes = _SecurityAttributes(ctypes.sizeof(_SecurityAttributes), descriptor, False)
+    access = 0x3 | 0x00080000
+    mode = 0x4 | 0x2 | 0x8
+    invalid = ctypes.c_void_p(-1).value
+    pipe = kernel.CreateNamedPipeW(
+        pipe_name, access, mode, 2, 4096, 4096, 15000, ctypes.byref(attributes)
+    )
+    if pipe in (None, 0, invalid):
+        kernel.LocalFree(descriptor)
+        raise FeasibilityError("PIPE_CREATE_FAILED")
+    try:
+        second = kernel.CreateNamedPipeW(
+            pipe_name, access, mode, 2, 4096, 4096, 15000, ctypes.byref(attributes)
+        )
+        second_error = ctypes.get_last_error()
+        if second not in (None, 0, invalid):
+            _close_handle(int(second))
+            raise FeasibilityError("PIPE_FIRST_INSTANCE_UNPROVEN")
+        if second_error != 5:
+            raise FeasibilityError("PIPE_FIRST_INSTANCE_UNPROVEN")
+        connected = bool(kernel.ConnectNamedPipe(pipe, None))
+        if not connected and ctypes.get_last_error() != 535:
+            raise FeasibilityError("PIPE_CONNECT_FAILED")
+        client_pid = wintypes.ULONG()
+        if not kernel.GetNamedPipeClientProcessId(pipe, ctypes.byref(client_pid)):
+            raise FeasibilityError("PIPE_CLIENT_PID_FAILED")
+        buffer = ctypes.create_string_buffer(512)
+        read = wintypes.DWORD()
+        if not kernel.ReadFile(pipe, buffer, len(buffer), ctypes.byref(read), None):
+            raise FeasibilityError("PIPE_READ_FAILED")
+        payload = json.loads(buffer.raw[: read.value].decode("ascii"))
+        server_pid = os.getpid()
+        if payload != {
+            "client_pid": int(client_pid.value),
+            "server_pid_observed": server_pid,
+        }:
+            raise FeasibilityError("PIPE_IDENTITY_UNPROVEN")
+        response = _canonical_json(
+            {
+                "server_pid": server_pid,
+                "client_pid_observed": int(client_pid.value),
+                "service_sid_present": True,
+            }
+        )
+        written = wintypes.DWORD()
+        if not kernel.WriteFile(
+            pipe, response, len(response), ctypes.byref(written), None
+        ) or written.value != len(response):
+            raise FeasibilityError("PIPE_WRITE_FAILED")
+        return server_pid, int(client_pid.value)
+    finally:
+        _close_handle(int(pipe))
+        kernel.LocalFree(descriptor)
+
+
+def _service_operation() -> None:
+    control_root = Path(str(_service_context["control_root"]))
+    pipe_name = str(_service_context["pipe_name"])
+    service_sid = str(_service_context["service_sid"])
+    client_sid = str(_service_context["client_sid"])
+    try:
+        sid_present = _token_contains_sid(service_sid)
+        if not sid_present:
+            raise FeasibilityError("SERVICE_SID_NOT_IN_TOKEN")
+        _set_service_status(0x4)  # RUNNING
+        server_pid, client_pid = _service_pipe_server(
+            pipe_name, service_sid=service_sid, client_sid=client_sid
+        )
+        proof = {
+            "record_type": "TASK102_PMST_N1B_SERVICE_PROOF_V1",
+            "service_sid_sha256": _sha256(service_sid.encode("ascii")),
+            "service_sid_present": True,
+            "server_pid": server_pid,
+            "client_pid": client_pid,
+        }
+        _write_durable(control_root / "service-proof.json", _canonical_json(proof))
+        _set_service_status(0x1)  # STOPPED
+    except Exception as exc:
+        failure = exc.code if isinstance(exc, FeasibilityError) else "SERVICE_WORKER_FAILED"
+        try:
+            _write_durable(
+                control_root / "service-failure.json",
+                _canonical_json({"reason_code": failure}),
+            )
+        finally:
+            try:
+                _set_service_status(0x1, exit_code=1)
+            except FeasibilityError:
+                pass
+
+
+@_SERVICE_MAIN
+def _service_main(argc: int, argv: ctypes.POINTER(wintypes.LPWSTR)) -> None:
+    del argc, argv
+    global _service_status_handle
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    advapi.RegisterServiceCtrlHandlerExW.argtypes = [
+        wintypes.LPCWSTR,
+        _SERVICE_HANDLER,
+        ctypes.c_void_p,
+    ]
+    advapi.RegisterServiceCtrlHandlerExW.restype = wintypes.HANDLE
+    _service_status_handle = advapi.RegisterServiceCtrlHandlerExW(
+        str(_service_context["service_name"]), _service_control_handler, None
+    )
+    if not _service_status_handle:
+        return
+    _set_service_status(0x2)  # START_PENDING
+    _service_operation()
+
+
+def _run_service_worker(
+    service_name: str,
+    control_root: Path,
+    pipe_name: str,
+    service_sid: str,
+    client_sid: str,
+) -> int:
+    _require_windows()
+    validate_service_name(service_name)
+    _service_context.update(
+        {
+            "service_name": service_name,
+            "control_root": str(control_root),
+            "pipe_name": pipe_name,
+            "service_sid": service_sid,
+            "client_sid": client_sid,
+        }
+    )
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    advapi.StartServiceCtrlDispatcherW.argtypes = [
+        ctypes.POINTER(_ServiceTableEntry)
+    ]
+    advapi.StartServiceCtrlDispatcherW.restype = wintypes.BOOL
+    table = (_ServiceTableEntry * 2)()
+    table[0].name = service_name
+    table[0].callback = _service_main
+    table[1].name = None
+    table[1].callback = _SERVICE_MAIN()
+    if not advapi.StartServiceCtrlDispatcherW(table):
+        return 1
+    return 0
+
+
+def _n1b_pipe_client(pipe_name: str, expected_server_pid: int) -> dict[str, object]:
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.GetNamedPipeServerProcessId.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.ULONG),
+    ]
+    kernel.GetNamedPipeServerProcessId.restype = wintypes.BOOL
+    kernel.ReadFile.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.c_void_p,
+    ]
+    kernel.ReadFile.restype = wintypes.BOOL
+    kernel.WriteFile.argtypes = kernel.ReadFile.argtypes
+    kernel.WriteFile.restype = wintypes.BOOL
+    invalid = ctypes.c_void_p(-1).value
+    handle = invalid
+    for _ in range(100):
+        handle = kernel.CreateFileW(pipe_name, 0xC0000000, 0, None, 3, 0, None)
+        if handle not in (None, 0, invalid):
+            break
+        import time
+
+        time.sleep(0.1)
+    if handle in (None, 0, invalid):
+        raise FeasibilityError("PIPE_CONNECT_FAILED")
+    try:
+        server_pid = wintypes.ULONG()
+        if not kernel.GetNamedPipeServerProcessId(handle, ctypes.byref(server_pid)):
+            raise FeasibilityError("PIPE_SERVER_PID_FAILED")
+        if int(server_pid.value) != expected_server_pid:
+            raise FeasibilityError("PIPE_IDENTITY_UNPROVEN")
+        payload = _canonical_json(
+            {
+                "client_pid": os.getpid(),
+                "server_pid_observed": int(server_pid.value),
+            }
+        )
+        written = wintypes.DWORD()
+        if not kernel.WriteFile(
+            handle, payload, len(payload), ctypes.byref(written), None
+        ) or written.value != len(payload):
+            raise FeasibilityError("PIPE_WRITE_FAILED")
+        buffer = ctypes.create_string_buffer(512)
+        read = wintypes.DWORD()
+        if not kernel.ReadFile(handle, buffer, len(buffer), ctypes.byref(read), None):
+            raise FeasibilityError("PIPE_READ_FAILED")
+        response = json.loads(buffer.raw[: read.value].decode("ascii"))
+        expected = {
+            "server_pid": expected_server_pid,
+            "client_pid_observed": os.getpid(),
+            "service_sid_present": True,
+        }
+        if response != expected:
+            raise FeasibilityError("PIPE_IDENTITY_UNPROVEN")
+        return response
+    finally:
+        _close_handle(int(handle))
+
+
 def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--barrier-child", nargs=2, metavar=("ACTION", "PATH"))
     parser.add_argument("--pipe-client")
     parser.add_argument("--crash-worker", nargs=2, metavar=("SEAM", "ROOT"))
+    parser.add_argument(
+        "--service-worker",
+        nargs=5,
+        metavar=("SERVICE", "CONTROL", "PIPE", "SERVICE_SID", "CLIENT_SID"),
+    )
+    parser.add_argument(
+        "--n1b-client", nargs=2, metavar=("PIPE", "EXPECTED_SERVER_PID")
+    )
     parser.add_argument("--run-root", type=Path)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
@@ -761,6 +1147,25 @@ def _main(argv: list[str] | None = None) -> int:
         return _pipe_client(args.pipe_client)
     if args.crash_worker:
         return _crash_worker(Path(args.crash_worker[1]), args.crash_worker[0])
+    if args.service_worker:
+        return _run_service_worker(
+            args.service_worker[0],
+            Path(args.service_worker[1]),
+            args.service_worker[2],
+            args.service_worker[3],
+            args.service_worker[4],
+        )
+    if args.n1b_client:
+        try:
+            result = _n1b_pipe_client(
+                args.n1b_client[0], int(args.n1b_client[1])
+            )
+            print(_canonical_json(result).decode("ascii"))
+            return 0
+        except (FeasibilityError, ValueError) as exc:
+            code = exc.code if isinstance(exc, FeasibilityError) else "PID_REJECTED"
+            print(code, file=sys.stderr)
+            return 1
     if args.run_root is None or args.report is None:
         parser.error("--run-root and --report are required")
     try:

@@ -9,7 +9,9 @@ from ai_video_production.task102_windows_feasibility import (
     FeasibilityError,
     RUN_PREFIX,
     classify_recovery,
+    protected_pipe_sddl,
     validate_run_root,
+    validate_service_name,
 )
 
 
@@ -90,3 +92,37 @@ def test_windows_native_entrypoint_is_windows_only() -> None:
 
     with pytest.raises(FeasibilityError, match="WINDOWS_REQUIRED"):
         run_n1a(Path("unused"))
+
+
+def test_service_name_accepts_only_unique_bounded_hex_suffix() -> None:
+    value = "BvpTask102PmstN1-0123456789abcdef"
+
+    assert validate_service_name(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Foreign-0123456789abcdef",
+        "BvpTask102PmstN1-short",
+        "BvpTask102PmstN1-0123456789abcdeg",
+        "BvpTask102PmstN1-" + "0" * 33,
+    ],
+)
+def test_service_name_rejects_foreign_or_unsafe_value(value: str) -> None:
+    with pytest.raises(FeasibilityError, match="SERVICE_NAME_REJECTED"):
+        validate_service_name(value)
+
+
+def test_protected_pipe_sddl_is_closed_to_service_and_client_sids() -> None:
+    value = protected_pipe_sddl("S-1-5-80-1234", "S-1-5-21-5678")
+
+    assert value == (
+        "D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+        "(A;;GA;;;S-1-5-80-1234)(A;;GRGW;;;S-1-5-21-5678)"
+    )
+
+
+def test_protected_pipe_sddl_rejects_non_sid_text() -> None:
+    with pytest.raises(FeasibilityError, match="PIPE_SID_REJECTED"):
+        protected_pipe_sddl("NT SERVICE\\example", "S-1-5-21-5678")

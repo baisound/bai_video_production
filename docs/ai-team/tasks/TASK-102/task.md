@@ -1,13 +1,13 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1A_PASS / PMST_N1B_BLOCKED_PRIVILEGE / PMST_N1_NOT_CONFIRMED`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1A_N1B_PASS / PMST_N1_COMPLETE / PMST_I2_NOT_AUTHORIZED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
 - Direct consumer: TASK-099 JCV-N.
 - Related dependency: TASK-068 immutable publication/readback remains independently owned and is not absorbed.
 - First unused Task-ID audit: `TASK-102` is absent while TASK-100 and TASK-101 are already allocated in this worktree.
-- Current implementation authority: none. Service installation, ACL mutation, enrollment, native QA and Product integration remain separate gates.
+- Current implementation authority: PMST-N1 authority is consumed and complete. PMST-I2 writer migration, Product enrollment, Release, Deploy and Production remain separate gates and are not authorized by N1 completion.
 
 ## Objective and responsibility boundary
 
@@ -165,3 +165,13 @@ Every native run must use one new run-specific directory beneath the OS system t
 PMST-N1A is technically `PASS` on the supported Windows host. Run `20260927-n1a-final-007` proved a unique system-Temp child on fixed NTFS, non-inheritable root/control/manifest barriers with five second-process rejection observations, a DELETE-capable handle-bound same-volume replacement with changed physical identity, file plus directory flush, closed recovery classification across three process-termination seams, a protected and stable task-owned control DACL, and an explicit local named-pipe descriptor with first-instance-specific rejection, remote-client rejection configuration and mutual process-ID readback. Focused TASK-102 tests are `78 PASS` including direct PMST-I1 regression. The native report file SHA-256 is `3eba567cc83001211174f34e06924de91f67cda8a0bcbcd726ca27c44e867692`; the public-safe summary is under this Task's `evidence/` directory.
 
 This is not a physical power-loss proof and creates no Product enrollment or writer authority. PMST-N1B was not executed because both the sandbox and host execution token were non-elevated. No service-create effect was attempted, no existing service or ACL was changed, and the exact result is `NOT_CONFIRMED / BLOCKED_PRIVILEGE`. Therefore PMST-N1 as a whole is not accepted complete and PMST-I2 remains blocked until a separately elevated, exact N1B run proves service-SID exclusion and cleanup.
+
+## PMST-N1B completion — 2026-09-28
+
+The Owner instructed `PMST-N1B再開OK`. The non-elevated controller launched one explicit UAC-elevated bounded runner; no credential capture or bypass occurred. Final run `20260928-n1b-final-007` is `PASS`.
+
+The runner created one random `BvpTask102PmstN1-*` demand-start own-process test service, enabled its unrestricted service SID, and read back the exact registered image command, LocalSystem identity, start mode, process type and SID type before start. The service ran a copied helper inside the operation-owned Machine Temp root. SYSTEM, Administrators and the interactive user had read/execute only; the service SID was the sole Full-control ACE on the protected control directory. The live service token contained the expected service SID and created the closed proof object. The peer controller was denied create, overwrite, delete and directory rename. The explicit protected pipe configuration rejected a second first-instance creator, configured remote-client rejection and proved both service/client PIDs. The exact service stopped and was deleted; post-run service inventory found zero `BvpTask102PmstN1-*` residual services.
+
+The final body-free report file SHA-256 is `deea6770c9499d72319dd022dde6dec6d943432251ff836636f7ad86e573e446`. Exact DACL readback confirmed four explicit non-inherited allow ACEs: service SID Full control and interactive user, SYSTEM and Administrators ReadAndExecute plus Synchronize. N1A regression remained `PASS`; PMST-I1 plus N1 focused tests are `85 PASS`. Earlier N1B recovery runs were preserved rather than hidden: one rejected an invalid empty-password `sc config` form, two proved service cleanup after virtual-account service-start access denial, run 004 established the accepted topology, run 005 added configuration readback, and run 006 exposed and corrected the RX/Synchronize comparison.
+
+PMST-N1 is now technically complete within its stated claim. It proves process-termination recovery and Windows primitive/service-SID feasibility, not physical power-loss durability, Product enrollment, writer migration or Production readiness. PMST-I2 may be proposed as the next unit but remains unauthorized until its own bounded authority is recorded.

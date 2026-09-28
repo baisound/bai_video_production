@@ -1,6 +1,6 @@
 # TASK-102 PMST-N1 Windows Feasibility Plan R0
 
-Status: `N1A_PASS / N1B_BLOCKED_PRIVILEGE / OVERALL_NOT_CONFIRMED`
+Status: `N1A_PASS / N1B_PASS / PMST_N1_COMPLETE`
 
 ## 1. Decision target
 
@@ -50,4 +50,12 @@ N1A exits with focused pure tests, a real Windows contained run, exact report ha
 
 PMST-N1A run `20260927-n1a-final-007` is `PASS`. It exercised every N1A matrix row in an operation-owned system-Temp root and copied/read back its body-free report from the canonical external TASK-102 Evidence root. The report file SHA-256 is `3eba567cc83001211174f34e06924de91f67cda8a0bcbcd726ca27c44e867692`. Pure plus direct PMST-I1 regression is `78 PASS`.
 
-The current host token is not elevated, so PMST-N1B is `NOT_CONFIRMED / BLOCKED_PRIVILEGE`. No `sc.exe create`, service configuration, existing ACL mutation, Product Project mutation or UAC bypass was attempted. An elevated N1B run remains mandatory before PMST-N1 completion or PMST-I2 allocation.
+The initial host token was not elevated, so N1B correctly remained `NOT_CONFIRMED / BLOCKED_PRIVILEGE` until the Owner instructed `PMST-N1B再開OK` and accepted the visible UAC elevation path.
+
+## 7. PMST-N1B observed result — 2026-09-28
+
+Final run `20260928-n1b-final-007` is `PASS`. Exact service/image/configuration readback, exact four-ACE protected DACL readback, service-SID-only mutation authority, peer create/overwrite/delete/rename rejection, live token service-SID membership, closed service-owned mutation, first-instance and remote-client pipe configuration, mutual PID readback and exact service deletion all passed. Residual service inventory was zero. The report file SHA-256 is `deea6770c9499d72319dd022dde6dec6d943432251ff836636f7ad86e573e446`.
+
+The accepted topology uses the SCM default LocalSystem account with `SERVICE_SID_TYPE_UNRESTRICTED`. The protected control DACL grants SYSTEM, Administrators and the interactive user read/execute only; its service-specific SID is the sole Full-control ACE. This proves that the service operation succeeds because the live token contains the configured service SID, while same-user and non-service SYSTEM principals lack ordinary mutation rights. Administrator privilege abuse, ownership/DACL takeover and kernel compromise remain outside the live guarantee.
+
+The owned Machine Temp run root and canonical external Evidence are intentional recorded residuals; the temporary service is not. No real Project, existing service, existing ACL, Release, Deploy or Production state was changed. Physical power-loss remains explicitly `NOT_CONFIRMED`; N1 completion does not broaden that claim. PMST-I2 remains a separate authority gate.

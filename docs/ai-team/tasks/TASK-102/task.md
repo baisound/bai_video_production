@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE / PMST_I2E_RECOVERY_R2_REVIEW_BUDGET_EXHAUSTED`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE / PMST_I2E_RECOVERY_R3_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -306,3 +306,9 @@ The final independent DEV-4 review is `REVISE`: Critic `Critical 0 / High 2 / Me
 The two permitted review/fix cycles are exhausted. PMST-I2 is not accepted complete, no PR/merge is permitted from this checkpoint, and a bounded Recovery R3 requires explicit Owner authorization. If authorized, R3 may change only the source-policy test/helper needed to recognize the constructor-call receiver and require an accepted D1 route bound to a real `require_legacy_access` guard/delegation, plus exact negative tests and one fresh final independent review.
 
 External Recovery Evidence: `C:\home\baisound\evidence\bai-video-production\TASK-102\pmst-i2e\20260929-i2e-recovery-r2\completion-checkpoint.json`; initial readback SHA-256 `EFE63F41ED28E81051BE27448BAEB9E3575AD57531A8367A7CBE5314542535EE`.
+
+## PMST-I2E Recovery R3 authority and Builder checkpoint — 2026-09-29
+
+After the explicit R2 escalation request, the Owner answered `次へ` and then separately authorized GitHub PR creation. This authorizes only the bounded R3 correction, final independent review and—if accepted—PR creation. It does not authorize Product enrollment, service/ACL mutation, real Project writes, native QA, Release, Deploy or Production.
+
+R3 changes only `tests/test_task102_writer_source_policy.py`. Constructor-bound `ProductProjectSaveCoordinator().save(...)` is now normalized as a coordinator save signal. Route closure now requires an actual `require_legacy_access` call whose `route_id` is an accepted D1 route, including a function's exact default route binding; comments, docstrings and unknown routes do not qualify. Exact synthetic negatives cover constructor save, comment-only marker and unknown-route guard. Source-policy is `9 PASS`; TASK-102 is `141 PASS`. Final independent DEV-4 Critic/Tester review is next.

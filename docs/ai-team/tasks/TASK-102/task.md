@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -231,3 +231,24 @@ I2B may add explicit injected PMST routing to central manifest create/transition
 - Focused I2A/I2B: `23 PASS`. TASK-102 plus runnable central TASK-043 regression: `145 PASS`. Audio Placement, Timeline Audio, Interactive Timeline and Meter Policy consumer regression: `223 PASS / 1 Windows-only SKIP`.
 - `tests/test_task043_project_save_recovery.py` remains `NOT_CONFIRMED` at collection because the established WSL environment lacks the already-declared `referencing` package. No dependency installation was attempted. Equivalent participant/recovery consumer cases initially exposed and then verified the journal-call compatibility correction (`15 PASS`).
 - Python compile and `git diff --check`: `PASS`. No real Project, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.
+
+## PMST-I2C decomposition and C1 checkpoint — 2026-09-29
+
+I2C is split into three bounded source units without changing its accepted responsibility: C1 covers R003/R004/R007 singleton and append-chain object writers; C2 covers R005/R006 snapshot sets; C3 covers R008/R009/R010 Timeline recovery, read lease and TASK-029 participant paths. Each enrolled route must either use a closed adapter or stop before its legacy lock/mutation. I2D remains responsible for semantic caller wiring and the complete source-policy closure.
+
+I2C-C1 exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/durable_product_job.py`
+4. `src/ai_video_production/project_history.py`
+5. `src/ai_video_production/voice_profile_store.py`
+6. `tests/test_task102_project_writer_migration_objects.py`
+7. bounded Evidence under the canonical external TASK-102 Evidence root
+
+C1 injects the disabled-by-default router into the R003 Job service/store and the R004/R007 store entrypoints. For every valid enrolled status it rejects the legacy path before a lock target/control directory is created; package-private Job/history writer entrypoints carry the same guard. The default resolver proves `UNENROLLED`, so existing Product behavior and APIs remain compatible. Exact broker request construction/readback and semantic caller composition remain I2D work; until then these enrolled features are deterministically unavailable rather than partially migrated.
+
+- New plus prior I2 focused tests: `29 PASS`.
+- Existing durable Job, history/autosave/backup and VoiceProfile regression: `56 PASS`.
+- Direct Export Queue and Timeline history consumer regression: `48 PASS`.
+- Python compile: `PASS`; real Projects, service/ACL/native state, private media, Release, Deploy and Production effects: none.

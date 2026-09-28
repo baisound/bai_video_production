@@ -10,6 +10,10 @@ from typing import Any, Mapping
 from .atomic import AtomicJsonWriter, AtomicWriteResult, FailureInjector, exclusive_file_update_lock
 from .errors import ProductError, ProductErrorCategory
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .voice_profile_revision import VoiceProfileRevision
 
 
@@ -186,7 +190,13 @@ class VoiceProfileRevisionStore:
         revision: VoiceProfileRevision,
         *,
         failure_injector: FailureInjector | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> AtomicWriteResult:
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            project_root,
+            route_id="PMST-R007",
+            access_kind="LOCK",
+        )
         if revision.revision != 1 or revision.parent_revision_sha256 is not None:
             raise ProductError(
                 "ERR_VOICE_PROFILE_FIRST_REVISION_INVALID",
@@ -229,7 +239,13 @@ class VoiceProfileRevisionStore:
         *,
         expected_previous_store_sha256: str | None,
         failure_injector: FailureInjector | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> AtomicWriteResult:
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            project_root,
+            route_id="PMST-R007",
+            access_kind="LOCK",
+        )
         target = _store_path(project_root, create_control_dir=True)
         try:
             with exclusive_file_update_lock(target):

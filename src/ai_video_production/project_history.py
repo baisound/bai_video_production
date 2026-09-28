@@ -19,6 +19,10 @@ from .product_project import ProductProjectManifest, parse_product_project_manif
 from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock, _manifest_path, _project_root
 from .project_save import ProductProjectSaveCoordinator
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 _HISTORY_VERSION = "1.0.0"
@@ -337,12 +341,25 @@ class ProjectCommandHistoryStore:
             raise ProductError("ERR_PROJECT_HISTORY_READ", "Project command history could not be read", ProductErrorCategory.DATA_INTEGRITY) from exc
 
     @staticmethod
-    def save(project_root: str | Path, history: ProjectCommandHistory, *, expected_previous_history_sha256: str | None = None) -> AtomicWriteResult:
+    def save(
+        project_root: str | Path,
+        history: ProjectCommandHistory,
+        *,
+        expected_previous_history_sha256: str | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> AtomicWriteResult:
+        router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        router.require_legacy_access(
+            project_root,
+            route_id="PMST-R004",
+            access_kind="LOCK",
+        )
         with _exclusive_project_lock(_manifest_path(project_root, create_control_dir=True)):
             return ProjectCommandHistoryStore._save_unlocked(
                 project_root,
                 history,
                 expected_previous_history_sha256=expected_previous_history_sha256,
+                pmst_router=router,
             )
 
     @staticmethod
@@ -351,8 +368,14 @@ class ProjectCommandHistoryStore:
         history: ProjectCommandHistory,
         *,
         expected_previous_history_sha256: str | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> AtomicWriteResult:
         """CAS-write while the caller already owns the Project manifest lock."""
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            project_root,
+            route_id="PMST-R004",
+            access_kind="MUTATION",
+        )
         target = ProjectCommandHistoryStore.path(project_root, create=True)
         if target.exists():
             current = ProjectCommandHistoryStore.load(project_root)

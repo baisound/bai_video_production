@@ -1,6 +1,6 @@
 # TASK-102 PMST-I2 — Product Writer Migration Plan R0
 
-Status: `PMST_I2_AUTHORIZED / PMST_I2A_IN_PROGRESS / PRODUCT_ENROLLMENT_DISABLED`
+Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_COMMITTED / PMST_I2C1_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
 
 ## 1. Bound outcome
 
@@ -36,6 +36,12 @@ I2B connects the central manifest/coordinator routes. I2C connects or blocks eve
 ### I2B central readback rule
 
 Central source migration uses explicit dependency injection. A supplied PMST request never authorizes a legacy fallback. `COMMITTED_WITH_READBACK` is necessary but insufficient: the Product reparses the canonical manifest after the port returns, requires the exact requested successor digest, and for coordinated saves revalidates every selected child. Missing, stale or mismatched readback is `DATA_INTEGRITY`, not success. Until later units supply exact broker query/read-lease and participant recovery adapters, enrolled legacy recovery/status/integrity entrypoints return a deterministic unavailable error before lock/journal mutation.
+
+### I2C protected-object order
+
+I2C is executed as C1 (`R003/R004/R007` object stores), C2 (`R005/R006` snapshot sets), and C3 (`R008/R009/R010` recovery/read-lease/participant paths). A feature-block is a valid intermediate disposition only when it occurs before any legacy lock or protected-control mutation and no caller can bypass it through a package-private writer. The default composition remains unenrolled. Semantic request construction, readback and caller composition are completed in I2D before enrollment can be proposed.
+
+C1 adds only injected legacy-route guards. All valid enrollment states reject Job, history and VoiceProfile legacy locks/writes before `.bai-project` creation. Direct Job/history internal writer calls are guarded separately. Unenrolled behavior remains unchanged, and C1 does not expose a broker write path that lacks semantic-owner request/readback validation.
 
 ## 5. I2A acceptance
 

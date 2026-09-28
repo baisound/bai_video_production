@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C_COMMITTED / PMST_I2D_BUILDER_COMPLETE / PMST_I2E_RECOVERY_R3_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_ACCEPTED / PRODUCT_ENROLLMENT_DISABLED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -312,3 +312,9 @@ External Recovery Evidence: `C:\home\baisound\evidence\bai-video-production\TASK
 After the explicit R2 escalation request, the Owner answered `次へ` and then separately authorized GitHub PR creation. This authorizes only the bounded R3 correction, final independent review and—if accepted—PR creation. It does not authorize Product enrollment, service/ACL mutation, real Project writes, native QA, Release, Deploy or Production.
 
 R3 changes only `tests/test_task102_writer_source_policy.py`. Constructor-bound `ProductProjectSaveCoordinator().save(...)` is now normalized as a coordinator save signal. Route closure now requires an actual `require_legacy_access` call whose `route_id` is an accepted D1 route, including a function's exact default route binding; comments, docstrings and unknown routes do not qualify. Exact synthetic negatives cover constructor save, comment-only marker and unknown-route guard. Source-policy is `9 PASS`; TASK-102 is `141 PASS`. Final independent DEV-4 Critic/Tester review is next.
+
+## PMST-I2E Recovery R3 acceptance — 2026-09-29
+
+The bounded R3 correction is accepted at implementation HEAD `25c1b274d392e3a0058e4285eba98504cb0dd4ae`. Source-policy additionally requires `MUTATION` or `LOCK`, propagates exact helper positional/keyword bindings, applies defaults only when omitted, rejects unresolved explicit variables, and fails closed for `*args` / `**kwargs`. Direct `READ_ONLY`, helper `READ_ONLY`, unknown route, comment-only route, constructor save and expansion-based bypass probes are closed.
+
+Verification is source-policy `10 PASS`, TASK-102 `142 PASS`, prior central/source-policy `18 PASS`, Timeline/Audio Placement/Compatibility Migration `40 PASS`, and writer-owner/major-consumer integration `399 PASS / 6 SKIP`. Final independent Critic and Tester both returned `ACCEPT` with `Critical 0 / High 0 / Medium 0 / Low 0`. PMST-I2 is accepted complete for source writer migration with enrollment disabled. Product enrollment, service installation/update, ACL mutation, real Project writes, native QA, Release, Deploy and Production remain separate unauthorized gates.

@@ -1,6 +1,6 @@
 # TASK-102 PMST-I2 — Product Writer Migration Plan R0
 
-Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_COMMITTED / PMST_I2C1_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
+Status: `PMST_I2_AUTHORIZED / PMST_I2A_I2B_I2C1_COMMITTED / PMST_I2C2_BUILDER_COMPLETE / PRODUCT_ENROLLMENT_DISABLED`
 
 ## 1. Bound outcome
 
@@ -42,6 +42,8 @@ Central source migration uses explicit dependency injection. A supplied PMST req
 I2C is executed as C1 (`R003/R004/R007` object stores), C2 (`R005/R006` snapshot sets), and C3 (`R008/R009/R010` recovery/read-lease/participant paths). A feature-block is a valid intermediate disposition only when it occurs before any legacy lock or protected-control mutation and no caller can bypass it through a package-private writer. The default composition remains unenrolled. Semantic request construction, readback and caller composition are completed in I2D before enrollment can be proposed.
 
 C1 adds only injected legacy-route guards. All valid enrollment states reject Job, history and VoiceProfile legacy locks/writes before `.bai-project` creation. Direct Job/history internal writer calls are guarded separately. Unenrolled behavior remains unchanged, and C1 does not expose a broker write path that lacks semantic-owner request/readback validation.
+
+C2 guards the mutating R005/R006 snapshot-set entrypoints. Enrolled Autosave mutation, Backup create and Backup restore stop before legacy locks, manifest save, snapshot reads or snapshot writes. Autosave's non-mutating timing skips and Backup's verified read-only preview remain compatible. Closed snapshot request/readback adapters remain I2D work, so enrolled snapshot mutation is unavailable rather than partially routed.
 
 ## 5. I2A acceptance
 

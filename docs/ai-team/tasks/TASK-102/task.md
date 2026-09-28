@@ -1,6 +1,6 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_BUILDER_COMPLETE`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_AUTHORIZED / PMST_I2A_COMMITTED / PMST_I2B_COMMITTED / PMST_I2C1_COMMITTED / PMST_I2C2_BUILDER_COMPLETE`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
@@ -252,3 +252,11 @@ C1 injects the disabled-by-default router into the R003 Job service/store and th
 - Existing durable Job, history/autosave/backup and VoiceProfile regression: `56 PASS`.
 - Direct Export Queue and Timeline history consumer regression: `48 PASS`.
 - Python compile: `PASS`; real Projects, service/ACL/native state, private media, Release, Deploy and Production effects: none.
+
+### PMST-I2C2 snapshot-set checkpoint
+
+I2C-C2 exact Allowed Files are this Task record, the I2 plan, `src/ai_video_production/project_history.py`, `tests/test_task102_project_writer_migration_objects.py`, and bounded external TASK-102 Evidence. Autosave's mutating branch now checks R005 before manifest save or snapshot creation; a non-mutating debounce/quiescence skip remains available. Backup create and restore check R006 before legacy lock, snapshot loading or coordinated save. Read-only verified backup preview remains unchanged. The default unenrolled composition preserves all existing behavior.
+
+- I2C2 guard plus existing Autosave/Backup regression: `20 PASS`.
+- I2A through I2C2 focused regression: `31 PASS`.
+- No real Project, protected-control directory, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.

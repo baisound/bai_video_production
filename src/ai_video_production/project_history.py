@@ -405,8 +405,14 @@ class ProjectAutosaveResult:
 
 
 class ProductProjectAutosaveCoordinator:
-    def __init__(self, policy: ProjectAutosavePolicy | None = None) -> None:
+    def __init__(
+        self,
+        policy: ProjectAutosavePolicy | None = None,
+        *,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> None:
         self.policy = policy or ProjectAutosavePolicy()
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
 
     def autosave(
         self, project_root: str | Path, target_manifest: ProductProjectManifest,
@@ -418,6 +424,11 @@ class ProductProjectAutosaveCoordinator:
             return ProjectAutosaveResult("SKIPPED_NOT_QUIESCENT")
         if previous_autosave_at and (current_time - _timestamp(previous_autosave_at, "previous_autosave_at")).total_seconds() < self.policy.debounce_seconds:
             return ProjectAutosaveResult("SKIPPED_DEBOUNCE")
+        self._pmst_router.require_legacy_access(
+            project_root,
+            route_id="PMST-R005",
+            access_kind="MUTATION",
+        )
         _assert_snapshot_safe(target_manifest)
         saved = ProductProjectSaveCoordinator().save(
             project_root, target_manifest, child_documents,
@@ -442,10 +453,21 @@ class ProjectBackupPreview:
 
 class ProductProjectBackupStore:
     @staticmethod
-    def create(project_root: str | Path, *, max_backups: int = 10, created_at: str | None = None) -> str:
+    def create(
+        project_root: str | Path,
+        *,
+        max_backups: int = 10,
+        created_at: str | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> str:
         if not 1 <= max_backups <= 100:
             raise ValueError("max_backups must be between 1 and 100")
         root = _project_root(project_root)
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            root,
+            route_id="PMST-R006",
+            access_kind="LOCK",
+        )
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
             ProductProjectSaveCoordinator._require_no_pending_recovery(root)
@@ -507,8 +529,19 @@ class ProductProjectBackupStore:
         )
 
     @staticmethod
-    def restore(project_root: str | Path, backup_id: str, *, expected_current_manifest_sha256: str) -> ProductProjectManifest:
+    def restore(
+        project_root: str | Path,
+        backup_id: str,
+        *,
+        expected_current_manifest_sha256: str,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> ProductProjectManifest:
         root = _project_root(project_root)
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            root,
+            route_id="PMST-R006",
+            access_kind="MUTATION",
+        )
         backup = ProductProjectBackupStore._load_verified(root, backup_id)
         current = ProductProjectManifestStore.load(root)
         if current.project_manifest_sha256 != expected_current_manifest_sha256:

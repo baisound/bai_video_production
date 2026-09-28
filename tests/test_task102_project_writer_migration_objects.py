@@ -14,7 +14,12 @@ from ai_video_production.durable_product_job import (
     DurableProductJobStore,
 )
 from ai_video_production.errors import ProductError
-from ai_video_production.project_history import ProjectCommandHistory, ProjectCommandHistoryStore
+from ai_video_production.project_history import (
+    ProductProjectAutosaveCoordinator,
+    ProductProjectBackupStore,
+    ProjectCommandHistory,
+    ProjectCommandHistoryStore,
+)
 from ai_video_production.serialization import sha256_bytes
 from ai_video_production.task102_project_manifest_transaction import PROTOCOL_VERSION, seal_record
 from ai_video_production.task102_project_writer_migration import (
@@ -149,4 +154,54 @@ def test_unenrolled_guard_preserves_existing_job_service_path(tmp_path: Path) ->
     route = router.require_legacy_access(root, route_id="PMST-R003", access_kind="LOCK")
 
     assert route.route_id == "PMST-R003"
+    assert not (root / ".bai-project").exists()
+
+
+def test_enrolled_snapshot_routes_block_before_legacy_mutation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    router = _router("ACTIVE")
+    monkeypatch.setattr(history_module, "_assert_snapshot_safe", _lock_must_not_run)
+    monkeypatch.setattr(history_module, "_manifest_path", _lock_must_not_run)
+    monkeypatch.setattr(ProductProjectBackupStore, "_load_verified", _lock_must_not_run)
+
+    attempts = (
+        lambda: ProductProjectAutosaveCoordinator(pmst_router=router).autosave(
+            root,
+            object(),
+            {},
+            expected_previous_manifest_sha256=_hash("previous"),
+            last_edit_at="2026-09-29T00:00:00Z",
+            now="2026-09-29T00:01:00Z",
+        ),
+        lambda: ProductProjectBackupStore.create(root, pmst_router=router),
+        lambda: ProductProjectBackupStore.restore(
+            root,
+            "backup-" + "0" * 64,
+            expected_current_manifest_sha256=_hash("current"),
+            pmst_router=router,
+        ),
+    )
+
+    for attempt in attempts:
+        with pytest.raises(ProductError) as captured:
+            attempt()
+        assert captured.value.code == "ERR_PMST_LEGACY_WRITER_BLOCKED"
+    assert not (root / ".bai-project").exists()
+
+
+def test_enrolled_autosave_can_return_non_mutating_skip(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+
+    result = ProductProjectAutosaveCoordinator(pmst_router=_router("ACTIVE")).autosave(
+        root,
+        object(),
+        {},
+        expected_previous_manifest_sha256=_hash("previous"),
+        last_edit_at="2026-09-29T00:00:00Z",
+        now="2026-09-29T00:00:01Z",
+    )
+
+    assert result.state == "SKIPPED_NOT_QUIESCENT"
     assert not (root / ".bai-project").exists()

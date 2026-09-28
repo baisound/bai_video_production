@@ -8,6 +8,7 @@ import pytest
 from ai_video_production.atomic import AtomicJsonWriter
 from ai_video_production.audio_placement_application import Task026AudioPlacementApplication
 from ai_video_production.errors import ProductError
+from ai_video_production.interactive_timeline_application import Task044TimelineEditApplication
 from ai_video_production.product_project import ProductProjectManifest, ProjectChildBinding, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.project_save import ProductProjectSaveCoordinator, ProjectSaveJournalStore
@@ -466,10 +467,16 @@ def test_semantic_callers_derive_the_router_from_a_supplied_coordinator(tmp_path
         "project-1",
         coordinator=coordinator,
     )
+    timeline = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        save_coordinator=coordinator,
+    )
 
     assert audio._pmst_router is router
     assert migration._pmst_router is router
     assert meter._pmst_router is router
+    assert timeline._pmst_router is router
 
 
 def test_semantic_callers_reject_a_split_router_composition(tmp_path: Path) -> None:
@@ -504,6 +511,15 @@ def test_semantic_callers_reject_a_split_router_composition(tmp_path: Path) -> N
             pmst_router=explicit_router,
         )
     assert meter_error.value.reason == "PMST_ROUTER_COMPOSITION_MISMATCH"
+
+    with pytest.raises(ProductError) as timeline_error:
+        Task044TimelineEditApplication(
+            project_root=tmp_path,
+            project_id="project-1",
+            save_coordinator=coordinator,
+            pmst_router=explicit_router,
+        )
+    assert timeline_error.value.code == "ERR_PMST_ROUTER_COMPOSITION_MISMATCH"
 
 
 def test_enrolled_legacy_recovery_and_integrity_routes_are_deterministically_unavailable(tmp_path: Path) -> None:

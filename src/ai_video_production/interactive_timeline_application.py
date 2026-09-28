@@ -424,13 +424,21 @@ class Task044TimelineEditApplication:
                  pmst_router: PmstWriterMigrationRouter | None = None) -> None:
         self.project_root = Path(project_root).resolve(strict=True)
         self.project_id = project_id
-        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_id != project_id:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_MISMATCH", "Project identity differs", ProductErrorCategory.SECURITY)
-        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator(
-            pmst_router=self._pmst_router
-        )
+        if save_coordinator is not None:
+            if pmst_router is not None and save_coordinator.pmst_router is not pmst_router:
+                raise ProductError(
+                    "ERR_PMST_ROUTER_COMPOSITION_MISMATCH",
+                    "Timeline coordinator and PMST router must share one boundary",
+                    ProductErrorCategory.SECURITY,
+                )
+            self._pmst_router = save_coordinator.pmst_router
+            self._save_coordinator = save_coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._save_coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._participant = _TimelineHistoryParticipant(
             project_id=project_id,
             recovery_path=ProductProjectManifestStore.path(self.project_root).with_name(

@@ -23,6 +23,8 @@ All source, schema, tests, producer Task records, current-state/index, Product/S
 
 The delivery overlay previously named `TASK-063-INSTALLED-READBACK` as a prerequisite. Current canonical TASK-063 owns only installer-root derivation and readback for the montage-learning Bridge. Its receipt cannot prove GPT-SoVITS model-pair custody, installation, currentness or load permission. Reusing its digest would be a cross-domain identity error.
 
+This supersedes the earlier TASK-100 Task prose that named `063/036 installed binding` as model evidence, but it does not rewrite the accepted V1 ABI. The V1 `installed_binding_sha256` remains only the existing candidate/route/preflight correlation coordinate. It is not a C2 receipt and cannot be promoted or rehashed into one. A future C2 schema must add a separately named and versioned assessment/receipt coordinate.
+
 The required boundary is therefore:
 
 | Responsibility | Canonical owner | C2 treatment |
@@ -51,15 +53,15 @@ A future source allocation may define a deterministic `LocalVoiceInstalledIdenti
 - TASK-066 compute/no-network evidence when live eligibility is evaluated;
 - a trusted evaluation time supplied by the orchestrator.
 
-The pure verifier must reparse every public constructible record, bind contract and producer versions, compare pair/runtime/profile/candidate/custody/license/Consent identities, reject crossed or stale records, and remain effect-zero. Until the installed-observation producer and ABI are accepted, its only truthful result is dependency-blocked; it cannot manufacture `INSTALLED` from catalog state.
+The pure verifier must reparse every public constructible record, bind contract and producer versions, compare pair/runtime/profile/candidate/custody/license/Consent identities, reject crossed or stale records, and remain effect-zero. Final installed/live eligibility is the explicit conjunction of the exact accepted C1 readback and an admitted separately versioned C2 assessment. C1 `consumer_live_eligible=true` is pre-native Human-Gate evidence only. Until the installed-observation producer and ABI are accepted, or whenever the C2 receipt is absent, the final result is `DEPENDENCY_BLOCKED`; catalog state cannot manufacture `INSTALLED`.
 
 ### 4.2 C2-N native observation
 
-Native observation is a separate effect unit and requires an exact Owner Human Gate. Its producer and ABI are not allocated by this design. The future unit must use bounded private handles, not caller-supplied reusable paths, and must validate the exact protected pair inventory, file identities, pair digest, runtime/build identity, custody revision and trusted-time currentness. It must not load the model or infer audio.
+Native observation is a separate effect unit and requires an exact Owner Human Gate. Its producer and ABI are not allocated by this design. The accepted custody owner must issue a distinct one-operation `INSTALLED_IDENTITY_OBSERVATION` capability for the exact pair and observation operation. It is read-only, one-shot, non-replayable, non-load and non-executing, and carries bounded private handles rather than a caller-supplied reusable path. TASK-101's inference load lease and any generic path token are invalid substitutes. Missing or crossed observation capability yields `DEPENDENCY_BLOCKED` before any body is opened. The future unit validates the exact protected pair inventory, file identities, pair digest, runtime/build identity, custody revision and trusted-time currentness. It must not load the model or infer audio.
 
-Any hashing of private model bytes is a private-body read and must be named in the native authorization. Output and logs must remain under a unique verified OS temporary root or the canonical external Evidence root; public evidence contains opaque identities and digests only. Absolute private paths, account names, model bodies, reference audio/text and secrets must not be persisted.
+Any hashing of private model bytes is a private-body read and must be named in the native authorization. Private scratch and sensitive logs may exist only below a unique verified OS temporary root and must follow the authorized retention policy. Every native run must additionally persist a bounded public-safe checkpoint/receipt below `C:\home\baisound\evidence\bai-video-production\TASK-100\lvc-c2-n\<run-id>\`, reopen it, and verify its identity or digest. That durable checkpoint records result, receipt/hash, resolved scratch/output/Evidence roots and every intentional residual artifact. Public evidence contains opaque identities and digests only; absolute private paths, account names, model bodies, reference audio/text and secrets must not be persisted.
 
-Observation does not issue TASK-101's load lease, TASK-075 execution authority or TASK-071/072 Human action/ticket authority. UNKNOWN or partial observation fails closed and is not automatically retried, repaired or cleaned up.
+Observation neither issues nor consumes TASK-101's inference load lease, TASK-075 execution authority or TASK-071/072 Human action/ticket authority. Only the distinct `INSTALLED_IDENTITY_OBSERVATION` capability may authorize its bounded read. UNKNOWN or partial observation fails closed and is not automatically retried, repaired or cleaned up.
 
 ## 5. Decision states
 
@@ -77,10 +79,11 @@ The future assessment uses a closed state set:
 C2-I source allocation requires all of the following:
 
 1. accepted installed-observation producer owner and versioned ABI;
-2. accepted TASK-101 import custody/readback input contract or an explicit decision that C2 remains blocked without it;
-3. exact source, canonical schema, package mirror and test Allowed Files;
-4. frozen digest domain, parser limits, timestamp rules and negative/crossing vectors;
-5. DEV-4 independent Critic and Tester plan.
+2. accepted observation-capability issuer and `INSTALLED_IDENTITY_OBSERVATION` ABI, distinct from the inference load lease;
+3. accepted TASK-101 import custody/readback input contract or an explicit decision that C2 remains blocked without it;
+4. exact source, canonical schema, package mirror and test Allowed Files;
+5. frozen digest domain, parser limits, timestamp rules and negative/crossing vectors;
+6. DEV-4 independent Critic and Tester plan.
 
 C2-N additionally requires:
 
@@ -88,7 +91,7 @@ C2-N additionally requires:
 2. current TASK-046 H4/Consent/rights and TASK-101 protected custody authority;
 3. exact TASK-066 compute/no-network policy evidence if live eligibility is claimed;
 4. explicit authorization for private model-byte reads and exact observation effects;
-5. unique output/Evidence roots, residual-artifact policy and no-clobber/recovery behavior;
+5. unique OS-temp scratch plus mandatory canonical external Evidence/readback, residual-artifact policy and no-clobber/recovery behavior;
 6. independent native verification and final integration review.
 
 Absent any item, the unit remains `BLOCKED` and no file body is opened.

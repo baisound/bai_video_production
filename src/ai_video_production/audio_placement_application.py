@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
+import re
 import secrets
 from typing import Any, Callable
 
@@ -26,7 +28,7 @@ from .production_control import CandidateLifecycle, ProductionControlRegistry
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore
 from .project_save import ProductProjectSaveCoordinator
-from .serialization import sha256_bytes, utc_now_iso
+from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
 from .task102_project_writer_migration import (
     DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
     PmstWriterMigrationRouter,
@@ -42,6 +44,81 @@ from .timeline_audio_store import (
 
 TokenFactory = Callable[[], str]
 _PROJECTION_LIMIT = 500
+_COMPILATION_ID_RE = re.compile(r"audio-placement-[0-9a-f]{24}")
+_OWNER_CURRENT_READ_SEAL = object()
+
+
+class AudioPlacementCurrentState(str, Enum):
+    CURRENT = "CURRENT"
+    STALE = "STALE"
+    NOT_FOUND = "NOT_FOUND"
+
+
+@dataclass(frozen=True, slots=True)
+class AudioPlacementCurrentRead:
+    state: AudioPlacementCurrentState
+    project_id: str
+    compilation_id: str
+    record: AudioPlacementCompilationRecord | None
+    record_sha256: str | None
+    project_manifest_sha256: str
+    production_snapshot_sha256: str
+    audio_snapshot_sha256: str
+    timeline_snapshot_sha256: str
+    history_snapshot_sha256: str
+    reason_codes: tuple[str, ...]
+    owner_application_read: bool
+    owner_record_origin_authenticated: bool
+    currentness_verified: bool
+    _issuer_seal: object = field(repr=False, compare=False)
+    provider_execution_started: bool = False
+    paid_execution_authorized: bool = False
+    media_write_started: bool = False
+    task010_execution_started: bool = False
+    resolve_mutation_started: bool = False
+    cubase_mutation_started: bool = False
+
+    def __post_init__(self) -> None:
+        if self._issuer_seal is not _OWNER_CURRENT_READ_SEAL:
+            raise ValueError("current placement read must be issued by the TASK-026 owner application")
+        if any((
+            self.provider_execution_started,
+            self.paid_execution_authorized,
+            self.media_write_started,
+            self.task010_execution_started,
+            self.resolve_mutation_started,
+            self.cubase_mutation_started,
+        )):
+            raise ValueError("current placement read cannot carry effect authority")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "state": self.state.value,
+            "project_id": self.project_id,
+            "compilation_id": self.compilation_id,
+            "record_sha256": self.record_sha256,
+            "project_manifest_sha256": self.project_manifest_sha256,
+            "production_snapshot_sha256": self.production_snapshot_sha256,
+            "audio_snapshot_sha256": self.audio_snapshot_sha256,
+            "timeline_snapshot_sha256": self.timeline_snapshot_sha256,
+            "history_snapshot_sha256": self.history_snapshot_sha256,
+            "review_id": None if self.record is None else self.record.review_id,
+            "candidate_id": None if self.record is None else self.record.candidate_id,
+            "asset_id": None if self.record is None else self.record.asset_id,
+            "track_index": None if self.record is None else self.record.track_index,
+            "bed_mode": None if self.record is None else self.record.bed_mode.value,
+            "task026_plan_sha256": None if self.record is None else self.record.to_dict()["task026_plan_sha256"],
+            "reason_codes": list(self.reason_codes),
+            "owner_application_read": self.owner_application_read,
+            "owner_record_origin_authenticated": self.owner_record_origin_authenticated,
+            "currentness_verified": self.currentness_verified,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "media_write_started": False,
+            "task010_execution_started": False,
+            "resolve_mutation_started": False,
+            "cubase_mutation_started": False,
+        }
 
 
 @dataclass(slots=True)
@@ -501,6 +578,75 @@ class Task026AudioPlacementApplication:
             "cubase_mutation_started": False,
         }
 
+    def read_current_compilation(
+        self,
+        *,
+        compilation_id: str,
+        expected_record_sha256: str,
+    ) -> AudioPlacementCurrentRead:
+        """Read one owner-persisted compilation and revalidate it against current Project state."""
+        if not isinstance(compilation_id, str) or not _COMPILATION_ID_RE.fullmatch(compilation_id):
+            raise ProductError(
+                "ERR_AUDIO_PLACEMENT_COMPILATION_ID_INVALID",
+                "TASK-026 compilation_id is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        try:
+            validate_sha256(expected_record_sha256, field_name="expected_record_sha256")
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_AUDIO_PLACEMENT_RECORD_SHA_INVALID",
+                "TASK-026 expected record checksum is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+
+        state = self._load_state()
+        record = state.history.records.get(compilation_id)
+        common = {
+            "project_id": self.project_id,
+            "compilation_id": compilation_id,
+            "project_manifest_sha256": state.manifest.project_manifest_sha256,
+            "production_snapshot_sha256": state.production_sha256,
+            "audio_snapshot_sha256": state.audio_sha256,
+            "timeline_snapshot_sha256": state.timeline_sha256,
+            "history_snapshot_sha256": state.history_sha256,
+            "owner_application_read": True,
+            "_issuer_seal": _OWNER_CURRENT_READ_SEAL,
+        }
+        if record is None:
+            reasons = {"COMPILATION_NOT_FOUND"}
+            if state.recovery.get("required") is True:
+                reasons.add("PROJECT_RECOVERY_REQUIRED")
+            return AudioPlacementCurrentRead(
+                state=AudioPlacementCurrentState.NOT_FOUND,
+                record=None,
+                record_sha256=None,
+                reason_codes=tuple(sorted(reasons)),
+                owner_record_origin_authenticated=False,
+                currentness_verified=False,
+                **common,
+            )
+
+        record_sha256 = sha256_bytes(canonical_json_bytes(record.to_dict()))
+        reasons = set(self._record_reasons(record, state))
+        if state.recovery.get("required") is True:
+            reasons.add("PROJECT_RECOVERY_REQUIRED")
+        if record_sha256 != expected_record_sha256:
+            reasons.add("COMPILATION_RECORD_CHANGED")
+        current = not reasons
+        return AudioPlacementCurrentRead(
+            state=(
+                AudioPlacementCurrentState.CURRENT
+                if current else AudioPlacementCurrentState.STALE
+            ),
+            record=record,
+            record_sha256=record_sha256,
+            reason_codes=tuple(sorted(reasons)),
+            owner_record_origin_authenticated=True,
+            currentness_verified=current,
+            **common,
+        )
+
     def prepare_compilation(
         self,
         *,
@@ -674,4 +820,7 @@ class Task026AudioPlacementApplication:
         }
 
 
-__all__ = ["Task026AudioPlacementApplication"]
+__all__ = [
+    "AudioPlacementCurrentRead", "AudioPlacementCurrentState",
+    "Task026AudioPlacementApplication",
+]

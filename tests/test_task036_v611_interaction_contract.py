@@ -308,6 +308,60 @@ const window={{pywebview:{{api:{{
     assert completed.stdout.strip() == "OK"
 
 
+def test_export_journey_projects_each_user_visible_state_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Export journey behavior contract")
+
+    match = re.search(
+        r"function exportJourneyState\(.*?\r?\n\}",
+        HTML,
+        re.DOTALL,
+    )
+    assert match is not None
+    script = f"""
+const assert=require('node:assert/strict');
+{match.group(0)}
+const project={{project:{{project_id:'project-1'}}}};
+const editing={{next_recommended_action:'edit_plan.approve'}};
+const reviewReady={{readiness:{{available:true}},approval:{{approval_current:false}}}};
+const approved={{readiness:{{available:true}},approval:{{approval_current:true}}}};
+const preparation={{available:true}};
+assert.equal(exportJourneyState({{}},{{}},{{}},{{}},[]).current,'source');
+assert.equal(exportJourneyState(project,editing,{{readiness:{{available:false}}}},{{}},[]).current,'edit');
+assert.equal(exportJourneyState(project,editing,reviewReady,preparation,[]).current,'approval');
+assert.equal(exportJourneyState(project,editing,approved,preparation,[]).current,'settings');
+assert.equal(exportJourneyState(project,editing,approved,preparation,[{{stage:'QUEUED'}}]).current,'preflight');
+assert.equal(exportJourneyState(project,editing,approved,preparation,[{{stage:'READY'}}]).current,'render');
+const running=exportJourneyState(project,editing,approved,preparation,[{{stage:'RUNNING'}}]);
+assert.equal(running.current,'render');
+assert.match(running.message,/書き出し中/);
+const succeeded=exportJourneyState(project,editing,approved,preparation,[{{stage:'SUCCEEDED'}}]);
+assert.equal(succeeded.done.result,true);
+assert.match(succeeded.message,/保存先を開けます/);
+const retry=exportJourneyState(project,editing,approved,preparation,[{{stage:'HUMAN_REQUIRED'}}]);
+assert.equal(retry.current,'preflight');
+assert.equal(retry.blocked,true);
+assert.match(retry.message,/再試行/);
+const failed=exportJourneyState(project,editing,approved,preparation,[{{stage:'FAILED'}}]);
+assert.equal(failed.current,'render');
+assert.match(failed.message,/失敗/);
+const unknown=exportJourneyState(project,editing,approved,preparation,[{{stage:'UNKNOWN'}}]);
+assert.equal(unknown.current,'result');
+assert.match(unknown.message,/自動再試行せず/);
+console.log('OK');
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     for marker in (
         "function startTimelineScrub(event,target)",

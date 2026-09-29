@@ -95,6 +95,11 @@ class ExportQueueApplication:
             raise ProductError("ERR_PRODUCT_JOB_PROJECT_CONFLICT", "Export jobs belong to another Project", ProductErrorCategory.SECURITY)
         return collection.get(job_id)
 
+    def get_job(self, *, job_id: str) -> DurableProductJob:
+        """Read one canonical Export Job with the application Project guard."""
+
+        return self._job(job_id)
+
     @staticmethod
     def _matches(job: DurableProductJob, preparation: ExportPreparation) -> bool:
         return (job.kind == "EXPORT"
@@ -121,6 +126,50 @@ class ExportQueueApplication:
             )
         return self.jobs.transition(self.project_root, job.job_id, DurableProductJobState.READY,
                                     expected_state_version=job.state_version)
+
+    def retry_preflight(self, *, job_id: str, preparation: ExportPreparation) -> DurableProductJob:
+        """Re-run preflight for an explicitly recoverable Human-required job.
+
+        This deliberately reuses the same durable Job and its canonical
+        ``RESUME_PREFLIGHT`` transition.  Terminal FAILED jobs and UNKNOWN jobs
+        are never replayed through this route.
+        """
+
+        job = self._job(job_id)
+        if (
+            job.state is not DurableProductJobState.HUMAN_REQUIRED
+            or "RESUME_PREFLIGHT" not in job.recovery_actions
+        ):
+            raise ProductError(
+                "ERR_EXPORT_RETRY_STATE",
+                "Only a recoverable Human-required Export can retry preflight",
+                ProductErrorCategory.STATE,
+            )
+        try:
+            self._validate_current(preparation)
+            if not self._matches(job, preparation):
+                raise ProductError(
+                    "ERR_EXPORT_STALE_REPREPARE_REQUIRED",
+                    "Export inputs differ from the queued operation",
+                    ProductErrorCategory.STATE,
+                )
+        except ProductError as exc:
+            if exc.category is ProductErrorCategory.SECURITY:
+                raise
+            return job
+        preflight = self.jobs.transition(
+            self.project_root,
+            job.job_id,
+            DurableProductJobState.PREFLIGHT,
+            expected_state_version=job.state_version,
+            recovery_action="RESUME_PREFLIGHT",
+        )
+        return self.jobs.transition(
+            self.project_root,
+            preflight.job_id,
+            DurableProductJobState.READY,
+            expected_state_version=preflight.state_version,
+        )
 
     def prepare_dispatch(self, *, job_id: str, preparation: ExportPreparation) -> dict[str, object]:
         self._validate_current(preparation)

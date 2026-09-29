@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fractions import Fraction
+import os
 from pathlib import Path
 from threading import Lock
 from typing import Any, Callable, Mapping
@@ -27,7 +28,26 @@ from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
 ExportPreparationProvider = Callable[[str], ExportPreparation]
 ExportDestinationProvider = Callable[[str, ExportPreparation], str | Path]
+ExportDestinationOpener = Callable[[Path], None]
 _MAX_PENDING_DISPATCH_PREPARATIONS = 256
+
+
+def _open_export_destination(path: Path) -> None:
+    opener = getattr(os, "startfile", None)
+    if os.name != "nt" or not callable(opener):
+        raise ProductError(
+            "ERR_NLE_SHELL_EXPORT_DESTINATION_OPEN_UNAVAILABLE",
+            "Opening an Export destination is unavailable on this host",
+            ProductErrorCategory.EXTERNAL_DEPENDENCY,
+        )
+    try:
+        opener(os.fspath(path))
+    except OSError as exc:
+        raise ProductError(
+            "ERR_NLE_SHELL_EXPORT_DESTINATION_OPEN_FAILED",
+            "The Export destination could not be opened",
+            ProductErrorCategory.EXTERNAL_DEPENDENCY,
+        ) from exc
 
 
 def _frame(value: object, name: str, *, minimum: int = 0) -> int:
@@ -69,6 +89,7 @@ class Task044NleShellController:
                  export_preparation_provider: ExportPreparationProvider | None = None,
                  export_destination_provider: ExportDestinationProvider | None = None,
                  export_dispatcher: DispatchCallback | None = None,
+                 export_destination_opener: ExportDestinationOpener | None = None,
                  visual_asset_placement: Task036VisualAssetPlacementApplication | None = None) -> None:
         self.timeline = timeline
         self.edit_application = edit_application
@@ -77,6 +98,7 @@ class Task044NleShellController:
         self.export_preparation_provider = export_preparation_provider
         self.export_destination_provider = export_destination_provider
         self.export_dispatcher = export_dispatcher
+        self.export_destination_opener = export_destination_opener or _open_export_destination
         self.visual_asset_placement = visual_asset_placement
         self._pending_dispatch_preparations: dict[str, tuple[str, ExportPreparation]] = {}
         self._pending_dispatch_lock = Lock()
@@ -650,6 +672,24 @@ class Task044NleShellController:
             "external_mutation_started": False,
         }
 
+    def export_retry_preflight(self, args: Any) -> dict[str, Any]:
+        if self.export_application is None:
+            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"job_id"}:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export preflight retry request is invalid", ProductErrorCategory.VALIDATION)
+        job_id = str(args["job_id"])
+        job = self.export_application.retry_preflight(
+            job_id=job_id,
+            preparation=self._export_preparation(job_id),
+        )
+        return {
+            "job_id": job.job_id,
+            "state": job.state.value,
+            "state_version": job.state_version,
+            "external_mutation_started": False,
+            "automatic_replay_started": False,
+        }
+
     def export_prepare_dispatch(self, args: Any) -> dict[str, object]:
         if self.export_application is None:
             raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
@@ -763,6 +803,54 @@ class Task044NleShellController:
         )
         return {"job_id": job.job_id, "state": job.state.value,
                 "state_version": job.state_version, "external_mutation_started": False}
+
+    def export_open_destination(self, args: Any) -> dict[str, Any]:
+        if self.export_application is None or self.export_destination_provider is None:
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DESTINATION_NOT_BOUND",
+                "The private Export destination is unavailable",
+                ProductErrorCategory.STATE,
+            )
+        if not isinstance(args, dict) or set(args) != {"job_id"}:
+            raise ProductError(
+                "ERR_NLE_SHELL_REQUEST_INVALID",
+                "Export destination request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        job_id = str(args["job_id"])
+        job = self.export_application.get_job(job_id=job_id)
+        if job.state is not DurableProductJobState.SUCCEEDED:
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DESTINATION_NOT_READY",
+                "Only a successful Export has an openable destination",
+                ProductErrorCategory.STATE,
+            )
+        preparation = self._export_preparation(job_id)
+        try:
+            destination = Path(self.export_destination_provider(job_id, preparation))
+            lexical = destination.absolute()
+            resolved = destination.resolve(strict=True)
+        except (OSError, TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DESTINATION_INVALID",
+                "The private Export destination is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+        if not destination.is_absolute() or destination.is_symlink() or resolved != lexical or not resolved.is_dir():
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DESTINATION_INVALID",
+                "The private Export destination is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        self.export_destination_opener(resolved)
+        return {
+            "job_id": job.job_id,
+            "state": job.state.value,
+            "result_ref": job.result_ref,
+            "opened": True,
+            "host_output_path_exposed": False,
+            "external_mutation_started": False,
+        }
 
     def export_reconcile(self, args: Any) -> dict[str, Any]:
         if self.export_application is None:

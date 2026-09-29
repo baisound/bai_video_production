@@ -27,6 +27,10 @@ from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore
 from .project_save import ProductProjectSaveCoordinator
 from .serialization import sha256_bytes, utc_now_iso
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .timeline_audio_store import (
     FORMAT_ID as TIMELINE_FORMAT_ID,
     FORMAT_VERSION as TIMELINE_FORMAT_VERSION,
@@ -80,6 +84,7 @@ class Task026AudioPlacementApplication:
         production_control: Task037ProductionControlApplication | None = None,
         token_factory: TokenFactory | None = None,
         save_coordinator: ProductProjectSaveCoordinator | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         supplied = Path(project_root)
         if supplied.is_symlink() or not supplied.is_dir():
@@ -114,7 +119,18 @@ class Task026AudioPlacementApplication:
         self.timeline_path = root / TIMELINE_RELATIVE_PATH
         self.history_path = root / RELATIVE_PATH
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
-        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator()
+        if save_coordinator is not None:
+            if pmst_router is not None and save_coordinator.pmst_router is not pmst_router:
+                raise ProductError(
+                    "ERR_PMST_ROUTER_COMPOSITION_MISMATCH",
+                    "TASK-026 save coordinator and PMST router must share one boundary",
+                    ProductErrorCategory.SECURITY,
+                )
+            self._pmst_router = save_coordinator.pmst_router
+            self._save_coordinator = save_coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._save_coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._pending: dict[str, _CompilationConfirmation] = {}
 
     @staticmethod
@@ -584,6 +600,11 @@ class Task026AudioPlacementApplication:
                 "TASK-026 confirmation is missing or already consumed",
                 ProductErrorCategory.AUTHORIZATION,
             )
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R012",
+            access_kind="MUTATION",
+        )
         pending.consumed = True
         state = self._load_state()
         self._require_no_recovery(state)

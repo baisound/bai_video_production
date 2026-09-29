@@ -54,6 +54,10 @@ from .product_project import (
     ProductProjectManifest, ProjectChildBinding, parse_product_project_manifest,
 )
 from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .project_save import (
     ProductProjectSaveCoordinator,
     ProjectSaveParticipantOutcome,
@@ -1485,7 +1489,8 @@ class MontageLearningCanonicalAdmissionTransactionStore:
     """Canonical exact-admission writer and trusted latest-reader."""
 
     def __init__(self, project_root: str | Path, external_anchor_root: str | Path,
-                 *, canonical_store_id: str, bridge_instance_id: str) -> None:
+                 *, canonical_store_id: str, bridge_instance_id: str,
+                 pmst_router: PmstWriterMigrationRouter | None = None) -> None:
         self.project_root = _root(project_root, "project_root")
         self.external_anchor_root = _root(external_anchor_root, "external_anchor_root")
         try:
@@ -1502,6 +1507,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
             raise MontageLearningCanonicalAdmissionError("Project root must be external to anchor")
         self.canonical_store_id = _identifier(canonical_store_id, "canonical_store_id")
         self.bridge_instance_id = _identifier(bridge_instance_id, "bridge_instance_id")
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
         state = self.project_root / "state"
         self.canonical_path = self.project_root / CANONICAL_RELATIVE_PATH
         self.receipt_path = self.project_root / RECEIPT_RELATIVE_PATH
@@ -1511,6 +1517,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.generic_journal_path = self.project_root / GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH
         self.generic_object_root = self.project_root / GENERIC_OBSERVATION_OBJECT_DIRECTORY
         self.generic_marker_root = self.project_root / GENERIC_OBSERVATION_MARKER_DIRECTORY
+        self._require_legacy_route(access_kind="LOCK")
         with _exclusive_existing_project_lock(self.project_root):
             # Exact and Generic writers share these authority directories.  Keep
             # first-use initialization inside the same Product lock used by both
@@ -1528,6 +1535,18 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.anchor_recovery_path = self.external_anchor_root / ANCHOR_RECOVERY_FILE_NAME
         self._validate_paths()
 
+    def _require_legacy_route(self, *, access_kind: str) -> None:
+        try:
+            self._pmst_router.require_legacy_access(
+                self.project_root,
+                route_id="PMST-R010",
+                access_kind=access_kind,
+            )
+        except ProductError as exc:
+            raise MontageLearningCanonicalAdmissionError(
+                "RECOVERY_REQUIRED: enrolled Project requires the PMST TASK-029 adapter"
+            ) from exc
+
     def _validate_paths(self) -> None:
         for path in (self.canonical_path, self.receipt_path, self.journal_path,
                      self.generic_observation_path, self.generic_commit_path,
@@ -1537,6 +1556,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
 
     @contextmanager
     def _locks(self) -> Iterator[None]:
+        self._require_legacy_route(access_kind="LOCK")
         with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
             with exclusive_file_update_lock(self.anchor_path):
                 self._validate_paths()
@@ -2325,6 +2345,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         failure_hook: FailureHook | None = None,
     ) -> MontageLearningCanonicalAdmissionResult:
         """Serialize one complete admission attempt on a stable lock inode."""
+        self._require_legacy_route(access_kind="LOCK")
         # ``exclusive_file_update_lock`` locks the sibling ``.<name>.lock``.
         # The transaction journal itself may be atomically replaced/unlinked,
         # but this stable lock file is never a transaction payload and remains
@@ -2770,6 +2791,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
     def _generic_result_from_readback(
         self, outcome: str, readback: Mapping[str, Any],
     ) -> ReviewObservationAdmissionResult:
+        self._require_legacy_route(access_kind="LOCK")
         with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
             anchored, manifest, binding, ledger = self._generic_trusted_readback_locked(readback)
             return self._generic_make_result(outcome, anchored, manifest, binding, ledger)
@@ -3176,6 +3198,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
         failure_hook: FailureHook | None = None,
     ) -> ReviewObservationAdmissionResult:
+        self._require_legacy_route(access_kind="LOCK")
         raw = _exact(delivery, "generic delivery", max_nodes=200_000)
         candidate = validate_generic_learning_delivery(raw)
         if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
@@ -3235,6 +3258,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
         failure_hook: FailureHook | None = None,
     ) -> ReviewObservationAdmissionResult:
+        self._require_legacy_route(access_kind="LOCK")
         raw = _exact(delivery, "generic delivery", max_nodes=200_000)
         candidate = validate_generic_learning_delivery(raw)
         if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
@@ -3255,6 +3279,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         generic_store_id: str = "task058-generic-review-observations",
         owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
     ) -> ReviewObservationAdmissionResult:
+        self._require_legacy_route(access_kind="LOCK")
         wanted_record = _identifier(record_id, "record_id")
         wanted_digest = _as_bare_sha(_sha(learning_sha256, "learning_sha256"))
         wanted_commit = _as_bare_sha(_sha(canonical_commit_sha256, "canonical_commit_sha256"))

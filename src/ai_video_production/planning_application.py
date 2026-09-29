@@ -41,6 +41,10 @@ from .production_proposal import (
 )
 from .production_proposal_store import ProductionProposalSnapshotStore
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 TokenFactory = Callable[[], str]
@@ -112,6 +116,7 @@ class Task027PlanningApplication:
         project_id: str,
         production_control: Task037ProductionControlApplication | None = None,
         token_factory: TokenFactory | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         root = Path(project_root)
         if root.is_symlink() or not root.is_dir():
@@ -144,6 +149,7 @@ class Task027PlanningApplication:
             project_id=project_id,
         )
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
         self._go_confirmations: dict[str, _GoConfirmation] = {}
         self._install_confirmations: dict[str, _InstallConfirmation] = {}
         self._revision_confirmations: dict[str, _RevisionConfirmation] = {}
@@ -445,6 +451,11 @@ class Task027PlanningApplication:
         expected_project_manifest_sha256: str,
     ) -> dict[str, Any]:
         """Append one typed revision-1 Intent/Proposal through the canonical CAS."""
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R009",
+            access_kind="LOCK",
+        )
         if not isinstance(intent, CreationIntent) or not isinstance(proposal, ProductionProposalRevision):
             raise ProductError(
                 "ERR_PLANNING_APPLICATION_INITIAL_PROPOSAL_INVALID",

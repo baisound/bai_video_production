@@ -35,6 +35,10 @@ from .product_project_store import ProductProjectManifestStore
 from .project_save import ProductProjectSaveCoordinator, ProjectSaveJournalStore
 from .schema_contracts import validate_instance
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 from .voice_quality_meter_display_policy import MeterDisplayPolicyRevision
 
 
@@ -827,11 +831,19 @@ class MeterPolicyProjectStore:
         project_id: str,
         *,
         coordinator: ProductProjectSaveCoordinator | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         self._root = Path(project_root)
         self._pins = _root_pins(self._root)
         self.project_id = _project_id(project_id)
-        self._coordinator = coordinator if coordinator is not None else ProductProjectSaveCoordinator()
+        if coordinator is not None:
+            if pmst_router is not None and coordinator.pmst_router is not pmst_router:
+                raise MeterPolicyStoreError("PMST_ROUTER_COMPOSITION_MISMATCH")
+            self._pmst_router = coordinator.pmst_router
+            self._coordinator = coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._epoch = str(uuid.uuid4())
         self._token = object()
         self._closed = False
@@ -1087,6 +1099,16 @@ class MeterPolicyProjectStore:
             self._residuals.append("VOICE_QUALITY_DIRECTORY_RETAINED_UNCERTAIN")
 
     def apply(self, request: Mapping[str, Any] | bytes) -> dict[str, Any]:
+        try:
+            self._pmst_router.require_legacy_access(
+                self._root,
+                route_id="PMST-R012",
+                access_kind="MUTATION",
+            )
+        except ProductError as exc:
+            if exc.code != "ERR_PMST_LEGACY_WRITER_BLOCKED":
+                raise
+            raise MeterPolicyStoreError("PMST_ADAPTER_REQUIRED") from exc
         request_document = _validate_request(_document(request, limit=MAX_REQUEST_BYTES))
         if request_document["project_id"] != self.project_id:
             _fail("PROJECT_MISMATCH")

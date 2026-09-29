@@ -15,6 +15,10 @@ from .desktop_shell import JobSnapshot, JobState as ShellJobState
 from .errors import ProductError, ProductErrorCategory
 from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock, _manifest_path, _project_root
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 _STORE_VERSION = "1.0.0"
@@ -395,7 +399,17 @@ class DurableProductJobStore:
             raise ProductError("ERR_PRODUCT_JOB_STORE_READ", "Durable Product job store could not be read", ProductErrorCategory.DATA_INTEGRITY) from exc
 
     @staticmethod
-    def _save_unlocked(project_root: str | Path, collection: DurableProductJobCollection) -> AtomicWriteResult:
+    def _save_unlocked(
+        project_root: str | Path,
+        collection: DurableProductJobCollection,
+        *,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> AtomicWriteResult:
+        (pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER).require_legacy_access(
+            project_root,
+            route_id="PMST-R003",
+            access_kind="MUTATION",
+        )
         return AtomicJsonWriter.write(
             DurableProductJobStore.path(project_root, create=True), collection.to_dict(),
             validator=parse_durable_product_job_collection,
@@ -403,6 +417,16 @@ class DurableProductJobStore:
 
 
 class DurableProductJobService:
+    def __init__(self, *, pmst_router: PmstWriterMigrationRouter | None = None) -> None:
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+
+    def _require_legacy_route(self, project_root: str | Path, *, access_kind: str) -> None:
+        self._pmst_router.require_legacy_access(
+            project_root,
+            route_id="PMST-R003",
+            access_kind=access_kind,
+        )
+
     def enqueue(
         self, project_root: str | Path, *, kind: str, target_identity: str,
         input_hashes: Mapping[str, str], estimated_cost: float | None = None,
@@ -411,6 +435,7 @@ class DurableProductJobService:
         expected_project_id: str | None = None,
     ) -> DurableProductJob:
         root = _project_root(project_root)
+        self._require_legacy_route(root, access_kind="LOCK")
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
             manifest = ProductProjectManifestStore.load(root)
             self._assert_expected_project_id(manifest.project_id, expected_project_id)
@@ -444,7 +469,11 @@ class DurableProductJobService:
                 for existing in collection.jobs:
                     if existing.operation_identity == candidate.operation_identity:
                         return existing
-            DurableProductJobStore._save_unlocked(root, collection.replace(candidate))
+            DurableProductJobStore._save_unlocked(
+                root,
+                collection.replace(candidate),
+                pmst_router=self._pmst_router,
+            )
             return candidate
 
     def query_by_input_binding(
@@ -473,6 +502,7 @@ class DurableProductJobService:
                 ProductErrorCategory.VALIDATION,
             ) from exc
         root = _project_root(project_root)
+        self._require_legacy_route(root, access_kind="LOCK")
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
             manifest = ProductProjectManifestStore.load(root)
             self._assert_expected_project_id(manifest.project_id, expected_project_id)
@@ -505,6 +535,7 @@ class DurableProductJobService:
         recovery_action: str | None = None,
     ) -> DurableProductJob:
         root = _project_root(project_root)
+        self._require_legacy_route(root, access_kind="LOCK")
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
             collection = self._load_verified_collection(root)
             current = collection.get(job_id)
@@ -514,7 +545,11 @@ class DurableProductJobService:
                 state, result_ref=result_ref, error_code=error_code, actual_cost=actual_cost,
                 recovery_action=recovery_action,
             )
-            DurableProductJobStore._save_unlocked(root, collection.replace(changed))
+            DurableProductJobStore._save_unlocked(
+                root,
+                collection.replace(changed),
+                pmst_router=self._pmst_router,
+            )
             return changed
 
     def recover_interrupted(
@@ -534,6 +569,7 @@ class DurableProductJobService:
                 ProductErrorCategory.VALIDATION,
             )
         root = _project_root(project_root)
+        self._require_legacy_route(root, access_kind="LOCK")
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
             manifest = ProductProjectManifestStore.load(root)
             self._assert_expected_project_id(manifest.project_id, expected_project_id)
@@ -553,7 +589,11 @@ class DurableProductJobService:
                 current_collection = current_collection.replace(recovered)
                 changed.append(recovered)
             if changed:
-                DurableProductJobStore._save_unlocked(root, current_collection)
+                DurableProductJobStore._save_unlocked(
+                    root,
+                    current_collection,
+                    pmst_router=self._pmst_router,
+                )
             return tuple(changed)
 
     @staticmethod

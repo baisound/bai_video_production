@@ -1,13 +1,13 @@
 # TASK-102 — Secure Project Manifest Transaction Broker
 
-- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1A_N1B_PASS / PMST_N1_COMPLETE / PMST_I2_NOT_AUTHORIZED`.
+- Status: `PMST_D0_D1_I1_ACCEPTED / PMST_N1_COMPLETE / PMST_I2_ACCEPTED / PRODUCT_ENROLLMENT_DISABLED`.
 - Governance: `DEV-4 FOUNDATION CRITICAL`.
 - Allocation authority: on 2026-09-27 the Owner answered `つぎへ` directly to the explicit JCV-N-D Human Gate asking whether to accept the service-SID broker architecture and allocate one new direct dependency Task. This records acceptance of allocation/design only.
 - Responsibility predecessor: TASK-043 remains hosted-closed historical Project schema/store foundation and is not reopened.
 - Direct consumer: TASK-099 JCV-N.
 - Related dependency: TASK-068 immutable publication/readback remains independently owned and is not absorbed.
 - First unused Task-ID audit: `TASK-102` is absent while TASK-100 and TASK-101 are already allocated in this worktree.
-- Current implementation authority: PMST-N1 authority is consumed and complete. PMST-I2 writer migration, Product enrollment, Release, Deploy and Production remain separate gates and are not authorized by N1 completion.
+- Current implementation authority: PMST-N1 authority is consumed and complete. On 2026-09-29 the Owner explicitly authorized `PMST-I2`. This authorizes the bounded source/test writer-migration units recorded below. Product enrollment, service installation/update, ACL mutation, real Project writes, native QA, Release, Deploy and Production remain separate gates.
 
 ## Objective and responsibility boundary
 
@@ -175,3 +175,146 @@ The runner created one random `BvpTask102PmstN1-*` demand-start own-process test
 The final body-free report file SHA-256 is `deea6770c9499d72319dd022dde6dec6d943432251ff836636f7ad86e573e446`. Exact DACL readback confirmed four explicit non-inherited allow ACEs: service SID Full control and interactive user, SYSTEM and Administrators ReadAndExecute plus Synchronize. N1A regression remained `PASS`; PMST-I1 plus N1 focused tests are `85 PASS`. Earlier N1B recovery runs were preserved rather than hidden: one rejected an invalid empty-password `sc config` form, two proved service cleanup after virtual-account service-start access denial, run 004 established the accepted topology, run 005 added configuration readback, and run 006 exposed and corrected the RX/Synchronize comparison.
 
 PMST-N1 is now technically complete within its stated claim. It proves process-termination recovery and Windows primitive/service-SID feasibility, not physical power-loss durability, Product enrollment, writer migration or Production readiness. PMST-I2 may be proposed as the next unit but remains unauthorized until its own bounded authority is recorded.
+
+## PMST-I2 authority and Atomic Unit plan — 2026-09-29
+
+The Owner explicitly answered `PMST-I2 承認します`. PMST-I2 is therefore authorized only for source/test migration of every accepted D1 writer, recovery and protected-lock route behind a disabled-by-default Product composition. Existing unenrolled Projects retain current behavior. No source-only checkpoint can activate enrollment, install/update the Windows service, change an ACL, write a real Project, run native QA, Release, Deploy or activate Production.
+
+PMST-I2 is decomposed into ordered units so each reaches a reviewed commit-ready boundary:
+
+1. **PMST-I2A — writer migration kernel.** Freeze the accepted D1 matrix digest and all 13 route/profile bindings; admit strict PMST requests only for an exact ACTIVE enrollment and complete matrix; block unknown/old/partial routes and every legacy mutation/lock for any enrolled state; retain read-only compatibility. No current writer is connected in I2A.
+2. **PMST-I2B — central manifest/coordinator migration.** Route R001/R002/R011/R012 through the kernel and a closed Product PMST port; keep the legacy path only for a proven unenrolled root; block the legacy journal and direct `_save_unlocked` bypass for enrolled roots.
+3. **PMST-I2C — protected object and lock migration.** Route or explicitly feature-block R003 through R010, including Job, history, autosave, backup, VoiceProfile, Timeline recovery, read leases and TASK-029 participant paths.
+4. **PMST-I2D — semantic caller/source-policy closure.** Bind every D1 caller to an accepted adapter or deterministic unavailable result and make an unregistered protected-control mutation/lock source fail the source-policy test.
+5. **PMST-I2E — integration review and completion.** Run focused, direct-consumer and targeted Project regressions, independent DEV-4 Critic/Tester review, hosted CI and completion Evidence. Enrollment remains disabled until PMST-C is separately authorized.
+
+PMST-I2A exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/task102_project_writer_migration.py`
+4. `tests/test_task102_project_writer_migration.py`
+5. bounded Evidence under `docs/ai-team/tasks/TASK-102/evidence/` or the canonical external TASK-102 Evidence root
+
+I2A must not modify existing Product writer/store modules. Its exit requires exact route/matrix/profile binding, strict request/result binding, fail-closed negative tests, unchanged default Product behavior, focused TASK-102 regression, exact Allowed Files verification and external Evidence readback. I2B may not begin until I2A is commit-ready.
+
+## PMST-I2A Builder checkpoint — 2026-09-29
+
+- Added an effect-free writer-migration kernel with the exact accepted matrix record digest, immutable R001 through R013 registry and closed operation-kind/profile bindings.
+- The default resolver returns no enrollment and preserves existing unenrolled behavior. Every valid enrolled state blocks legacy mutation/lock access; only exact ACTIVE enrollment plus the complete matrix and a bound port can route a strict I1 request. R013 and unknown routes are always blocked.
+- The local Project path remains inside the trusted resolver and is never forwarded to the port. Port results are reparsed and cross-bound to operation, kind, profile, intent and request digests.
+- New I2A focused tests: `15 PASS`. PMST-I1/N1/I2A focused regression: `100 PASS`. Python compile and `git diff --check`: `PASS`.
+- The Windows Python environment stopped at collection because the pre-existing environment lacks `jsonschema`; no dependency was installed. The established WSL environment executed the tests successfully in unique `/tmp` roots.
+- No existing Product writer/store source, real Project, service, ACL, native runtime, private data, Release, Deploy or Production state was changed. PMST-I2B is the next ordered unit after this checkpoint is committed.
+- I2A commit: `32f72ab424cb003c1c8faf0c1346588b5e6e32ec`.
+
+## PMST-I2B exact scope — 2026-09-29
+
+Exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/task102_project_writer_migration.py`
+4. `src/ai_video_production/product_project_store.py`
+5. `src/ai_video_production/project_save.py`
+6. `tests/test_task102_project_writer_migration.py`
+7. `tests/test_task102_project_writer_migration_central.py`
+8. bounded Evidence under `docs/ai-team/tasks/TASK-102/evidence/` or the canonical external TASK-102 Evidence root
+
+I2B may add explicit injected PMST routing to central manifest create/transition and coordinated save. It must preserve existing unenrolled APIs and semantics. For an enrolled root, it must reject missing/mismatched PMST requests before creating the legacy lock or journal; accept only a strict request routed by I2A; and return success only after canonical manifest plus child readback matches the requested successor. Direct `_save_unlocked` and every legacy complete/rollback/orphan recovery entry must be blocked for enrolled roots. An enrolled recovery status or integrity read without a future exact broker query/read-lease adapter must return a deterministic unavailable error, never inspect the legacy journal as authority or fall back. Product enrollment and native effects remain prohibited.
+
+## PMST-I2B Builder checkpoint — 2026-09-29
+
+- `ProductProjectManifestStore.save` now accepts an explicit injected PMST router/request. It preserves the legacy path for a proven unenrolled root, validates create/transition predecessor and successor semantics before the port call, creates no legacy lock on the PMST path, and returns the existing whole-document `AtomicWriteResult` checksum only after exact canonical readback.
+- `ProductProjectSaveCoordinator.save` routes an explicit R002 request without the legacy lock/journal, preserves target/child validation and returns success only after exact manifest and child readback. Participant/commit-guard paths are deterministically unavailable until their closed adapter is added.
+- Enrolled direct `_save_unlocked`, legacy save, complete/rollback/orphan recovery are blocked before mutation. Enrolled legacy recovery-status and integrity-read paths require future broker query/read-lease adapters instead of silently consulting the old journal.
+- Focused I2A/I2B: `23 PASS`. TASK-102 plus runnable central TASK-043 regression: `145 PASS`. Audio Placement, Timeline Audio, Interactive Timeline and Meter Policy consumer regression: `223 PASS / 1 Windows-only SKIP`.
+- `tests/test_task043_project_save_recovery.py` remains `NOT_CONFIRMED` at collection because the established WSL environment lacks the already-declared `referencing` package. No dependency installation was attempted. Equivalent participant/recovery consumer cases initially exposed and then verified the journal-call compatibility correction (`15 PASS`).
+- Python compile and `git diff --check`: `PASS`. No real Project, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.
+
+## PMST-I2C decomposition and C1 checkpoint — 2026-09-29
+
+I2C is split into three bounded source units without changing its accepted responsibility: C1 covers R003/R004/R007 singleton and append-chain object writers; C2 covers R005/R006 snapshot sets; C3 covers R008/R009/R010 Timeline recovery, read lease and TASK-029 participant paths. Each enrolled route must either use a closed adapter or stop before its legacy lock/mutation. I2D remains responsible for semantic caller wiring and the complete source-policy closure.
+
+I2C-C1 exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/durable_product_job.py`
+4. `src/ai_video_production/project_history.py`
+5. `src/ai_video_production/voice_profile_store.py`
+6. `tests/test_task102_project_writer_migration_objects.py`
+7. bounded Evidence under the canonical external TASK-102 Evidence root
+
+C1 injects the disabled-by-default router into the R003 Job service/store and the R004/R007 store entrypoints. For every valid enrolled status it rejects the legacy path before a lock target/control directory is created; package-private Job/history writer entrypoints carry the same guard. The default resolver proves `UNENROLLED`, so existing Product behavior and APIs remain compatible. Exact broker request construction/readback and semantic caller composition remain I2D work; until then these enrolled features are deterministically unavailable rather than partially migrated.
+
+- New plus prior I2 focused tests: `29 PASS`.
+- Existing durable Job, history/autosave/backup and VoiceProfile regression: `56 PASS`.
+- Direct Export Queue and Timeline history consumer regression: `48 PASS`.
+- Python compile: `PASS`; real Projects, service/ACL/native state, private media, Release, Deploy and Production effects: none.
+
+### PMST-I2C2 snapshot-set checkpoint
+
+I2C-C2 exact Allowed Files are this Task record, the I2 plan, `src/ai_video_production/project_history.py`, `tests/test_task102_project_writer_migration_objects.py`, and bounded external TASK-102 Evidence. Autosave's mutating branch now checks R005 before manifest save or snapshot creation; a non-mutating debounce/quiescence skip remains available. Backup create and restore check R006 before legacy lock, snapshot loading or coordinated save. Read-only verified backup preview remains unchanged. The default unenrolled composition preserves all existing behavior.
+
+- I2C2 guard plus existing Autosave/Backup regression: `20 PASS`.
+- I2A through I2C2 focused regression: `31 PASS`.
+- No real Project, protected-control directory, service, ACL, native runtime, private data, Release, Deploy or Production effect occurred.
+
+### PMST-I2C3 recovery/read-lock/participant checkpoint
+
+I2C-C3 exact Allowed Files are this Task record, the I2 plan, `interactive_timeline_application.py`, `planning_application.py`, `creative_generation_execution_application.py`, `generation_output_adoption_application.py`, `montage_learning_canonical_admission_transaction.py`, `tests/test_task102_project_writer_migration_locks.py`, and bounded external TASK-102 Evidence.
+
+R008 now rechecks enrollment before Timeline recovery-object writes/removal, participant planning/reconciliation, apply/recovery mutation and legacy recovery-status reads. R009's three read-associated lock callers stop before creating the Project lock; output adoption does not consume its confirmation when blocked. R010 stops TASK-029 construction before its legacy Project lock/directories and rechecks enrollment at each exact/generic public lock route so a long-lived instance cannot bypass a later enrollment change. These are deterministic feature blocks; closed read-lease/participant request adapters remain I2D work.
+
+- I2C3 focused guards: `7 PASS`; I2A through I2C3 focused regression: `39 PASS`.
+- Runnable Timeline, Planning, creative-generation execution and TASK-029 direct-consumer regression: `168 PASS / 5 Windows-only SKIP`.
+- Generation-output adoption regression is `NOT_CONFIRMED` at collection because the existing WSL `cryptography` build lacks `hazmat.primitives.kdf.argon2.Argon2id`; no dependency installation/update occurred. The changed adoption module compiled and its pre-lock/non-consumption behavior passed the focused C3 test.
+- No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred.
+
+## PMST-I2D semantic caller and source-policy checkpoint — 2026-09-29
+
+I2D exact Allowed Files:
+
+1. `docs/ai-team/tasks/TASK-102/task.md`
+2. `docs/ai-team/tasks/TASK-102/pmst-i2-writer-migration-plan-r0.md`
+3. `src/ai_video_production/audio_placement_application.py`
+4. `src/ai_video_production/interactive_timeline_application.py`
+5. `src/ai_video_production/project_migration_application.py`
+6. `src/ai_video_production/task036_trusted_launcher.py`
+7. `src/ai_video_production/timeline_audio_application.py`
+8. `src/ai_video_production/voice_quality_meter_policy_store.py`
+9. `tests/test_task102_project_writer_migration_locks.py`
+10. `tests/test_task102_writer_source_policy.py`
+11. bounded Evidence under the canonical external TASK-102 Evidence root
+
+R011 bootstrap/import and remaining R012 Audio Placement, Timeline Audio, migration and Meter Policy callers now receive the injected router and either pass it into their central store/coordinator or stop before confirmation/operation consumption. Timeline's default save coordinator now shares the same router. TASK-036 bootstrap remains valid only before enrollment and uses the explicit R011 route. No Product entrypoint is enrolled by this source work.
+
+The bounded AST plus literal/symbol source-policy test matches every D1 matrix source to a direct route marker or an explicitly verified guarded parent, checks the exact R001–R013 registry closure, scans repository Project lock/manifest-save/coordinator/protected-literal mutation signals for files absent from the matrix, and proves a synthetic unregistered `.bai-project` writer is rejected. It does not treat arbitrary Product JSON writers as protected-control writers.
+
+- Semantic caller guard tests: `13 PASS`; source-policy: `3 PASS`; I2A through I2D focused regression: `47 PASS`.
+- Runnable Audio Placement, Timeline Audio, Meter Policy and Project Migration direct-consumer regression: `202 PASS / 1 Windows-only SKIP`.
+- TASK-036 launcher regression is `NOT_CONFIRMED` at collection for the same pre-existing WSL `Argon2id` dependency gap; no dependency installation/update occurred. The launcher module compiled and its R011 marker/call binding is checked by AST policy.
+- No real Project, service, ACL, native runtime, Provider, private data, Release, Deploy or Production effect occurred. I2E final integration/review is next.
+
+## PMST-I2E Recovery R2 checkpoint — 2026-09-29
+
+I2E integration reached committed HEAD `da60d103abde4e3c1eb046f04253566c59b8f0a0`. Post-R2 verification is TASK-102 `139 PASS`, central migration/source-policy `18 PASS`, and Timeline/Audio Placement/Compatibility Migration `40 PASS`. The earlier writer-owner and major-consumer integration remains `399 PASS / 6 SKIP`. Product enrollment remains disabled, and no service/ACL mutation, real Project write, native QA, Release, Deploy or Production effect occurred.
+
+The final independent DEV-4 review is `REVISE`: Critic `Critical 0 / High 2 / Medium 0 / Low 0`; Tester `Critical 0 / High 1 / Medium 0 / Low 0`. Both identify the remaining constructor-call shape `ProductProjectSaveCoordinator().save(...)`; Critic additionally identifies that a bare/comment/unknown `PMST-R...` marker can be mistaken for a proven guard. These are source-policy completeness findings, not a newly observed Product runtime failure.
+
+The two permitted review/fix cycles are exhausted. PMST-I2 is not accepted complete, no PR/merge is permitted from this checkpoint, and a bounded Recovery R3 requires explicit Owner authorization. If authorized, R3 may change only the source-policy test/helper needed to recognize the constructor-call receiver and require an accepted D1 route bound to a real `require_legacy_access` guard/delegation, plus exact negative tests and one fresh final independent review.
+
+External Recovery Evidence: `C:\home\baisound\evidence\bai-video-production\TASK-102\pmst-i2e\20260929-i2e-recovery-r2\completion-checkpoint.json`; initial readback SHA-256 `EFE63F41ED28E81051BE27448BAEB9E3575AD57531A8367A7CBE5314542535EE`.
+
+## PMST-I2E Recovery R3 authority and Builder checkpoint — 2026-09-29
+
+After the explicit R2 escalation request, the Owner answered `次へ` and then separately authorized GitHub PR creation. This authorizes only the bounded R3 correction, final independent review and—if accepted—PR creation. It does not authorize Product enrollment, service/ACL mutation, real Project writes, native QA, Release, Deploy or Production.
+
+R3 changes only `tests/test_task102_writer_source_policy.py`. Constructor-bound `ProductProjectSaveCoordinator().save(...)` is now normalized as a coordinator save signal. Route closure now requires an actual `require_legacy_access` call whose `route_id` is an accepted D1 route, including a function's exact default route binding; comments, docstrings and unknown routes do not qualify. Exact synthetic negatives cover constructor save, comment-only marker and unknown-route guard. Source-policy is `9 PASS`; TASK-102 is `141 PASS`. Final independent DEV-4 Critic/Tester review is next.
+
+## PMST-I2E Recovery R3 acceptance — 2026-09-29
+
+The bounded R3 correction is accepted at implementation HEAD `25c1b274d392e3a0058e4285eba98504cb0dd4ae`. Source-policy additionally requires `MUTATION` or `LOCK`, propagates exact helper positional/keyword bindings, applies defaults only when omitted, rejects unresolved explicit variables, and fails closed for `*args` / `**kwargs`. Direct `READ_ONLY`, helper `READ_ONLY`, unknown route, comment-only route, constructor save and expansion-based bypass probes are closed.
+
+Verification is source-policy `10 PASS`, TASK-102 `142 PASS`, prior central/source-policy `18 PASS`, Timeline/Audio Placement/Compatibility Migration `40 PASS`, and writer-owner/major-consumer integration `399 PASS / 6 SKIP`. Final independent Critic and Tester both returned `ACCEPT` with `Critical 0 / High 0 / Medium 0 / Low 0`. PMST-I2 is accepted complete for source writer migration with enrollment disabled. Product enrollment, service installation/update, ACL mutation, real Project writes, native QA, Release, Deploy and Production remain separate unauthorized gates.

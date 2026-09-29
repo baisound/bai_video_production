@@ -29,6 +29,11 @@ from .product_project_store import (
     _project_root,
 )
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
+from .task102_project_manifest_transaction import parse_private_request
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 FailureInjector = Callable[[str, Path], None]
@@ -619,13 +624,35 @@ class ProjectSaveJournalStore:
         return parse_project_save_journal(value)
 
     @staticmethod
-    def save(project_root: str | Path, journal: ProjectSaveJournal) -> AtomicWriteResult:
+    def save(
+        project_root: str | Path,
+        journal: ProjectSaveJournal,
+        *,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> AtomicWriteResult:
+        router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        router.require_legacy_access(
+            project_root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         return AtomicJsonWriter.write(ProjectSaveJournalStore.path(project_root, create_control_dir=True), journal.to_dict(), validator=parse_project_save_journal)
 
 
 class ProductProjectSaveCoordinator:
-    def __init__(self, *, failure_injector: FailureInjector | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        failure_injector: FailureInjector | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+    ) -> None:
         self.failure_injector = failure_injector
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+
+    @property
+    def pmst_router(self) -> PmstWriterMigrationRouter:
+        """Return the exact router governing this coordinator's write boundary."""
+        return self._pmst_router
 
     def save(
         self,
@@ -636,8 +663,26 @@ class ProductProjectSaveCoordinator:
         expected_previous_manifest_sha256: str,
         participant: ProjectSaveParticipant | None = None,
         commit_guard: Callable[[], ContextManager[None]] | None = None,
+        pmst_private_request: Mapping[str, Any] | None = None,
+        pmst_route_id: str = "PMST-R002",
     ) -> ProductProjectManifest:
         root = _project_root(project_root)
+        if pmst_private_request is not None:
+            return self._save_via_pmst(
+                root,
+                target_manifest,
+                child_documents,
+                expected_previous_manifest_sha256=expected_previous_manifest_sha256,
+                participant=participant,
+                commit_guard=commit_guard,
+                pmst_private_request=pmst_private_request,
+                pmst_route_id=pmst_route_id,
+            )
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id=pmst_route_id,
+            access_kind="MUTATION",
+        )
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
             guard = nullcontext() if commit_guard is None else commit_guard()
@@ -656,6 +701,95 @@ class ProductProjectSaveCoordinator:
                     participant=participant,
                 )
 
+    def _save_via_pmst(
+        self,
+        root: Path,
+        target_manifest: ProductProjectManifest,
+        child_documents: Mapping[str, bytes],
+        *,
+        expected_previous_manifest_sha256: str,
+        participant: ProjectSaveParticipant | None,
+        commit_guard: Callable[[], ContextManager[None]] | None,
+        pmst_private_request: Mapping[str, Any],
+        pmst_route_id: str,
+    ) -> ProductProjectManifest:
+        if self.failure_injector is not None or participant is not None or commit_guard is not None:
+            raise ProductError(
+                "ERR_PMST_ENROLLED_PARTICIPANT_ADAPTER_REQUIRED",
+                "Enrolled coordinated save requires a closed PMST participant adapter",
+                ProductErrorCategory.NOT_SUPPORTED,
+                details={"route_id": pmst_route_id},
+            )
+        current = ProductProjectManifestStore.load(root)
+        self._require_manifest_transition(current, target_manifest, expected_previous_manifest_sha256)
+        self._validate_documents(root, current, target_manifest, child_documents)
+        try:
+            request = parse_private_request(pmst_private_request)
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_PMST_PRIVATE_REQUEST_INVALID",
+                "PMST coordinated-save request is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        intent = request.to_dict()["intent"]
+        payload = intent["payload"]
+        if (
+            intent["operation_kind"] != "MANIFEST_TRANSITION_V1"
+            or payload.get("prior_manifest_sha256") != expected_previous_manifest_sha256
+            or payload.get("successor_manifest") != target_manifest.to_dict()
+        ):
+            raise ProductError(
+                "ERR_PMST_COORDINATED_SAVE_REQUEST_MISMATCH",
+                "PMST request does not match the coordinated save transition",
+                ProductErrorCategory.SECURITY,
+                details={"route_id": pmst_route_id},
+            )
+        result = self._pmst_router.execute(
+            root,
+            route_id=pmst_route_id,
+            private_request=pmst_private_request,
+        )
+        if result.data["status"] != "COMMITTED_WITH_READBACK":
+            raise ProductError(
+                "ERR_PMST_MANIFEST_NOT_COMMITTED",
+                "PMST did not report a committed coordinated save with readback",
+                ProductErrorCategory.STATE,
+                details={"route_id": pmst_route_id, "status": result.data["status"]},
+            )
+        try:
+            live = ProductProjectManifestStore.load(root)
+            if live.project_manifest_sha256 != target_manifest.project_manifest_sha256:
+                raise ProductError(
+                    "ERR_PMST_MANIFEST_READBACK_MISMATCH",
+                    "PMST coordinated-save manifest readback does not match",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"route_id": pmst_route_id},
+                )
+            self._validate_target_children(root, live)
+            for relative_path, expected_bytes in child_documents.items():
+                target = self._safe_child_target(root, relative_path)
+                if (
+                    target.is_symlink()
+                    or not target.is_file()
+                    or sha256_file_exact(target) != sha256_bytes(expected_bytes)
+                ):
+                    raise ProductError(
+                        "ERR_PMST_SELECTED_CHILD_READBACK_INVALID",
+                        "PMST coordinated-save selected child readback does not match",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                        details={"route_id": pmst_route_id, "relative_path": relative_path},
+                    )
+        except ProductError as exc:
+            if exc.code == "ERR_PMST_MANIFEST_READBACK_MISMATCH":
+                raise
+            raise ProductError(
+                "ERR_PMST_COORDINATED_SAVE_READBACK_INVALID",
+                "PMST coordinated-save readback is missing or invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"route_id": pmst_route_id},
+            ) from exc
+        return live
+
     def _save_locked(
         self,
         root: Path,
@@ -665,6 +799,11 @@ class ProductProjectSaveCoordinator:
         expected_previous_manifest_sha256: str,
         participant: ProjectSaveParticipant | None,
     ) -> ProductProjectManifest:
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         self._require_no_pending_recovery(root)
         current = ProductProjectManifestStore.load(root)
         self._require_manifest_transition(current, target_manifest, expected_previous_manifest_sha256)
@@ -716,6 +855,8 @@ class ProductProjectSaveCoordinator:
                 root,
                 target_manifest,
                 expected_previous_manifest_sha256=current.project_manifest_sha256,
+                pmst_router=self._pmst_router,
+                pmst_route_id="PMST-R002",
             )
             self._inject("after_manifest_commit", root)
             if participant is not None:
@@ -738,6 +879,12 @@ class ProductProjectSaveCoordinator:
 
     def recovery_status(self, project_root: str | Path) -> dict[str, object]:
         root = _project_root(project_root)
+        if self._pmst_router.enrollment_status(root) != "UNENROLLED":
+            raise ProductError(
+                "ERR_PMST_ENROLLED_RECOVERY_QUERY_REQUIRED",
+                "Enrolled Project recovery status requires the broker query adapter",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
         path = ProjectSaveJournalStore.path(root)
         if not path.exists():
             return {"required": False, "state": "NONE", "available_actions": []}
@@ -776,6 +923,11 @@ class ProductProjectSaveCoordinator:
     ) -> dict[str, object]:
         """Reconcile a participant receipt left before the first journal write."""
         root = _project_root(project_root)
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
             path = ProjectSaveJournalStore.path(root)
@@ -804,6 +956,12 @@ class ProductProjectSaveCoordinator:
     ) -> None:
         """Fail closed unless the manifest and every bound child are current."""
         root = _project_root(project_root)
+        if self._pmst_router.enrollment_status(root) != "UNENROLLED":
+            raise ProductError(
+                "ERR_PMST_ENROLLED_READ_LEASE_REQUIRED",
+                "Enrolled Project integrity validation requires a broker read lease",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
         if self.recovery_status(root)["required"]:
             raise ProductError(
                 "ERR_PROJECT_SAVE_RECOVERY_REQUIRED",
@@ -828,6 +986,11 @@ class ProductProjectSaveCoordinator:
         commit_guard: Callable[[], ContextManager[None]] | None = None,
     ) -> ProductProjectManifest:
         root = _project_root(project_root)
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
             guard = nullcontext() if commit_guard is None else commit_guard()
@@ -858,6 +1021,8 @@ class ProductProjectSaveCoordinator:
                         root,
                         committing.target_manifest,
                         expected_previous_manifest_sha256=committing.source_manifest_sha256,
+                        pmst_router=self._pmst_router,
+                        pmst_route_id="PMST-R002",
                     )
                     result_manifest = committing.target_manifest
                 if participant is not None:
@@ -888,6 +1053,11 @@ class ProductProjectSaveCoordinator:
         commit_guard: Callable[[], ContextManager[None]] | None = None,
     ) -> ProductProjectManifest:
         root = _project_root(project_root)
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
             guard = nullcontext() if commit_guard is None else commit_guard()
@@ -900,6 +1070,11 @@ class ProductProjectSaveCoordinator:
         transaction_id: str,
         participant: ProjectSaveParticipant | None,
     ) -> ProductProjectManifest:
+        self._pmst_router.require_legacy_access(
+            root,
+            route_id="PMST-R002",
+            access_kind="MUTATION",
+        )
         journal = self._require_recovery(root, transaction_id)
         self._require_participant(journal, participant)
         if (

@@ -45,6 +45,10 @@ from .project_save import (
 )
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
 from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 TokenFactory = Callable[[], str]
 CommitGuardFactory = Callable[[], ContextManager[None]]
@@ -78,11 +82,20 @@ class _TimelineHistoryParticipant:
         recovery_path: Path,
         expected_history_sha256: str | None = None,
         target_history: ProjectCommandHistory | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
     ) -> None:
         self.project_id = project_id
         self.recovery_path = recovery_path
         self.expected_history_sha256 = expected_history_sha256
         self.target_history = target_history
+        self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+
+    def _require_legacy_route(self, project_root: str | Path, *, access_kind: str) -> None:
+        self._pmst_router.require_legacy_access(
+            project_root,
+            route_id="PMST-R008",
+            access_kind=access_kind,
+        )
 
     @staticmethod
     def _body(
@@ -227,6 +240,7 @@ class _TimelineHistoryParticipant:
         source_manifest: ProductProjectManifest,
         target_manifest: ProductProjectManifest,
     ) -> ProjectSaveParticipantPlan:
+        self._require_legacy_route(project_root, access_kind="LOCK")
         if self.target_history is None:
             raise ProductError(
                 "ERR_TIMELINE_EDIT_HISTORY_PARTICIPANT_UNPREPARED",
@@ -256,6 +270,7 @@ class _TimelineHistoryParticipant:
         transaction_id: str,
         plan: ProjectSaveParticipantPlan,
     ) -> str:
+        self._require_legacy_route(project_root, access_kind="MUTATION")
         if self.target_history is None:
             raise ProductError(
                 "ERR_TIMELINE_EDIT_HISTORY_PARTICIPANT_UNPREPARED",
@@ -304,6 +319,7 @@ class _TimelineHistoryParticipant:
         prepared_receipt_sha256: str,
         outcome: ProjectSaveParticipantOutcome,
     ) -> ProjectSaveParticipantResult:
+        self._require_legacy_route(project_root, access_kind="MUTATION")
         _current, current_sha = self._current_history(project_root, self.project_id)
         if not self.recovery_path.exists():
             expected_sha = (
@@ -340,6 +356,7 @@ class _TimelineHistoryParticipant:
                     project_root,
                     target,
                     expected_previous_history_sha256=plan.source_content_sha256,
+                    pmst_router=self._pmst_router,
                 )
             result_sha = target.history_sha256
         else:
@@ -366,6 +383,7 @@ class _TimelineHistoryParticipant:
         plan: ProjectSaveParticipantPlan,
         prepared_receipt_sha256: str,
     ) -> None:
+        self._require_legacy_route(project_root, access_kind="MUTATION")
         recovery = self._load_recovery()
         self._require_scope(recovery, transaction_id, plan, prepared_receipt_sha256)
         self._delete_exact(prepared_receipt_sha256)
@@ -375,6 +393,7 @@ class _TimelineHistoryParticipant:
         project_root: Path,
         current_manifest: ProductProjectManifest,
     ) -> str | None:
+        self._require_legacy_route(project_root, access_kind="MUTATION")
         if not self.recovery_path.exists():
             return None
         recovery = self._load_recovery()
@@ -401,18 +420,31 @@ class Task044TimelineEditApplication:
     def __init__(self, *, project_root: str | Path, project_id: str,
                  token_factory: TokenFactory | None = None,
                  save_coordinator: ProductProjectSaveCoordinator | None = None,
-                 placement_guard_resolver: PlacementGuardResolver | None = None) -> None:
+                 placement_guard_resolver: PlacementGuardResolver | None = None,
+                 pmst_router: PmstWriterMigrationRouter | None = None) -> None:
         self.project_root = Path(project_root).resolve(strict=True)
         self.project_id = project_id
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_id != project_id:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_MISMATCH", "Project identity differs", ProductErrorCategory.SECURITY)
-        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator()
+        if save_coordinator is not None:
+            if pmst_router is not None and save_coordinator.pmst_router is not pmst_router:
+                raise ProductError(
+                    "ERR_PMST_ROUTER_COMPOSITION_MISMATCH",
+                    "Timeline coordinator and PMST router must share one boundary",
+                    ProductErrorCategory.SECURITY,
+                )
+            self._pmst_router = save_coordinator.pmst_router
+            self._save_coordinator = save_coordinator
+        else:
+            self._pmst_router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+            self._save_coordinator = ProductProjectSaveCoordinator(pmst_router=self._pmst_router)
         self._participant = _TimelineHistoryParticipant(
             project_id=project_id,
             recovery_path=ProductProjectManifestStore.path(self.project_root).with_name(
                 "timeline-edit-command-recovery.json"
             ),
+            pmst_router=self._pmst_router,
         )
         self._recover_command_history()
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
@@ -444,6 +476,11 @@ class Task044TimelineEditApplication:
                                 result_manifest_sha256: str,
                                 expected_history_sha256: str | None,
                                 history: ProjectCommandHistory) -> None:
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R008",
+            access_kind="MUTATION",
+        )
         body = {"recovery_version": "1.0.0", "project_id": self.project_id,
                 "source_manifest_sha256": source_manifest_sha256,
                 "result_manifest_sha256": result_manifest_sha256,
@@ -459,6 +496,11 @@ class Task044TimelineEditApplication:
         path = self._history_recovery_path
         if not path.exists():
             return
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R008",
+            access_kind="MUTATION",
+        )
         if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
             raise ProductError("ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID", "Timeline history recovery is invalid", ProductErrorCategory.DATA_INTEGRITY)
         try:
@@ -1029,6 +1071,11 @@ class Task044TimelineEditApplication:
                 "Confirmation identity is invalid",
                 ProductErrorCategory.VALIDATION,
             )
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R008",
+            access_kind="LOCK",
+        )
         with self._pending_lock:
             pending = self._pending.pop(confirmation_id, None)
         if pending is None:
@@ -1100,6 +1147,7 @@ class Task044TimelineEditApplication:
                 recovery_path=self._history_recovery_path,
                 expected_history_sha256=current_history_sha,
                 target_history=updated_project_history,
+                pmst_router=self._pmst_router,
             )
         else:
             self._write_history_recovery(
@@ -1119,6 +1167,7 @@ class Task044TimelineEditApplication:
                 self.project_root,
                 updated_project_history,
                 expected_previous_history_sha256=current_history_sha,
+                pmst_router=self._pmst_router,
             )
             self._history_recovery_path.unlink()
         projected, in_out = TimelineEditProjector.apply(timeline, history)
@@ -1151,6 +1200,11 @@ class Task044TimelineEditApplication:
         }
 
     def project_save_recovery_status(self) -> dict[str, object]:
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R008",
+            access_kind="LOCK",
+        )
         status = self._save_coordinator.recovery_status(self.project_root)
         return {
             **status,
@@ -1173,6 +1227,11 @@ class Task044TimelineEditApplication:
                 "Project save recovery transaction is invalid",
                 ProductErrorCategory.VALIDATION,
             )
+        self._pmst_router.require_legacy_access(
+            self.project_root,
+            route_id="PMST-R008",
+            access_kind="MUTATION",
+        )
         status = self._save_coordinator.recovery_status(self.project_root)
         if not status["required"] or status.get("transaction_id") != transaction_id:
             raise ProductError(

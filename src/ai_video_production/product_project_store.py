@@ -6,11 +6,17 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator, Mapping
 
 from .atomic import AtomicJsonWriter, AtomicWriteResult
 from .errors import ProductError, ProductErrorCategory
 from .product_project import ProductProjectManifest, parse_product_project_manifest
+from .serialization import canonical_json_bytes, sha256_bytes
+from .task102_project_manifest_transaction import parse_private_request
+from .task102_project_writer_migration import (
+    DEFAULT_PMST_WRITER_MIGRATION_ROUTER,
+    PmstWriterMigrationRouter,
+)
 
 
 _MAX_MANIFEST_BYTES = 4 * 1024 * 1024
@@ -96,13 +102,65 @@ class ProductProjectManifestStore:
         manifest: ProductProjectManifest,
         *,
         expected_previous_manifest_sha256: str | None = None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+        pmst_route_id: str = "PMST-R001",
+        pmst_private_request: Mapping[str, Any] | None = None,
     ) -> AtomicWriteResult:
+        router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        if pmst_private_request is not None:
+            ProductProjectManifestStore._validate_pmst_request(
+                project_root,
+                pmst_private_request,
+                manifest,
+                expected_previous_manifest_sha256=expected_previous_manifest_sha256,
+            )
+            result = router.execute(
+                project_root,
+                route_id=pmst_route_id,
+                private_request=pmst_private_request,
+            )
+            if result.data["status"] != "COMMITTED_WITH_READBACK":
+                raise ProductError(
+                    "ERR_PMST_MANIFEST_NOT_COMMITTED",
+                    "PMST did not report a committed manifest with readback",
+                    ProductErrorCategory.STATE,
+                    details={"route_id": pmst_route_id, "status": result.data["status"]},
+                )
+            try:
+                live = ProductProjectManifestStore.load(project_root)
+            except ProductError as exc:
+                raise ProductError(
+                    "ERR_PMST_MANIFEST_READBACK_INVALID",
+                    "PMST manifest readback is missing or invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"route_id": pmst_route_id},
+                ) from exc
+            if live.project_manifest_sha256 != manifest.project_manifest_sha256:
+                raise ProductError(
+                    "ERR_PMST_MANIFEST_READBACK_MISMATCH",
+                    "PMST manifest readback does not match the requested successor",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"route_id": pmst_route_id},
+                )
+            document = canonical_json_bytes(live.to_dict())
+            return AtomicWriteResult(
+                _manifest_path(project_root),
+                sha256_bytes(document),
+                len(document) + 1,
+            )
+        router.require_legacy_access(
+            project_root,
+            route_id=pmst_route_id,
+            access_kind="MUTATION",
+        )
         target = _manifest_path(project_root, create_control_dir=True)
         with _exclusive_project_lock(target):
             return ProductProjectManifestStore._save_unlocked(
                 project_root,
                 manifest,
                 expected_previous_manifest_sha256=expected_previous_manifest_sha256,
+                pmst_router=router,
+                pmst_route_id=pmst_route_id,
             )
 
     @staticmethod
@@ -111,11 +169,19 @@ class ProductProjectManifestStore:
         manifest: ProductProjectManifest,
         *,
         expected_previous_manifest_sha256: str | None,
+        pmst_router: PmstWriterMigrationRouter | None = None,
+        pmst_route_id: str = "PMST-R001",
     ) -> AtomicWriteResult:
         """Save while the caller holds the Project lock.
 
         This is package-internal and exists for the multi-store save coordinator.
         """
+        router = pmst_router or DEFAULT_PMST_WRITER_MIGRATION_ROUTER
+        router.require_legacy_access(
+            project_root,
+            route_id=pmst_route_id,
+            access_kind="MUTATION",
+        )
         target = _manifest_path(project_root, create_control_dir=True)
         if target.is_symlink() or (target.exists() and not target.is_file()):
             raise ProductError("ERR_PROJECT_FORMAT_FILE_INVALID", "Refusing an invalid Project manifest target", ProductErrorCategory.SECURITY)
@@ -134,4 +200,57 @@ class ProductProjectManifestStore:
         elif manifest.project_revision != 1:
             raise ProductError("ERR_PROJECT_SAVE_REVISION_INVALID", "First Project manifest revision must be 1", ProductErrorCategory.STATE)
         return AtomicJsonWriter.write(target, manifest.to_dict(), validator=parse_product_project_manifest)
+
+    @staticmethod
+    def _validate_pmst_request(
+        project_root: str | Path,
+        private_request: Mapping[str, Any],
+        manifest: ProductProjectManifest,
+        *,
+        expected_previous_manifest_sha256: str | None,
+    ) -> None:
+        try:
+            request = parse_private_request(private_request)
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_PMST_PRIVATE_REQUEST_INVALID",
+                "PMST manifest request is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        intent = request.to_dict()["intent"]
+        payload = intent["payload"]
+        if payload.get("successor_manifest") != manifest.to_dict():
+            raise ProductError(
+                "ERR_PMST_MANIFEST_REQUEST_MISMATCH",
+                "PMST request successor does not match the supplied manifest",
+                ProductErrorCategory.SECURITY,
+            )
+        kind = intent["operation_kind"]
+        if expected_previous_manifest_sha256 is None:
+            matches = kind == "MANIFEST_CREATE_V1" and manifest.project_revision == 1
+            if _manifest_path(project_root).exists():
+                matches = False
+        else:
+            matches = (
+                kind == "MANIFEST_TRANSITION_V1"
+                and payload.get("prior_manifest_sha256") == expected_previous_manifest_sha256
+            )
+            if matches:
+                try:
+                    current = ProductProjectManifestStore.load(project_root)
+                except ProductError:
+                    matches = False
+                else:
+                    matches = (
+                        current.project_manifest_sha256 == expected_previous_manifest_sha256
+                        and current.project_id == manifest.project_id
+                        and current.created_at == manifest.created_at
+                        and manifest.project_revision == current.project_revision + 1
+                    )
+        if not matches:
+            raise ProductError(
+                "ERR_PMST_MANIFEST_PREDECESSOR_MISMATCH",
+                "PMST request does not match the supplied manifest predecessor",
+                ProductErrorCategory.SECURITY,
+            )
 

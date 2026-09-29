@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_IMPLEMENTED_REVIEW_PENDING / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_RECOVERY_R1_REVIEW_PENDING / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -74,3 +74,21 @@ C1 must bind accepted TASK-100 admission to exact TASK-074 fine-tuned selection/
 - Resolved OS-temp roots: `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-001` through `-004`. No task-owned path was created at a drive root.
 - Filesystem/model/runtime/process/network/audio/Project/Product effects: none. Native installed identity, TASK-101 private import/load lease, inference, private audio, Release, Deploy and Production remain prohibited.
 - DEV-4 independent Critic and Tester review is required before C1 acceptance.
+
+## LVC-C1 Recovery R1 checkpoint — 2026-09-29
+
+The frozen Builder commit `436b9c1279768fe7047d6bc3ca58b975957b94d9` received independent `REVISE`: Critic C/H/M/L `0/3/1/0`; Tester `FAIL / REVISE` C/H/M/L `0/2/0/1`. The accepted correction scope remains inside the exact C1 source/test/docs files.
+
+Recovery R1 closes the confirmed findings:
+
+- final trusted evaluation now rechecks TASK-074 Consent expiry and rejects the exact boundary and later values;
+- TASK-100 Consent is rebound to TASK-074 selection, and every selection/currentness duplicated coordinate is compared exactly, including Project manifest, Consent, ModelCandidate currentness and timestamps;
+- the public compiled-admission wrapper must contain canonical nested types and must equal a fresh candidate/assessment recompilation, preventing forged admission/inventory dictionaries;
+- TASK-014 capability probe is rebound to the TASK-100 capability-map digest;
+- new EOF blank-line warnings are removed.
+
+The Critic's Medium schema-escape candidate was not reproduced: JSON decode produces the intended `\.` regex, an ordinary `.123Z` timestamp passes, and a backslash form is rejected. The package mirror remains byte-identical. This candidate is closed by direct and independent test evidence without changing the correct regex.
+
+Post-Recovery verification is C1 `35 PASS`, C1 plus direct TASK-100/TASK-074/TASK-014 regression `139 PASS`, and broader TASK-100/TASK-074/TASK-014 owner regression `421 PASS`. Full C1 diff-check and compile are `PASS`. Resolved OS-temp roots are `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-006` through `-008`. No dependency installation or Product/native/private/model/audio effect occurred.
+
+One fresh independent Critic/Tester re-review of the Recovery commit is required. Product integration and LVC-C2 native installed-identity validation remain unstarted and unauthorized.

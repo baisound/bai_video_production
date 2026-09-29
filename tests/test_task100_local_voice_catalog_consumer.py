@@ -4,6 +4,7 @@ import ast
 from copy import deepcopy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
@@ -21,8 +22,9 @@ from ai_video_production.owner_narration_local_primary import (
     NarrationIntendedUsage,
     compile_local_primary_preflight,
 )
-from ai_video_production.serialization import sha256_bytes
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task100_local_voice_catalog_admission import (
+    CompiledLocalVoiceCatalogAdmissionV1,
     CustodyContractState,
     ObservationSource,
     ProducerAuthenticity,
@@ -331,6 +333,7 @@ def test_exact_fine_tuned_lineage_becomes_consumer_eligible_without_authority() 
     "changes",
     [
         {"voice_profile_revision_sha256": digest("wrong-voice")},
+        {"consent_current_evaluation_sha256": digest("wrong-consent")},
         {"installed_route_binding_sha256": digest("wrong-installed")},
         {"local_audio_model_inventory_revision_sha256": digest("wrong-inventory")},
         {"local_audio_model_inventory_entry_sha256": digest("wrong-entry")},
@@ -365,6 +368,7 @@ def test_task074_identity_crossing_is_rejected(changes) -> None:
         ("engine_admission_binding", {"model_artifact_sha256": digest("wrong-pair")}),
         ("engine_admission_binding", {"runtime_sha256": digest("wrong-runtime")}),
         ("engine_admission_binding", {"license_evidence_sha256": digest("wrong-license")}),
+        ("engine_admission_binding", {"capability_probe_sha256": digest("wrong-capability")}),
         ("fine_tuned_model_binding", {"model_candidate_revision_sha256": digest("wrong-model")}),
         ("fine_tuned_model_binding", {"model_artifact_binding_sha256": digest("wrong-installed")}),
         ("fine_tuned_model_binding", {"owner_model_approval_decision_sha256": digest("wrong-h4")}),
@@ -427,9 +431,93 @@ def test_noncurrent_route_and_nonready_preflight_are_ineligible() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "project_manifest_revision_sha256",
+        "consent_current_evaluation_sha256",
+        "model_candidate_currentness_sha256",
+    ],
+)
+def test_resealed_task074_currentness_cannot_cross_selection_coordinates(field: str) -> None:
+    cand, assess, compiled, chosen, route_currentness, preflight = complete_inputs()
+    body = route_currentness.to_dict()
+    body[field] = digest(f"crossed-{field}")
+    digest_body = deepcopy(body)
+    digest_body.pop("currentness_evaluation_sha256")
+    body["currentness_evaluation_sha256"] = sha256_bytes(
+        b"TASK074_VOICE_ROUTE_SELECTION_CURRENTNESS_EVALUATION_V1\0"
+        + canonical_json_bytes(digest_body)
+    )
+    crossed = VoiceRouteSelectionCurrentnessEvaluation.from_dict(body)
+    with pytest.raises(ValueError, match="route currentness .* mismatch"):
+        compile_local_voice_catalog_consumer_readback(
+            candidate=cand,
+            assessment=assess,
+            compiled_admission=compiled,
+            route_selection=chosen,
+            route_currentness=crossed,
+            narration_preflight=preflight,
+            evaluated_at="2026-09-29T00:04:00Z",
+        )
+
+
+def test_public_compiled_wrapper_cannot_bypass_canonical_readmission() -> None:
+    cand = candidate()
+    assess = assessment(cand, installed_state=InstalledState.NOT_INSTALLED.value)
+    canonical = compile_local_voice_catalog_admission(cand, assess)
+    forged_admission = canonical.admission.to_dict()
+    forged_admission["admission_state"] = "ADMITTED_CATALOG_CANDIDATE"
+    forged_admission["reason_codes"] = []
+    forged_inventory = canonical.inventory.to_public_dict()
+    forged_inventory["candidates"][0]["selectable"] = True
+    forged_inventory["candidates"][0]["execution_port_id"] = cand.to_dict()["execution_port_id"]
+    forged = CompiledLocalVoiceCatalogAdmissionV1(
+        admission=SimpleNamespace(to_dict=lambda: forged_admission),
+        inventory=SimpleNamespace(to_public_dict=lambda: forged_inventory),
+    )
+    chosen = selection(cand, canonical)
+    with pytest.raises(TypeError, match="compiled_admission.admission"):
+        compile_local_voice_catalog_consumer_readback(
+            candidate=cand,
+            assessment=assess,
+            compiled_admission=forged,
+            route_selection=chosen,
+            route_currentness=currentness(chosen),
+            narration_preflight=narration_preflight(cand, chosen),
+            evaluated_at="2026-09-29T00:04:00Z",
+        )
+
+
+def test_typed_but_unrelated_compiled_admission_is_rejected() -> None:
+    cand = candidate()
+    assess = assessment(cand)
+    unrelated = compile_local_voice_catalog_admission(
+        cand,
+        assessment(cand, evaluated_at="2026-09-29T00:01:30Z"),
+    )
+    chosen = selection(cand, unrelated)
+    with pytest.raises(ValueError, match="canonical candidate/assessment"):
+        compile_local_voice_catalog_consumer_readback(
+            candidate=cand,
+            assessment=assess,
+            compiled_admission=unrelated,
+            route_selection=chosen,
+            route_currentness=currentness(chosen),
+            narration_preflight=narration_preflight(cand, chosen),
+            evaluated_at="2026-09-29T00:04:00Z",
+        )
+
+
 @pytest.mark.parametrize("evaluated_at", ["2026-09-28T23:59:59Z", "2026-09-29T00:10:00Z"])
 def test_trusted_time_must_be_inside_candidate_window(evaluated_at: str) -> None:
     with pytest.raises(ValueError, match="validity window"):
+        compile_readback(evaluated_at=evaluated_at)
+
+
+@pytest.mark.parametrize("evaluated_at", ["2026-09-29T00:09:30Z", "2026-09-29T00:09:59Z"])
+def test_trusted_time_cannot_reuse_currentness_at_or_after_consent_expiry(evaluated_at: str) -> None:
+    with pytest.raises(ValueError, match="Consent validity window"):
         compile_readback(evaluated_at=evaluated_at)
 
 
@@ -440,6 +528,12 @@ def test_schema_mirror_and_positive_negative_vectors() -> None:
     validator = Draft202012Validator(schema)
     body = compile_readback().to_dict()
     validator.validate(body)
+    fractional = compile_readback(evaluated_at="2026-09-29T00:04:00.123Z").to_dict()
+    validator.validate(fractional)
+    malformed_fractional = deepcopy(body)
+    malformed_fractional["evaluated_at"] = "2026-09-29T00:04:00\\123Z"
+    with pytest.raises(ValidationError):
+        validator.validate(malformed_fractional)
     bad = deepcopy(body)
     bad["execution_authorized"] = True
     with pytest.raises(ValidationError):

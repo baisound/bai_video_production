@@ -14,6 +14,7 @@ import re
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from .local_audio_model_inventory import LocalAudioModelInventory
 from .owner_narration_local_primary import (
     LocalNarrationRouteMode,
     LocalPrimaryNarrationPreflight,
@@ -24,8 +25,10 @@ from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 from .task100_local_voice_catalog_admission import (
     CatalogAdmissionState,
     CompiledLocalVoiceCatalogAdmissionV1,
+    LocalVoiceCatalogAdmissionV1,
     LocalVoiceCatalogAssessmentV1,
     LocalVoiceCatalogCandidateV1,
+    compile_local_voice_catalog_admission,
 )
 from .voice_profile_route_selection import (
     CurrentnessResult,
@@ -245,6 +248,10 @@ def compile_local_voice_catalog_consumer_readback(
         raise TypeError("assessment must be LocalVoiceCatalogAssessmentV1")
     if not isinstance(compiled_admission, CompiledLocalVoiceCatalogAdmissionV1):
         raise TypeError("compiled_admission must be CompiledLocalVoiceCatalogAdmissionV1")
+    if not isinstance(compiled_admission.admission, LocalVoiceCatalogAdmissionV1):
+        raise TypeError("compiled_admission.admission must be LocalVoiceCatalogAdmissionV1")
+    if not isinstance(compiled_admission.inventory, LocalAudioModelInventory):
+        raise TypeError("compiled_admission.inventory must be LocalAudioModelInventory")
     if not isinstance(route_selection, VoiceProfileRouteSelection):
         raise TypeError("route_selection must be VoiceProfileRouteSelection")
     if not isinstance(route_currentness, VoiceRouteSelectionCurrentnessEvaluation):
@@ -259,8 +266,13 @@ def compile_local_voice_catalog_consumer_readback(
 
     candidate_data = candidate.to_dict()
     assessment_data = assessment.to_dict()
+    expected_compiled = compile_local_voice_catalog_admission(candidate, assessment)
     admission_data = compiled_admission.admission.to_dict()
     inventory_data = compiled_admission.inventory.to_public_dict()
+    if admission_data != expected_compiled.admission.to_dict():
+        raise ValueError("compiled admission is not the canonical candidate/assessment result")
+    if inventory_data != expected_compiled.inventory.to_public_dict():
+        raise ValueError("compiled inventory is not the canonical candidate/assessment result")
     selection_data = route_selection.to_dict()
     currentness_data = route_currentness.to_dict()
     preflight_data = narration_preflight.to_private_dict()
@@ -302,13 +314,33 @@ def compile_local_voice_catalog_consumer_readback(
         raise ValueError("LVC-C1 requires a fine-tuned TASK-074 route")
     _require_same(selection_data["source_requirement"], SourceRequirement.MODEL_CANDIDATE_REQUIRED.value, "route source requirement mismatch")
     _require_same(selection_data["voice_profile_revision_sha256"], candidate_data["voice_profile_revision_sha256"], "route voice-profile mismatch")
+    _require_same(selection_data["consent_current_evaluation_sha256"], candidate_data["consent_currentness_sha256"], "route Consent currentness mismatch")
     _require_same(selection_data["installed_route_binding_sha256"], candidate_data["installed_binding_sha256"], "route installed-binding mismatch")
     _require_same(selection_data["local_audio_model_inventory_revision_sha256"], admission_data["inventory_sha256"], "route inventory revision mismatch")
     _require_same(selection_data["local_audio_model_inventory_entry_sha256"], admission_data["inventory_candidate_sha256"], "route inventory entry mismatch")
     _require_same(selection_data["model_license_evidence_sha256"], candidate_data["license_evidence_sha256"], "route license mismatch")
     _require_same(selection_data["model_candidate_revision_sha256"], candidate_data["model_candidate_revision_sha256"], "route ModelCandidate mismatch")
 
-    _require_same(currentness_data["selection_sha256"], selection_data["selection_sha256"], "route currentness selection mismatch")
+    for currentness_field, selection_field in (
+        ("selection_sha256", "selection_sha256"),
+        ("route_mode", "route_mode"),
+        ("project_manifest_revision_sha256", "project_manifest_revision_sha256"),
+        ("voice_profile_revision_sha256", "voice_profile_revision_sha256"),
+        ("consent_current_evaluation_sha256", "consent_current_evaluation_sha256"),
+        ("selection_created_at", "created_at"),
+        ("consent_evaluated_at", "consent_evaluated_at"),
+        ("consent_expires_at", "consent_expires_at"),
+        ("installed_route_binding_sha256", "installed_route_binding_sha256"),
+        ("local_audio_model_inventory_entry_sha256", "local_audio_model_inventory_entry_sha256"),
+        ("model_license_evidence_sha256", "model_license_evidence_sha256"),
+        ("model_candidate_revision_sha256", "model_candidate_revision_sha256"),
+        ("model_candidate_currentness_sha256", "model_candidate_currentness_sha256"),
+    ):
+        _require_same(
+            currentness_data[currentness_field],
+            selection_data[selection_field],
+            f"route currentness {currentness_field} mismatch",
+        )
     for field, candidate_field in (
         ("voice_profile_revision_sha256", "voice_profile_revision_sha256"),
         ("installed_route_binding_sha256", "installed_binding_sha256"),
@@ -337,6 +369,7 @@ def compile_local_voice_catalog_consumer_readback(
     _require_same(engine["model_artifact_sha256"], candidate_data["model_pair_sha256"], "preflight model pair mismatch")
     _require_same(engine["runtime_sha256"], candidate_data["runtime_build_sha256"], "preflight runtime mismatch")
     _require_same(engine["license_evidence_sha256"], candidate_data["license_evidence_sha256"], "preflight license mismatch")
+    _require_same(engine["capability_probe_sha256"], candidate_data["capability_map_sha256"], "preflight capability mismatch")
     _require_same(fine_tuned["model_candidate_revision_sha256"], candidate_data["model_candidate_revision_sha256"], "preflight ModelCandidate mismatch")
     _require_same(fine_tuned["model_artifact_binding_sha256"], candidate_data["installed_binding_sha256"], "preflight installed binding mismatch")
     _require_same(fine_tuned["owner_model_approval_decision_sha256"], candidate_data["h4_approval_sha256"], "preflight H4 approval mismatch")
@@ -349,8 +382,11 @@ def compile_local_voice_catalog_consumer_readback(
     preflight_time = _timestamp(preflight_data["created_at"], "narration_preflight.created_at")
     trusted_time = _timestamp(evaluated_at, "evaluated_at")
     expires = _timestamp(candidate_data["expires_at"], "candidate.expires_at")
+    consent_expires = _timestamp(selection_data["consent_expires_at"], "route_selection.consent_expires_at")
     if not observed <= assessment_time <= selection_time <= currentness_time <= trusted_time < expires:
         raise ValueError("consumer evidence times are outside the candidate validity window")
+    if trusted_time >= consent_expires:
+        raise ValueError("consumer trusted time is outside the TASK-074 Consent validity window")
     if not observed <= preflight_time <= trusted_time:
         raise ValueError("narration preflight time is outside the candidate validity window")
 

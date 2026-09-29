@@ -1,6 +1,6 @@
 # TASK-100 LVC-C1 — Consumer Readback Contract R0
 
-Status: `IMPLEMENTED / DEV4_REVIEW_PENDING / NATIVE_IDENTITY_DEFERRED`
+Status: `RECOVERY_R1_IMPLEMENTED / DEV4_REREVIEW_PENDING / NATIVE_IDENTITY_DEFERRED`
 
 ## 1. Goal
 
@@ -72,4 +72,3 @@ Non-current operational states return `consumer_live_eligible=false` with closed
 - TASK-100, direct TASK-074 and TASK-014 focused regression passes;
 - no filesystem, process, network, model, audio, Project or Product runtime effect;
 - DEV-4 independent Critic and Tester findings end at Critical/High zero before acceptance.
-

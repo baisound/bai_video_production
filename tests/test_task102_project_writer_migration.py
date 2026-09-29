@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 import pytest
@@ -156,7 +155,10 @@ def test_registry_exactly_matches_accepted_d1_routes_and_matrix_digest() -> None
         "UNSUPPORTED_BLOCKED",
     }
     matrix = Path("docs/ai-team/tasks/TASK-102/pmst-d1-protected-control-mutation-matrix-r0.json")
-    assert f"sha256:{hashlib.sha256(matrix.read_bytes()).hexdigest()}" == ACCEPTED_WRITER_MIGRATION_MATRIX_SHA256
+    normalized_matrix_bytes = (
+        matrix.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    )
+    assert sha256_bytes(normalized_matrix_bytes) == ACCEPTED_WRITER_MIGRATION_MATRIX_SHA256
     assert WRITER_ROUTES["PMST-R013"].admitted_profiles == ()
     assert all(route.admitted_profiles for route_id, route in WRITER_ROUTES.items() if route_id != "PMST-R013")
 

@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C_PENDING / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_IMPLEMENTED_REVIEW_PENDING / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -56,3 +56,21 @@ See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for s
 - Primary focused + direct dependency regression: `PASS`, 120 tests. Independent Tester: `PASS`, 63 tests plus 61 in-memory adversarial assertions; schema self-validation/mirror, five ECMAScript patterns and nine calendar vectors also passed.
 - Independent DEV-4 Critic/Judge after one bounded correction cycle: `ACCEPT`, final C/H/M/L `0/0/0/0`. Closed findings were typed-record constructor/compiler validation bypass, missing cross-field schema conditions/calendar grammar, and excessive-depth `RecursionError` normalization.
 - The implementation is deterministic, body-free and effect-free. It creates no file/model/runtime/network/process/audio effect and grants no load, inference, replay or consumer-live authority. Native installed-model identity, private audio, LVC-C consumer currentness/readback and canonical Product integration remain `NOT_CONFIRMED` and outside this unit.
+
+## LVC-C1 source consumer-readback authority — 2026-09-29
+
+After TASK-102 PMST-I2 merge closure, the Owner instructed `次へ`. Together with the existing TASK-100 delivery-owner/implementation intent, this binds the source-only LVC-C1 Atomic Unit in [the C1 contract](lvc-c1-consumer-readback-contract-r0.md). C1 may add only the exact Task record, contract, source, canonical/package schema, focused test and external Evidence paths listed there.
+
+C1 must bind accepted TASK-100 admission to exact TASK-074 fine-tuned selection/currentness and TASK-014 non-executing preflight. It may return evidence-only `consumer_live_eligible` for the existing Owner Human Gate, but must keep execution/load/runtime/inference/body/path/resource effects false or zero. Existing TASK-014/TASK-074/catalog sources are read-only dependencies. Native installed identity, TASK-101 private import/load lease, real model access, inference, private audio, Project/Asset/Timeline mutation, Release, Deploy and Production remain outside this authority.
+
+## LVC-C1 Builder checkpoint — 2026-09-29
+
+- Added one pure consumer compiler/readback, a strict canonical schema with byte-identical package mirror, and focused adversarial tests. Existing TASK-014, TASK-074 and TASK-013 catalog source remain unchanged.
+- Positive eligibility requires exact TASK-100 candidate/assessment/admission/inventory lineage, fine-tuned TASK-074 selection plus runnable currentness, and a READY non-executing TASK-014 preflight. Exact Project, voice-profile, model-candidate, installed-binding, license, model-pair, engine, producer-readback and validity-time coordinates are rebound at the consumer boundary.
+- `consumer_live_eligible=true` is evidence-only eligibility for the existing Owner Human Gate. Authority/load/runtime/model/inference/body/path flags remain false and `resource_effect_count=0`.
+- TASK-014's publicly constructible historical preflight dataclass is always reparsed through its producer parser, closing hand-built decision/classification bypass.
+- Initial focused execution was `24 PASS / 1 FAIL`; the sole failure was an invalid schema file caused by a patch-marker generation error, not a compiler assertion. The schema and mirror were replaced before further verification.
+- Final C1 focused execution: `25 PASS`. TASK-100 admission/C1 plus direct TASK-074 and TASK-014 regression after constructor-bypass hardening: `130 PASS`.
+- Resolved OS-temp roots: `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-001` through `-004`. No task-owned path was created at a drive root.
+- Filesystem/model/runtime/process/network/audio/Project/Product effects: none. Native installed identity, TASK-101 private import/load lease, inference, private audio, Release, Deploy and Production remain prohibited.
+- DEV-4 independent Critic and Tester review is required before C1 acceptance.

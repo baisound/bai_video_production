@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C_PENDING / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -56,3 +56,47 @@ See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md) for s
 - Primary focused + direct dependency regression: `PASS`, 120 tests. Independent Tester: `PASS`, 63 tests plus 61 in-memory adversarial assertions; schema self-validation/mirror, five ECMAScript patterns and nine calendar vectors also passed.
 - Independent DEV-4 Critic/Judge after one bounded correction cycle: `ACCEPT`, final C/H/M/L `0/0/0/0`. Closed findings were typed-record constructor/compiler validation bypass, missing cross-field schema conditions/calendar grammar, and excessive-depth `RecursionError` normalization.
 - The implementation is deterministic, body-free and effect-free. It creates no file/model/runtime/network/process/audio effect and grants no load, inference, replay or consumer-live authority. Native installed-model identity, private audio, LVC-C consumer currentness/readback and canonical Product integration remain `NOT_CONFIRMED` and outside this unit.
+
+## LVC-C1 source consumer-readback authority — 2026-09-29
+
+After TASK-102 PMST-I2 merge closure, the Owner instructed `次へ`. Together with the existing TASK-100 delivery-owner/implementation intent, this binds the source-only LVC-C1 Atomic Unit in [the C1 contract](lvc-c1-consumer-readback-contract-r0.md). C1 may add only the exact Task record, contract, source, canonical/package schema, focused test and external Evidence paths listed there.
+
+C1 must bind accepted TASK-100 admission to exact TASK-074 fine-tuned selection/currentness and TASK-014 non-executing preflight. It may return evidence-only `consumer_live_eligible` for the existing Owner Human Gate, but must keep execution/load/runtime/inference/body/path/resource effects false or zero. Existing TASK-014/TASK-074/catalog sources are read-only dependencies. Native installed identity, TASK-101 private import/load lease, real model access, inference, private audio, Project/Asset/Timeline mutation, Release, Deploy and Production remain outside this authority.
+
+## LVC-C1 Builder checkpoint — 2026-09-29
+
+- Added one pure consumer compiler/readback, a strict canonical schema with byte-identical package mirror, and focused adversarial tests. Existing TASK-014, TASK-074 and TASK-013 catalog source remain unchanged.
+- Positive eligibility requires exact TASK-100 candidate/assessment/admission/inventory lineage, fine-tuned TASK-074 selection plus runnable currentness, and a READY non-executing TASK-014 preflight. Exact Project, voice-profile, model-candidate, installed-binding, license, model-pair, engine, producer-readback and validity-time coordinates are rebound at the consumer boundary.
+- `consumer_live_eligible=true` is evidence-only eligibility for the existing Owner Human Gate. Authority/load/runtime/model/inference/body/path flags remain false and `resource_effect_count=0`.
+- TASK-014's publicly constructible historical preflight dataclass is always reparsed through its producer parser, closing hand-built decision/classification bypass.
+- Initial focused execution was `24 PASS / 1 FAIL`; the sole failure was an invalid schema file caused by a patch-marker generation error, not a compiler assertion. The schema and mirror were replaced before further verification.
+- Final C1 focused execution: `25 PASS`. TASK-100 admission/C1 plus direct TASK-074 and TASK-014 regression after constructor-bypass hardening: `130 PASS`.
+- Resolved OS-temp roots: `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-001` through `-004`. No task-owned path was created at a drive root.
+- Filesystem/model/runtime/process/network/audio/Project/Product effects: none. Native installed identity, TASK-101 private import/load lease, inference, private audio, Release, Deploy and Production remain prohibited.
+- DEV-4 independent Critic and Tester review is required before C1 acceptance.
+
+## LVC-C1 Recovery R1 checkpoint — 2026-09-29
+
+The frozen Builder commit `436b9c1279768fe7047d6bc3ca58b975957b94d9` received independent `REVISE`: Critic C/H/M/L `0/3/1/0`; Tester `FAIL / REVISE` C/H/M/L `0/2/0/1`. The accepted correction scope remains inside the exact C1 source/test/docs files.
+
+Recovery R1 closes the confirmed findings:
+
+- final trusted evaluation now rechecks TASK-074 Consent expiry and rejects the exact boundary and later values;
+- TASK-100 Consent is rebound to TASK-074 selection, and every selection/currentness duplicated coordinate is compared exactly, including Project manifest, Consent, ModelCandidate currentness and timestamps;
+- the public compiled-admission wrapper must contain canonical nested types and must equal a fresh candidate/assessment recompilation, preventing forged admission/inventory dictionaries;
+- TASK-014 capability probe is rebound to the TASK-100 capability-map digest;
+- new EOF blank-line warnings are removed.
+
+The Critic's Medium schema-escape candidate was not reproduced: JSON decode produces the intended `\.` regex, an ordinary `.123Z` timestamp passes, and a backslash form is rejected. The package mirror remains byte-identical. This candidate is closed by direct and independent test evidence without changing the correct regex.
+
+Post-Recovery verification is C1 `35 PASS`, C1 plus direct TASK-100/TASK-074/TASK-014 regression `139 PASS`, and broader TASK-100/TASK-074/TASK-014 owner regression `421 PASS`. Full C1 diff-check and compile are `PASS`. Resolved OS-temp roots are `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-006` through `-008`. No dependency installation or Product/native/private/model/audio effect occurred.
+
+## LVC-C1 independent acceptance — 2026-09-29
+
+- Frozen Recovery HEAD: `358263fec0b6d8272db01564e95b5ac60010b647` on `codex/task-100-lvc-c-source`; exact six changed repository paths and clean worktree confirmed.
+- Independent DEV-4 Critic: `ACCEPT`, C/H/M/L `0/0/0/0`; all prior Consent-expiry, canonical-coordinate and compiled-wrapper findings are closed. The prior schema-escape candidate was withdrawn after direct decoded-regex verification.
+- Independent DEV-4 Tester: `PASS / ACCEPT`, C/H/M/L `0/0/0/0`; direct dependency regression `139 PASS` and independent adversarial checks `29 PASS`.
+- Tester confirmed Consent expiry just-before/boundary behavior, all 13 duplicated selection/currentness coordinates, forged admission/inventory wrapper rejection, TASK-014 probe-hash binding, schema fractional timestamp positive/negative vectors, byte-identical schema mirror, exact-six scope and clean frozen HEAD.
+- Independent output root `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-tester-r1-20260929-001` remained uncreated with no residual artifact. No install, native/private/model/runtime, filesystem Product, Project, audio or network effect occurred.
+
+LVC-C1 source acceptance closes only the deterministic body-free consumer-readback Atomic Unit. It does not authorize Product integration or LVC-C2 native installed-identity validation; both remain unstarted and require separately bound authority.

@@ -1,12 +1,12 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `DESIGN_ONLY_ALLOCATION / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R0_DESIGN_IN_REVIEW / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
 - Design coordinator: this voice-integration thread / TASK-073. Implementation owner/Allowed Files and native authority are not allocated by the separate Owner takeover of connection TASK-099/100.
 - ID101 is unused at baseline main `e41110c8`; serialize canonical metadata allocation with a fresh ID/lock audit.
-- Allowed now: this task definition only. No private file read/copy/encryption/load, source/schema/test or external-project change.
+- Allowed for IMC-D R0: this task definition and `imc-d-existing-model-import-custody-contract-r0.md` only. No private file read/copy/encryption/load, source/schema/test or external-project change.
 
 ## Goal and boundary
 
@@ -33,3 +33,9 @@ Exit requires current protected import/readback +046 model approval/binding+curr
 This allocation is design-only. Actual import/load/key/DACL/native effects require an exact authorized implementation/native unit and approved storage/retention policy. Training/download/paid/cloud/Asset/Timeline/Export/Release/Deploy/Production remain out of scope. No implicit implementation takeover or third private-effect approval is inferred from the two-connection instruction.
 
 See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md). TASK-101 replaces084 on the delivery ledger, leaving17 scoped lanes; it is not an eighteenth training dependency.
+
+## IMC-D R0 design authority — 2026-09-29
+
+After accepted TASK-100 LVC-C2-D0 identified TASK-101 custody/readback and a distinct installed-identity observation capability as direct prerequisites, the Owner instructed this voice-integration thread to continue. TASK-101 already assigns this thread as design coordinator. That instruction binds only the design exact2 in [the IMC-D contract](imc-d-existing-model-import-custody-contract-r0.md).
+
+Repository Allowed Files are exactly this Task record and the new design. External Evidence is limited to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-d-r0\<run-id>\`. No implementation-owner allocation, source/schema/test mutation, WSL/private model read, copy, encryption, key/DACL operation, protected destination creation, lease/capability issuance, model load, inference, Product/Shell integration, Release, Deploy or Production authority is created.

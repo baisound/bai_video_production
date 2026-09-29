@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/audio-round-trip-history.schema.json",
+  "title": "TASK-035 Audio Round Trip History",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshot_version", "task_owner", "project_id", "store_revision", "entries",
+    "audio_body_embedded", "external_execution_authority",
+    "asset_promotion_authority", "resolve_mutation_authority",
+    "publication_authority", "snapshot_sha256"
+  ],
+  "properties": {
+    "snapshot_version": {"const": "1.0.0"},
+    "task_owner": {"const": "TASK-035"},
+    "project_id": {"$ref": "#/$defs/id"},
+    "store_revision": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "https://bai.local/schemas/reaper-audio-finishing.schema.json#/$defs/AudioRoundTripManifest"
+      }
+    },
+    "audio_body_embedded": {"const": false},
+    "external_execution_authority": {"const": false},
+    "asset_promotion_authority": {"const": false},
+    "resolve_mutation_authority": {"const": false},
+    "publication_authority": {"const": false},
+    "snapshot_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

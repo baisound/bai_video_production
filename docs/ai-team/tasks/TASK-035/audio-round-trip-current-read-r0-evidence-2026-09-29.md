@@ -2,7 +2,7 @@
 
 - Date: 2026-09-29
 - Development profile: DEV-4 Foundation Critical
-- Status: `IMPLEMENTED / FOCUSED_PASS / HOSTED_PENDING / EFFECT0`
+- Status: `HOSTED_CLOSED / POST_MAIN_PASS / EFFECT0`
 - Base: `origin/main` at `1d9f4a471ea8540a9fb2df19a0e2cd933e8374e2`
 - Branch: `codex/task-035-round-trip-current-read-r0`
 - Worktree: `C:\Users\user\.codex\worktrees\1a51\bai-video-production\task035-r1-current-read-worktree`
@@ -50,7 +50,19 @@ the completion ledger, release, deploy or activate Production.
   TASK-035 manifest definition.
 - Static changed-source inspection found no audio or external-execution
   primitive.
-- Hosted clean-environment checks remain required and pending.
+- PR #596 exact head `ffb4d7b02a230b53e760d72cfa3283346453f5b2`
+  passed all `9 / 9` hosted checks and merged at exact main
+  `a51d3b625d2106702f35b56e80751352f09e0659`.
+- Exact-main downstream regression: `176 / 176 PASS`.
+- The automatic push workflows did not start, so post-main CI was manually
+  dispatched as run `36550251027`. All six environments passed on attempt 2;
+  attempt 1 had one unrelated TASK-036 JavaScript subprocess timeout on
+  Windows Python 3.13 after `8953 PASS`.
+- Manually dispatched Security run `36550257937` passed dependency audit. Its
+  secret scan examined all 1366 historical commits and reported existing test
+  placeholders from August/early September; none is in this unit's eight-file
+  diff. The exact PR-diff Security run `36547747006` passed both dependency and
+  secret scans.
 
 ## Remaining TASK-041 Audio Completion R2 dependencies
 

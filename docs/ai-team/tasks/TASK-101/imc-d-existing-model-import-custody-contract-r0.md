@@ -149,7 +149,22 @@ All tables are exact: no additional keys are permitted and no field is nullable 
 
 The closed reason-code enum is `CURRENT`, `STALE`, `REVOKED`, `REVOCATION_UNKNOWN`, `INTENT_MISMATCH`, `RECEIPT_MISMATCH`, `INVENTORY_MISMATCH`, `PHYSICAL_IDENTITY_MISMATCH`, `PAIR_IDENTITY_MISMATCH`, `RUNTIME_IDENTITY_MISMATCH` and `COMPLETION_UNKNOWN`. For `CURRENT`, `revocation_state=NOT_REVOKED`, both current inventory/physical identity digests must equal a successful native reread, and `reason_codes` is exactly `["CURRENT"]`. `STALE` requires `STALE`; `REVOKED` requires `REVOKED`; `IDENTITY_MISMATCH` requires at least one `*_MISMATCH`; `COMPLETION_UNKNOWN` requires `COMPLETION_UNKNOWN` or `REVOCATION_UNKNOWN`. No caller text is accepted.
 
-`ExistingModelImportCapabilityAuditV1` is the only serializable capability lifecycle record. The private capability itself is never serializable. The audit contains exactly: constant version/type/owner, `capability_id`, `purpose` (`INSTALLED_IDENTITY_OBSERVATION` or `LOCAL_NARRATION_INFERENCE`), `operation_id`, `consumer_task`, `custody_readback_sha256`, `model_pair_sha256`, `state` (`ISSUED`, `OPEN_STARTED`, `CONSUMED`, `EXPIRED`, `COMPLETION_UNKNOWN`, `FAILED_CLOSED`), nullable `predecessor_sha256`, `issued_at`, `expires_at`, nullable `completed_at`, and `audit_sha256`. `completed_at` is null only for `ISSUED` and `OPEN_STARTED`; terminal states require it. Exact duplicate requests return only the current audit record and never another capability.
+`ExistingModelImportCapabilityAuditV1` is the only serializable capability lifecycle record. The private capability itself is never serializable. It contains exactly:
+
+| field | type / rule |
+|---|---|
+| `contract_version`, `record_type`, `canonical_owner_task` | constants `EXISTING_MODEL_IMPORT_CAPABILITY_AUDIT_V1`, `ExistingModelImportCapabilityAuditV1`, `TASK-101` |
+| `capability_id`, `operation_id` | `Id`; unchanged across one lifecycle |
+| `purpose` | enum `INSTALLED_IDENTITY_OBSERVATION`, `LOCAL_NARRATION_INFERENCE`; unchanged |
+| `consumer_task` | constant `TASK-100` for observation; constant `TASK-075` for inference |
+| `custody_readback_sha256`, `model_pair_sha256` | `Digest`; unchanged and exact current inputs |
+| `state` | enum `ISSUED`, `OPEN_STARTED`, `CONSUMED`, `EXPIRED`, `COMPLETION_UNKNOWN`, `FAILED_CLOSED` |
+| `predecessor_sha256` | nullable `Digest`; null exactly for the initial `ISSUED` record, otherwise the exact prior audit digest |
+| `issued_at`, `expires_at`, `transitioned_at` | `Timestamp`; `issued_at < expires_at`, `issued_at <= transitioned_at`; initial `ISSUED` has `transitioned_at=issued_at`; `OPEN_STARTED` requires `transitioned_at < expires_at`; `EXPIRED` requires `transitioned_at >= expires_at` |
+| `completed_at` | nullable `Timestamp`; null exactly for `ISSUED` and `OPEN_STARTED`; every terminal state requires `completed_at=transitioned_at` |
+| `audit_sha256` | canonical digest defined in section 7 |
+
+Every noninitial record must keep all immutable fields and time bounds byte-for-byte equal to its predecessor except `state`, `predecessor_sha256`, `transitioned_at`, `completed_at` and `audit_sha256`. Exact duplicate requests return only the current audit record and never another capability.
 
 ## 5. Capability separation
 
@@ -217,9 +232,10 @@ No task-owned path may be a drive root or direct child of a drive root. The exac
 
 | observed boundary | terminal result | required behavior |
 |---|---|---|
-| parser, authority, currentness, capability, containment or source validation fails before any native create/write | `NO_EFFECT` | open/create/write count zero |
-| destination already exists, belongs to another operation or has unknown ownership | `NO_EFFECT` | preserve it; no overwrite/delete/repair |
-| source handles opened but destination operation-owned temporary object not created | `FAILED_CLOSED` | close handles; no destination artifact |
+| parser, authority, currentness, capability, containment or source preflight fails before the first native open/read/create/write | `NO_EFFECT` | open/read/create/write count zero |
+| destination collision/foreign/unknown ownership is proved by preflight before the first native open/read/create/write | `NO_EFFECT` | preserve it; open/read/create/write count zero |
+| one or more source handles were opened/read and source validation or destination preflight then fails before any destination temporary/final object exists | `FAILED_CLOSED` | all opened handles must have exact close/identity readback; no destination artifact |
+| a source handle was opened/read and its close/identity readback is uncertain, even though no destination object is known | `COMPLETION_UNKNOWN` | preserve evidence; prohibit retry |
 | only exact operation-owned temporary objects exist and failure/current-operation ownership is fully proved | `FAILED_CLOSED` | cleanup is optional only under separately authorized exact-identity policy; otherwise preserve and record residual |
 | temporary ownership/identity or cleanup completion is uncertain | `COMPLETION_UNKNOWN` | preserve, record, prohibit automatic retry |
 | any final namespace entry may have appeared, or no-replace result/flush/directory durability is ambiguous | `COMPLETION_UNKNOWN` | preserve all objects; no retry or alternate target |

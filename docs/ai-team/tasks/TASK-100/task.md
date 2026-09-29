@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_D0_DESIGN_IN_REVIEW / LVC_C2_NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -100,3 +100,13 @@ Post-Recovery verification is C1 `35 PASS`, C1 plus direct TASK-100/TASK-074/TAS
 - Independent output root `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-tester-r1-20260929-001` remained uncreated with no residual artifact. No install, native/private/model/runtime, filesystem Product, Project, audio or network effect occurred.
 
 LVC-C1 source acceptance closes only the deterministic body-free consumer-readback Atomic Unit. It does not authorize Product integration or LVC-C2 native installed-identity validation; both remain unstarted and require separately bound authority.
+
+## LVC-C2-D0 native installed-identity boundary design — 2026-09-29
+
+After PR #595 merged LVC-C1 into main `1d9f4a471ea8540a9fb2df19a0e2cd933e8374e2`, the Owner instructed this delivery thread to continue. The existing end-to-end TASK-100 implementation intent binds only the design-only `LVC-C2-D0` Atomic Unit in [the C2 design](lvc-c2-native-installed-identity-design-r0.md).
+
+Allowed repository files are exactly this Task record and the new C2 design. No source, schema, test, producer Task, current-state/index, private model/audio, native runtime, Project, Release, Deploy or Production effect is authorized.
+
+The design resolves a canonical-owner collision before implementation: current TASK-063 owns the installer-relative montage-learning Bridge and cannot issue GPT-SoVITS model installation identity. TASK-046 retains ModelArtifactBinding/H4/Consent/rights, TASK-101 must own protected existing-model import custody/readback and one-operation load lease, TASK-066 retains compute/no-network proof, TASK-075 retains inference execution, and TASK-100 may consume only their reviewed body-free identities. TASK-093's Qwen Owner Voice Runtime installation is not evidence that the selected GPT-SoVITS pair is installed.
+
+LVC-C2 pure or native implementation remains blocked until an owning producer, exact ABI/version, Allowed Files and effect-specific Human Gate are separately bound. Product/Shell integration remains outside TASK-100 and must be allocated to its owning TASK-036/073/014/074 unit.

@@ -1,6 +1,6 @@
 # TASK-100 LVC-C2-D0 — Native Installed-Identity Boundary Design R0
 
-Status: `DESIGN_IN_REVIEW / SOURCE_NOT_ALLOCATED / NATIVE_BLOCKED`
+Status: `DESIGN_ACCEPTED / SOURCE_NOT_ALLOCATED / NATIVE_BLOCKED`
 
 ## 1. Goal
 
@@ -113,3 +113,11 @@ This design is accepted only when independent DEV-4 review confirms:
 - future native private-body reads and output roots require exact authorization;
 - Product/Shell wiring remains with its canonical owners;
 - Critical and High findings are zero.
+
+## 9. Acceptance record
+
+The initial independent Critic returned C/H/M/L `0/1/2/0`. Recovery R1 explicitly superseded the obsolete TASK-063/036 model-proof wording without changing the V1 ABI, required exact C1-and-C2 final eligibility, introduced the dedicated non-load `INSTALLED_IDENTITY_OBSERVATION` capability, and made external public-safe Evidence/readback mandatory after every future native run.
+
+Frozen Recovery HEAD `a1bc60cabc7eaf6d20f93216dcc2ee301b4af957` received independent Critic `ACCEPT` and Tester `PASS`, both C/H/M/L `0/0/0/0`. Exact-two scope, clean branch, resolved relative links, ASCII filenames and `git diff --check` passed. Code and native tests were not run because no C2 source or native implementation is allocated.
+
+This acceptance does not authorize C2-I source, C2-N native observation, private model-body reads, model load, inference, audio handling, Product/Shell integration, Release, Deploy or Production.

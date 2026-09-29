@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_D0_DESIGN_IN_REVIEW / LVC_C2_NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_D0_DESIGN_ACCEPTED / LVC_C2_SOURCE_UNALLOCATED / LVC_C2_NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -111,4 +111,6 @@ The design resolves a canonical-owner collision before implementation: current T
 
 LVC-C2 pure or native implementation remains blocked until an owning producer, exact ABI/version, Allowed Files and effect-specific Human Gate are separately bound. Product/Shell integration remains outside TASK-100 and must be allocated to its owning TASK-036/073/014/074 unit.
 
-Cycle-1 independent Critic review recorded C/H/M/L `0/1/2/0`. Recovery keeps the V1 `installed_binding_sha256` meaning unchanged, requires an explicit C1-and-C2 final eligibility rule, separates observation capability from the inference load lease, and requires durable external Evidence after every future native run. Re-review is required before design acceptance.
+Cycle-1 independent Critic review recorded C/H/M/L `0/1/2/0`. Recovery keeps the V1 `installed_binding_sha256` meaning unchanged, requires an explicit C1-and-C2 final eligibility rule, separates observation capability from the inference load lease, and requires durable external Evidence after every future native run.
+
+Recovery HEAD `a1bc60cabc7eaf6d20f93216dcc2ee301b4af957` received independent DEV-4 Critic `ACCEPT` and Tester `PASS`, both C/H/M/L `0/0/0/0`. Exact-two scope, clean worktree, relative links, ASCII filenames and diff-check passed. LVC-C2-D0 is accepted as design only; source/native implementation and Product integration remain unallocated or blocked.

@@ -1,8 +1,13 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from ai_video_production.audio_placement_application import Task026AudioPlacementApplication
+from ai_video_production.audio_placement_application import (
+    AudioPlacementCurrentState,
+    Task026AudioPlacementApplication,
+)
+from ai_video_production.audio_placement_store import AudioPlacementHistoryStore
 from ai_video_production.audio_workspace import AudioWorkspaceRegistry, PlacementDecision, PlacementReview
 from ai_video_production.audio_workspace_store import AudioWorkspaceSnapshotStore
 from ai_video_production.errors import ProductError
@@ -16,7 +21,7 @@ from ai_video_production.production_control import (
     SlotKind,
 )
 from ai_video_production.production_control_store import ProductionControlSnapshotStore
-from ai_video_production.serialization import sha256_bytes
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.timebase import FrameRate
 from ai_video_production.timeline_audio import AudioSourceBinding, AudioSourceIntent, MusicPlan, TimelineAudioPlan
 from ai_video_production.timeline_audio_application import Task042TimelineAudioApplication
@@ -103,6 +108,18 @@ def prepare(app: Task026AudioPlacementApplication, snapshot: dict) -> dict:
     )
 
 
+def persist_compilation(app: Task026AudioPlacementApplication) -> tuple[str, str, dict]:
+    confirmation = prepare(app, app.snapshot())
+    result = app.apply_compilation(confirmation_id=confirmation["confirmation_id"])
+    compilation_id = result["apply_result"]["compilation_id"]
+    history = AudioPlacementHistoryStore.load(
+        app.history_path, expected_project_id="project-1"
+    )
+    record = history.records[compilation_id]
+    record_sha256 = sha256_bytes(canonical_json_bytes(record.to_dict()))
+    return compilation_id, record_sha256, result["snapshot"]
+
+
 def test_compile_persists_restarts_current_and_is_idempotent(tmp_path: Path) -> None:
     setup_runnable_project(tmp_path)
     app = Task026AudioPlacementApplication(
@@ -160,3 +177,129 @@ def test_unbound_history_is_rejected(tmp_path: Path) -> None:
     app = Task026AudioPlacementApplication(project_root=tmp_path, project_id="project-1")
     with pytest.raises(ProductError, match="Unbound"):
         app.snapshot()
+
+
+def test_owner_current_read_returns_exact_persisted_current_record(tmp_path: Path) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "read-current"
+    )
+    compilation_id, record_sha256, snapshot = persist_compilation(app)
+    result = app.read_current_compilation(
+        compilation_id=compilation_id,
+        expected_record_sha256=record_sha256,
+    )
+    assert result.state is AudioPlacementCurrentState.CURRENT
+    assert result.record is not None
+    assert result.record.compilation_id == compilation_id
+    assert result.record_sha256 == record_sha256
+    assert result.project_manifest_sha256 == snapshot["project_manifest_sha256"]
+    assert result.owner_application_read is True
+    assert result.owner_record_origin_authenticated is True
+    assert result.currentness_verified is True
+    public = result.to_dict()
+    assert "task026_plan" not in public
+    assert all(public[field] is False for field in (
+        "provider_execution_started", "paid_execution_authorized", "media_write_started",
+        "task010_execution_started", "resolve_mutation_started", "cubase_mutation_started",
+    ))
+
+
+def test_owner_current_read_reports_expected_record_and_upstream_drift(tmp_path: Path) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "read-stale"
+    )
+    compilation_id, record_sha256, snapshot = persist_compilation(app)
+    wrong_record = app.read_current_compilation(
+        compilation_id=compilation_id,
+        expected_record_sha256=ASSET_SHA,
+    )
+    assert wrong_record.state is AudioPlacementCurrentState.STALE
+    assert wrong_record.reason_codes == ("COMPILATION_RECORD_CHANGED",)
+
+    audio = AudioWorkspaceSnapshotStore.load(tmp_path / "audio-workspace.json")
+    audio.add_placement(PlacementReview(
+        "review-2", "candidate-1", 0, 300, "BGM", PlacementDecision.REVIEW,
+    ))
+    AudioWorkspaceSnapshotStore.save(
+        tmp_path / "audio-workspace.json",
+        audio,
+        expected_previous_snapshot_sha256=snapshot["audio_snapshot_sha256"],
+    )
+    upstream_stale = app.read_current_compilation(
+        compilation_id=compilation_id,
+        expected_record_sha256=record_sha256,
+    )
+    assert upstream_stale.state is AudioPlacementCurrentState.STALE
+    assert "AUDIO_SNAPSHOT_CHANGED" in upstream_stale.reason_codes
+    assert upstream_stale.currentness_verified is False
+
+
+def test_owner_current_read_is_stale_while_project_recovery_is_required(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "read-recovery"
+    )
+    compilation_id, record_sha256, _ = persist_compilation(app)
+    monkeypatch.setattr(
+        app._save_coordinator,
+        "recovery_status",
+        lambda _root: {
+            "required": True,
+            "state": "RECOVERY_REQUIRED",
+            "transaction_id": "tx-recovery",
+        },
+    )
+    result = app.read_current_compilation(
+        compilation_id=compilation_id,
+        expected_record_sha256=record_sha256,
+    )
+    assert result.state is AudioPlacementCurrentState.STALE
+    assert result.reason_codes == ("PROJECT_RECOVERY_REQUIRED",)
+    assert result.owner_record_origin_authenticated is True
+    assert result.currentness_verified is False
+
+
+def test_owner_current_read_distinguishes_missing_record(tmp_path: Path) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(project_root=tmp_path, project_id="project-1")
+    result = app.read_current_compilation(
+        compilation_id="audio-placement-" + "0" * 24,
+        expected_record_sha256=ASSET_SHA,
+    )
+    assert result.state is AudioPlacementCurrentState.NOT_FOUND
+    assert result.reason_codes == ("COMPILATION_NOT_FOUND",)
+    assert result.owner_application_read is True
+    assert result.owner_record_origin_authenticated is False
+    assert result.currentness_verified is False
+
+
+def test_owner_current_read_rejects_forged_seal_and_effect_claim(tmp_path: Path) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "read-sealed"
+    )
+    compilation_id, record_sha256, _ = persist_compilation(app)
+    result = app.read_current_compilation(
+        compilation_id=compilation_id,
+        expected_record_sha256=record_sha256,
+    )
+    with pytest.raises(ValueError, match="owner application"):
+        replace(result, _issuer_seal=object())
+    with pytest.raises(ValueError, match="effect authority"):
+        replace(result, media_write_started=True)
+
+
+@pytest.mark.parametrize("compilation_id", ["", "placement-1", "audio-placement-xyz", 1])
+def test_owner_current_read_rejects_invalid_identity(tmp_path: Path, compilation_id) -> None:
+    setup_runnable_project(tmp_path)
+    app = Task026AudioPlacementApplication(project_root=tmp_path, project_id="project-1")
+    with pytest.raises(ProductError) as exc:
+        app.read_current_compilation(
+            compilation_id=compilation_id,
+            expected_record_sha256=ASSET_SHA,
+        )
+    assert exc.value.code == "ERR_AUDIO_PLACEMENT_COMPILATION_ID_INVALID"

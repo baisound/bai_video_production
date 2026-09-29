@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R0_DESIGN_IN_REVIEW / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R2_DESIGN_ACCEPTED_WITH_EXPLICIT_IMC_I_SOURCE_GATE / IMC_I_BLOCKED_PENDING_CAPABILITY_AUDIT_CHAIN_TIME_FREEZE / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -43,3 +43,7 @@ Repository Allowed Files are exactly this Task record and the new design. Extern
 Cycle-1 independent Critic review recorded C/H/M/L `0/1/0/0`: implementation start was not explicitly gated on a separately frozen exact ABI/failure matrix. Recovery R1 freezes those details inside the same exact2 design rather than adding another Task, and makes independent acceptance of this exact design revision a prerequisite to owner allocation and IMC-I source start.
 
 Recovery R1 re-review recorded Critic `0/1/1/0` and Tester `0/1/1/0`. The bounded R2 correction fully specifies the capability-audit constants/types/conditional nullability/timestamp order and makes pre-open, post-open and ambiguous native failure rows mutually exclusive. One final re-review is required; any remaining Critical/High finding escalates rather than starting implementation.
+
+Frozen R2 HEAD `272cbb84d55332c539b327c06fa88a42f19a2b5d` received Critic C/H/M/L `0/0/1/0` and Tester `PASS / ACCEPT`, `0/0/0/0`. The DEV-4 Judge accepted R2 as design because the declared design threshold is Critical/High zero, but imposed an explicit source gate for the real Medium finding: noninitial capability-audit records do not yet require `predecessor.transitioned_at <= transitioned_at`. Accepted R2 design payload SHA-256 is `05df814ba587f57d06bab4fbbbed0ea77046b0de67a77347305a6c8d9cc0748b`.
+
+Acceptance is not implementation allocation. IMC-I owner allocation and every source/schema/test mutation remain blocked until the Owner authorizes a narrow design-only R3 erratum in the same exact2, the monotonic predecessor-time condition is frozen, and independent Critic/Tester/Judge accept the revised design digest.

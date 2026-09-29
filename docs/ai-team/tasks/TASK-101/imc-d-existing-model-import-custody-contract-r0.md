@@ -1,6 +1,6 @@
 # TASK-101 IMC-D R0 — Existing Model Import Custody Contract
 
-Status: `DESIGN_IN_REVIEW / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED`
+Status: `R2_DESIGN_ACCEPTED_WITH_EXPLICIT_SOURCE_GATE / IMC_I_BLOCKED_PENDING_CAPABILITY_AUDIT_CHAIN_TIME_FREEZE / NATIVE_BLOCKED`
 
 ## 1. Goal
 
@@ -309,3 +309,11 @@ Independent design review must verify at least:
 - Product/Shell, model load, inference, audio, Release, Deploy and Production remain outside IMC-D.
 
 Critical and High findings must be zero before IMC-D acceptance.
+
+## 10. R2 acceptance and explicit source gate
+
+Frozen R2 HEAD `272cbb84d55332c539b327c06fa88a42f19a2b5d` received independent Critic C/H/M/L `0/0/1/0`, Tester `PASS / ACCEPT` at `0/0/0/0`, and DEV-4 Judge `ACCEPT_WITH_EXPLICIT_SOURCE_GATE`. Exact-two scope, clean branch, diff-check, ASCII paths and relative links passed. Code/native tests were not applicable and no external/private effect ran.
+
+The accepted R2 payload SHA-256 is `05df814ba587f57d06bab4fbbbed0ea77046b0de67a77347305a6c8d9cc0748b`. Its one unresolved Medium is exact and non-hidden: a noninitial `ExistingModelImportCapabilityAuditV1` does not yet require `predecessor.transitioned_at <= transitioned_at`, so a digest-linked transition could move backward in time.
+
+This Medium does not cross the design acceptance threshold, which is Critical/High zero, but it blocks implementation. No IMC-I owner allocation or source/schema/test mutation may begin until an Owner-authorized design-only R3 erratum adds the monotonic predecessor-time condition in this exact2 and independent Critic/Tester/Judge accept and record the new design digest. Native/private model reads, import, capability issuance, load, inference and Product integration remain separately blocked.

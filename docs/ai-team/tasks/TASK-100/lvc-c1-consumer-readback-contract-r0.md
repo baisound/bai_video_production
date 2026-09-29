@@ -1,6 +1,6 @@
 # TASK-100 LVC-C1 — Consumer Readback Contract R0
 
-Status: `RECOVERY_R1_IMPLEMENTED / DEV4_REREVIEW_PENDING / NATIVE_IDENTITY_DEFERRED`
+Status: `SOURCE_ACCEPTED / DEV4_ACCEPTED / NATIVE_IDENTITY_DEFERRED`
 
 ## 1. Goal
 
@@ -72,3 +72,9 @@ Non-current operational states return `consumer_live_eligible=false` with closed
 - TASK-100, direct TASK-074 and TASK-014 focused regression passes;
 - no filesystem, process, network, model, audio, Project or Product runtime effect;
 - DEV-4 independent Critic and Tester findings end at Critical/High zero before acceptance.
+
+## 6. Acceptance record
+
+Recovery HEAD `358263fec0b6d8272db01564e95b5ac60010b647` received independent DEV-4 Critic `ACCEPT` and Tester `PASS / ACCEPT`, both with C/H/M/L `0/0/0/0`. Direct TASK-100/TASK-074/TASK-014 regression is `139 PASS`; independent adversarial verification is `29 PASS`. Exact-six scope, clean frozen HEAD, Consent expiry boundary, all 13 repeated selection/currentness coordinates, forged compiled-wrapper rejection, TASK-014 capability-probe binding, fractional timestamp schema vectors and byte-identical schema mirror all passed.
+
+This acceptance is source-only. LVC-C2 native installed identity, Product/Shell integration, private model/audio access, inference, Project mutation, Release, Deploy and Production remain unauthorized and `NOT_CONFIRMED`.

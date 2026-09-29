@@ -1,6 +1,6 @@
 # TASK-100 — Local Voice Model / Runtime Catalog Admission successor
 
-- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_RECOVERY_R1_REVIEW_PENDING / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
+- Status: `LVC_D_R0_DESIGN_ACCEPTED / LVC_I_R0_PURE_IMPLEMENTATION_ACCEPTED / LVC_C1_SOURCE_ACCEPTED / LVC_C2_NATIVE_PENDING / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL (cross-owner model/runtime admission).
 - Owner intent: 2026-09-27 expression Master WAV remaining-Task/detail-design request.
 - Responsibility predecessor: TASK-013 closed creative/catalog foundation; historical Task is not reopened.
@@ -91,4 +91,12 @@ The Critic's Medium schema-escape candidate was not reproduced: JSON decode prod
 
 Post-Recovery verification is C1 `35 PASS`, C1 plus direct TASK-100/TASK-074/TASK-014 regression `139 PASS`, and broader TASK-100/TASK-074/TASK-014 owner regression `421 PASS`. Full C1 diff-check and compile are `PASS`. Resolved OS-temp roots are `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-20260929-006` through `-008`. No dependency installation or Product/native/private/model/audio effect occurred.
 
-One fresh independent Critic/Tester re-review of the Recovery commit is required. Product integration and LVC-C2 native installed-identity validation remain unstarted and unauthorized.
+## LVC-C1 independent acceptance — 2026-09-29
+
+- Frozen Recovery HEAD: `358263fec0b6d8272db01564e95b5ac60010b647` on `codex/task-100-lvc-c-source`; exact six changed repository paths and clean worktree confirmed.
+- Independent DEV-4 Critic: `ACCEPT`, C/H/M/L `0/0/0/0`; all prior Consent-expiry, canonical-coordinate and compiled-wrapper findings are closed. The prior schema-escape candidate was withdrawn after direct decoded-regex verification.
+- Independent DEV-4 Tester: `PASS / ACCEPT`, C/H/M/L `0/0/0/0`; direct dependency regression `139 PASS` and independent adversarial checks `29 PASS`.
+- Tester confirmed Consent expiry just-before/boundary behavior, all 13 duplicated selection/currentness coordinates, forged admission/inventory wrapper rejection, TASK-014 probe-hash binding, schema fractional timestamp positive/negative vectors, byte-identical schema mirror, exact-six scope and clean frozen HEAD.
+- Independent output root `C:\Users\user\AppData\Local\Temp\bvp-task100-lvc-c1-tester-r1-20260929-001` remained uncreated with no residual artifact. No install, native/private/model/runtime, filesystem Product, Project, audio or network effect occurred.
+
+LVC-C1 source acceptance closes only the deterministic body-free consumer-readback Atomic Unit. It does not authorize Product integration or LVC-C2 native installed-identity validation; both remain unstarted and require separately bound authority.

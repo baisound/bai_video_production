@@ -1,6 +1,6 @@
 # TASK-101 IMC-D R0 — Existing Model Import Custody Contract
 
-Status: `R2_DESIGN_ACCEPTED_WITH_EXPLICIT_SOURCE_GATE / IMC_I_BLOCKED_PENDING_CAPABILITY_AUDIT_CHAIN_TIME_FREEZE / NATIVE_BLOCKED`
+Status: `R3_ERRATUM_IN_REVIEW / IMC_I_BLOCKED_PENDING_R3_ACCEPTANCE / NATIVE_BLOCKED`
 
 ## 1. Goal
 
@@ -160,11 +160,11 @@ The closed reason-code enum is `CURRENT`, `STALE`, `REVOKED`, `REVOCATION_UNKNOW
 | `custody_readback_sha256`, `model_pair_sha256` | `Digest`; unchanged and exact current inputs |
 | `state` | enum `ISSUED`, `OPEN_STARTED`, `CONSUMED`, `EXPIRED`, `COMPLETION_UNKNOWN`, `FAILED_CLOSED` |
 | `predecessor_sha256` | nullable `Digest`; null exactly for the initial `ISSUED` record, otherwise the exact prior audit digest |
-| `issued_at`, `expires_at`, `transitioned_at` | `Timestamp`; `issued_at < expires_at`, `issued_at <= transitioned_at`; initial `ISSUED` has `transitioned_at=issued_at`; `OPEN_STARTED` requires `transitioned_at < expires_at`; `EXPIRED` requires `transitioned_at >= expires_at` |
+| `issued_at`, `expires_at`, `transitioned_at` | `Timestamp`; `issued_at < expires_at`, `issued_at <= transitioned_at`; initial `ISSUED` has `transitioned_at=issued_at`; every noninitial record requires `predecessor.transitioned_at <= transitioned_at`; `OPEN_STARTED` requires `transitioned_at < expires_at`; `EXPIRED` requires `transitioned_at >= expires_at` |
 | `completed_at` | nullable `Timestamp`; null exactly for `ISSUED` and `OPEN_STARTED`; every terminal state requires `completed_at=transitioned_at` |
 | `audit_sha256` | canonical digest defined in section 7 |
 
-Every noninitial record must keep all immutable fields and time bounds byte-for-byte equal to its predecessor except `state`, `predecessor_sha256`, `transitioned_at`, `completed_at` and `audit_sha256`. Exact duplicate requests return only the current audit record and never another capability.
+Every noninitial record must keep all immutable fields and time bounds byte-for-byte equal to its predecessor except `state`, `predecessor_sha256`, `transitioned_at`, `completed_at` and `audit_sha256`. Before applying the monotonic time rule, the predecessor must be canonically parsed, its own `audit_sha256` must be recomputed successfully, and `predecessor_sha256` must match that recomputed digest exactly. A missing, malformed, self-digest-invalid or link-mismatched predecessor fails closed before state or timestamp acceptance. Exact duplicate requests return only the current audit record and never another capability.
 
 ## 5. Capability separation
 
@@ -317,3 +317,9 @@ Frozen R2 HEAD `272cbb84d55332c539b327c06fa88a42f19a2b5d` received independent C
 The accepted R2 payload SHA-256 is `05df814ba587f57d06bab4fbbbed0ea77046b0de67a77347305a6c8d9cc0748b`. Its one unresolved Medium is exact and non-hidden: a noninitial `ExistingModelImportCapabilityAuditV1` does not yet require `predecessor.transitioned_at <= transitioned_at`, so a digest-linked transition could move backward in time.
 
 This Medium does not cross the design acceptance threshold, which is Critical/High zero, but it blocks implementation. No IMC-I owner allocation or source/schema/test mutation may begin until an Owner-authorized design-only R3 erratum adds the monotonic predecessor-time condition in this exact2 and independent Critic/Tester/Judge accept and record the new design digest. Native/private model reads, import, capability issuance, load, inference and Product integration remain separately blocked.
+
+## 11. R3 capability-audit chain-time erratum
+
+The Owner authorized a design-only R3 correction in the same exact-two scope. R3 adds one invariant: every noninitial capability-audit record requires `predecessor.transitioned_at <= transitioned_at`, using only a canonically reparsed predecessor whose self-digest and exact digest link have already passed. This prevents a digest-linked lifecycle from moving backward in time and closes the sole R2 Medium without changing any field, enum, digest domain, transition edge, custody rule or authority boundary.
+
+R3 is not accepted merely by this edit. IMC-I source/schema/test mutation remains blocked until the frozen revision receives independent Critic, Tester and DEV-4 Judge acceptance and the accepted design digest is recorded. All native/private effects and Product integration remain separately blocked.

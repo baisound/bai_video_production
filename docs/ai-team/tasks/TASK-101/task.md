@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R2_DESIGN_ACCEPTED_WITH_EXPLICIT_IMC_I_SOURCE_GATE / IMC_I_BLOCKED_PENDING_CAPABILITY_AUDIT_CHAIN_TIME_FREEZE / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_ERRATUM_IN_REVIEW / IMC_I_BLOCKED_PENDING_R3_ACCEPTANCE / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -47,3 +47,9 @@ Recovery R1 re-review recorded Critic `0/1/1/0` and Tester `0/1/1/0`. The bounde
 Frozen R2 HEAD `272cbb84d55332c539b327c06fa88a42f19a2b5d` received Critic C/H/M/L `0/0/1/0` and Tester `PASS / ACCEPT`, `0/0/0/0`. The DEV-4 Judge accepted R2 as design because the declared design threshold is Critical/High zero, but imposed an explicit source gate for the real Medium finding: noninitial capability-audit records do not yet require `predecessor.transitioned_at <= transitioned_at`. Accepted R2 design payload SHA-256 is `05df814ba587f57d06bab4fbbbed0ea77046b0de67a77347305a6c8d9cc0748b`.
 
 Acceptance is not implementation allocation. IMC-I owner allocation and every source/schema/test mutation remain blocked until the Owner authorizes a narrow design-only R3 erratum in the same exact2, the monotonic predecessor-time condition is frozen, and independent Critic/Tester/Judge accept the revised design digest.
+
+## IMC-D R3 design erratum authority — 2026-09-29
+
+After the explicit request to authorize a narrow exact-two R3 design erratum, the Owner instructed this thread to proceed. This authorizes only the two IMC-D design records already listed as Allowed Files. It does not authorize IMC-I source/schema/test mutation, implementation-owner allocation, private model access, native execution, import, capability issuance, model load, inference, Product/Shell integration, Release, Deploy or Production use.
+
+R3 closes the sole R2 Medium by requiring every noninitial `ExistingModelImportCapabilityAuditV1` record to satisfy `predecessor.transitioned_at <= transitioned_at`. The predecessor must first pass canonical parse, self-digest and exact-link validation; only then may its timestamp participate in the monotonic comparison. No other ABI, lifecycle, custody or authority rule changes. IMC-I remains blocked until an independent Critic, Tester and DEV-4 Judge accept the frozen R3 revision and its digest is recorded here.

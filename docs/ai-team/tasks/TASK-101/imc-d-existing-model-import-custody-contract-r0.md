@@ -1,6 +1,6 @@
 # TASK-101 IMC-D R0 — Existing Model Import Custody Contract
 
-Status: `R3_ERRATUM_IN_REVIEW / IMC_I_BLOCKED_PENDING_R3_ACCEPTANCE / NATIVE_BLOCKED`
+Status: `R3_DESIGN_ACCEPTED / IMC_I_SOURCE_GATE_RELEASED_AWAITING_EXACT_IMPLEMENTATION_ALLOCATION / NATIVE_BLOCKED`
 
 ## 1. Goal
 
@@ -323,3 +323,9 @@ This Medium does not cross the design acceptance threshold, which is Critical/Hi
 The Owner authorized a design-only R3 correction in the same exact-two scope. R3 adds one invariant: every noninitial capability-audit record requires `predecessor.transitioned_at <= transitioned_at`, using only a canonically reparsed predecessor whose self-digest and exact digest link have already passed. This prevents a digest-linked lifecycle from moving backward in time and closes the sole R2 Medium without changing any field, enum, digest domain, transition edge, custody rule or authority boundary.
 
 R3 is not accepted merely by this edit. IMC-I source/schema/test mutation remains blocked until the frozen revision receives independent Critic, Tester and DEV-4 Judge acceptance and the accepted design digest is recorded. All native/private effects and Product integration remain separately blocked.
+
+### 11.1 R3 acceptance
+
+Frozen R3 HEAD `4709b274f37448140cb73fe1af5018e8905d4654` on base `84d4fa75fa19bb99519dfb97f541dd0b6bfc7147`, including unit commit `9cb5d58b2c3d4c59871e5d804d5809858b259de6`, received independent Critic `ACCEPT` C/H/M/L `0/0/0/0`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `R2_EXPLICIT_IMC_I_SOURCE_GATE_RELEASED` C/H/M/L `0/0/0/0`. The Tester passed `9/9` normative in-memory chain-time vectors; code/native tests were not applicable. The accepted pre-record design payload SHA-256 is `23ce20e29d4d92b9b2fe5e9b35eb0941fde0fa40ca3ed3d84e0890d805950208`. Exact-two scope, clean branch, diff-check, ASCII paths and relative links passed, with no native/private/model/audio/runtime effect.
+
+The R2 design/ABI source gate is therefore released. This is not implementation authority: IMC-I still requires an explicit implementation owner and exact-five Allowed Files allocation. IMC-N and all private/native import, capability, load, inference and Product integration effects remain separately blocked.

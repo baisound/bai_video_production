@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_ERRATUM_IN_REVIEW / IMC_I_BLOCKED_PENDING_R3_ACCEPTANCE / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_SOURCE_GATE_RELEASED / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -53,3 +53,7 @@ Acceptance is not implementation allocation. IMC-I owner allocation and every so
 After the explicit request to authorize a narrow exact-two R3 design erratum, the Owner instructed this thread to proceed. This authorizes only the two IMC-D design records already listed as Allowed Files. It does not authorize IMC-I source/schema/test mutation, implementation-owner allocation, private model access, native execution, import, capability issuance, model load, inference, Product/Shell integration, Release, Deploy or Production use.
 
 R3 closes the sole R2 Medium by requiring every noninitial `ExistingModelImportCapabilityAuditV1` record to satisfy `predecessor.transitioned_at <= transitioned_at`. The predecessor must first pass canonical parse, self-digest and exact-link validation; only then may its timestamp participate in the monotonic comparison. No other ABI, lifecycle, custody or authority rule changes. IMC-I remains blocked until an independent Critic, Tester and DEV-4 Judge accept the frozen R3 revision and its digest is recorded here.
+
+Frozen R3 HEAD `4709b274f37448140cb73fe1af5018e8905d4654` on current base `84d4fa75fa19bb99519dfb97f541dd0b6bfc7147`, with R3 unit commit `9cb5d58b2c3d4c59871e5d804d5809858b259de6`, received independent Critic `ACCEPT` C/H/M/L `0/0/0/0`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `R2_EXPLICIT_IMC_I_SOURCE_GATE_RELEASED` C/H/M/L `0/0/0/0`. Tester normative in-memory time vectors passed `9/9`; code/native tests were not applicable and no native/private effect ran. The accepted pre-record R3 design payload SHA-256 is `23ce20e29d4d92b9b2fe5e9b35eb0941fde0fa40ca3ed3d84e0890d805950208`.
+
+This acceptance releases only the R2 design/ABI source gate. IMC-I still has no implementation owner, exact Allowed Files or source-mutation authority. A separate Owner/canonical allocation must bind the proposed exact five files before implementation starts. IMC-N and every private model read/copy/encryption/key/DACL/destination/capability/load/inference/Product/Shell/Release/Deploy/Production effect remain blocked.

@@ -1,12 +1,12 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `DESIGN_ONLY_ALLOCATION / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_SOURCE_GATE_RELEASED / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
 - Design coordinator: this voice-integration thread / TASK-073. Implementation owner/Allowed Files and native authority are not allocated by the separate Owner takeover of connection TASK-099/100.
 - ID101 is unused at baseline main `e41110c8`; serialize canonical metadata allocation with a fresh ID/lock audit.
-- Allowed now: this task definition only. No private file read/copy/encryption/load, source/schema/test or external-project change.
+- Allowed for IMC-D R0: this task definition and `imc-d-existing-model-import-custody-contract-r0.md` only. No private file read/copy/encryption/load, source/schema/test or external-project change.
 
 ## Goal and boundary
 
@@ -16,7 +16,7 @@ TASK-046 owns verified historical model/Dataset/training lineage, subject/Consen
 
 ## Proposed import contract and unit order
 
-IMC-D freezes a strict `EXISTING_MODEL_IMPORT` receipt branch. Input is exact046-owned historical provenance reconciliation + current model/profile/Consent/rights/license + immutable pair content identity + runtime/format identity + exact import intent and authorized protected destination. It must preserve verified original training/model identities but must not accept/require an invented current083 reservation, TASK-084 training terminal or H3 TRAINING_START. Unverified historical facts remain NOT_CONFIRMED and block import.
+IMC-D freezes a strict `EXISTING_MODEL_IMPORT` receipt branch. Input is exact046-owned historical provenance reconciliation + current model/profile/Consent/rights/license + immutable pair content identity + runtime/format identity + exact import intent and authorized protected destination. It must preserve verified original training/model identities but must not accept/require an invented current083 reservation, TASK-084 training terminal or H3 TRAINING_START. Unverified historical facts remain NOT_CONFIRMED and block import. The exact field/type/nullability tables, parser limits, digest domains/preimages and failure matrix are frozen by `imc-d-existing-model-import-custody-contract-r0.md`; that exact revision must be independently accepted and recorded here before implementation-owner allocation or IMC-I source start.
 
 Private receipt binds `import_intent_id`, `import_revision`, predecessor import digest, producer/task/version identity, model-pair inventory/hash/size, approved model/runtime/license/rights/Consent provenance, exact protected destination and content/physical inventory references, cipher/key/security policy identities, import commit/readback/currentness coordinates and retention/revocation status. Public projection contains bounded opaque references/digests/status only. Body-free fixture receipt is explicitly `FIXTURE_ONLY`, never trusted readback/load authority. Exact fields/digest preimage/schema/mirror/failure matrix must pass independent review before implementation allocation.
 
@@ -33,3 +33,27 @@ Exit requires current protected import/readback +046 model approval/binding+curr
 This allocation is design-only. Actual import/load/key/DACL/native effects require an exact authorized implementation/native unit and approved storage/retention policy. Training/download/paid/cloud/Asset/Timeline/Export/Release/Deploy/Production remain out of scope. No implicit implementation takeover or third private-effect approval is inferred from the two-connection instruction.
 
 See [delivery plan](../TASK-073/expression-master-wav-delivery-plan-r0.md). TASK-101 replaces084 on the delivery ledger, leaving17 scoped lanes; it is not an eighteenth training dependency.
+
+## IMC-D R0 design authority — 2026-09-29
+
+After accepted TASK-100 LVC-C2-D0 identified TASK-101 custody/readback and a distinct installed-identity observation capability as direct prerequisites, the Owner instructed this voice-integration thread to continue. TASK-101 already assigns this thread as design coordinator. That instruction binds only the design exact2 in [the IMC-D contract](imc-d-existing-model-import-custody-contract-r0.md).
+
+Repository Allowed Files are exactly this Task record and the new design. External Evidence is limited to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-d-r0\<run-id>\`. No implementation-owner allocation, source/schema/test mutation, WSL/private model read, copy, encryption, key/DACL operation, protected destination creation, lease/capability issuance, model load, inference, Product/Shell integration, Release, Deploy or Production authority is created.
+
+Cycle-1 independent Critic review recorded C/H/M/L `0/1/0/0`: implementation start was not explicitly gated on a separately frozen exact ABI/failure matrix. Recovery R1 freezes those details inside the same exact2 design rather than adding another Task, and makes independent acceptance of this exact design revision a prerequisite to owner allocation and IMC-I source start.
+
+Recovery R1 re-review recorded Critic `0/1/1/0` and Tester `0/1/1/0`. The bounded R2 correction fully specifies the capability-audit constants/types/conditional nullability/timestamp order and makes pre-open, post-open and ambiguous native failure rows mutually exclusive. One final re-review is required; any remaining Critical/High finding escalates rather than starting implementation.
+
+Frozen R2 HEAD `272cbb84d55332c539b327c06fa88a42f19a2b5d` received Critic C/H/M/L `0/0/1/0` and Tester `PASS / ACCEPT`, `0/0/0/0`. The DEV-4 Judge accepted R2 as design because the declared design threshold is Critical/High zero, but imposed an explicit source gate for the real Medium finding: noninitial capability-audit records do not yet require `predecessor.transitioned_at <= transitioned_at`. Accepted R2 design payload SHA-256 is `05df814ba587f57d06bab4fbbbed0ea77046b0de67a77347305a6c8d9cc0748b`.
+
+Acceptance is not implementation allocation. IMC-I owner allocation and every source/schema/test mutation remain blocked until the Owner authorizes a narrow design-only R3 erratum in the same exact2, the monotonic predecessor-time condition is frozen, and independent Critic/Tester/Judge accept the revised design digest.
+
+## IMC-D R3 design erratum authority — 2026-09-29
+
+After the explicit request to authorize a narrow exact-two R3 design erratum, the Owner instructed this thread to proceed. This authorizes only the two IMC-D design records already listed as Allowed Files. It does not authorize IMC-I source/schema/test mutation, implementation-owner allocation, private model access, native execution, import, capability issuance, model load, inference, Product/Shell integration, Release, Deploy or Production use.
+
+R3 closes the sole R2 Medium by requiring every noninitial `ExistingModelImportCapabilityAuditV1` record to satisfy `predecessor.transitioned_at <= transitioned_at`. The predecessor must first pass canonical parse, self-digest and exact-link validation; only then may its timestamp participate in the monotonic comparison. No other ABI, lifecycle, custody or authority rule changes. IMC-I remains blocked until an independent Critic, Tester and DEV-4 Judge accept the frozen R3 revision and its digest is recorded here.
+
+Frozen R3 HEAD `4709b274f37448140cb73fe1af5018e8905d4654` on current base `84d4fa75fa19bb99519dfb97f541dd0b6bfc7147`, with R3 unit commit `9cb5d58b2c3d4c59871e5d804d5809858b259de6`, received independent Critic `ACCEPT` C/H/M/L `0/0/0/0`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `R2_EXPLICIT_IMC_I_SOURCE_GATE_RELEASED` C/H/M/L `0/0/0/0`. Tester normative in-memory time vectors passed `9/9`; code/native tests were not applicable and no native/private effect ran. The accepted pre-record R3 design payload SHA-256 is `23ce20e29d4d92b9b2fe5e9b35eb0941fde0fa40ca3ed3d84e0890d805950208`.
+
+This acceptance releases only the R2 design/ABI source gate. IMC-I still has no implementation owner, exact Allowed Files or source-mutation authority. A separate Owner/canonical allocation must bind the proposed exact five files before implementation starts. IMC-N and every private model read/copy/encryption/key/DACL/destination/capability/load/inference/Product/Shell/Release/Deploy/Production effect remain blocked.

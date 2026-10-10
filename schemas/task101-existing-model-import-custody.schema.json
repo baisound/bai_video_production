@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/task101-existing-model-import-custody.schema.json",
+  "title": "TASK-101 Existing Model Import Custody Contract",
+  "oneOf": [
+    { "$ref": "#/$defs/ExistingModelImportIntentV1" },
+    { "$ref": "#/$defs/ExistingModelImportCustodyReceiptV1" },
+    { "$ref": "#/$defs/ExistingModelImportCustodyReadbackV1" },
+    { "$ref": "#/$defs/ExistingModelImportCapabilityAuditV1" }
+  ],
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9]))T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z$"
+    },
+    "PositiveInt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "ByteCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "ArtifactSovits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_sha256", "byte_count", "opaque_source_identity_sha256"],
+      "properties": {
+        "role": { "const": "SOVITS" },
+        "content_sha256": { "$ref": "#/$defs/Digest" },
+        "byte_count": { "$ref": "#/$defs/ByteCount" },
+        "opaque_source_identity_sha256": { "$ref": "#/$defs/Digest" }
+      }
+    },
+    "ArtifactGpt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_sha256", "byte_count", "opaque_source_identity_sha256"],
+      "properties": {
+        "role": { "const": "GPT" },
+        "content_sha256": { "$ref": "#/$defs/Digest" },
+        "byte_count": { "$ref": "#/$defs/ByteCount" },
+        "opaque_source_identity_sha256": { "$ref": "#/$defs/Digest" }
+      }
+    },
+    "ReceiptArtifactSovits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_sha256", "plaintext_byte_count", "source_physical_identity_sha256", "ciphertext_sha256", "ciphertext_byte_count", "destination_physical_identity_sha256"],
+      "properties": {
+        "role": { "const": "SOVITS" },
+        "content_sha256": { "$ref": "#/$defs/Digest" },
+        "plaintext_byte_count": { "$ref": "#/$defs/ByteCount" },
+        "source_physical_identity_sha256": { "$ref": "#/$defs/Digest" },
+        "ciphertext_sha256": { "$ref": "#/$defs/Digest" },
+        "ciphertext_byte_count": { "$ref": "#/$defs/ByteCount" },
+        "destination_physical_identity_sha256": { "$ref": "#/$defs/Digest" }
+      }
+    },
+    "ReceiptArtifactGpt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_sha256", "plaintext_byte_count", "source_physical_identity_sha256", "ciphertext_sha256", "ciphertext_byte_count", "destination_physical_identity_sha256"],
+      "properties": {
+        "role": { "const": "GPT" },
+        "content_sha256": { "$ref": "#/$defs/Digest" },
+        "plaintext_byte_count": { "$ref": "#/$defs/ByteCount" },
+        "source_physical_identity_sha256": { "$ref": "#/$defs/Digest" },
+        "ciphertext_sha256": { "$ref": "#/$defs/Digest" },
+        "ciphertext_byte_count": { "$ref": "#/$defs/ByteCount" },
+        "destination_physical_identity_sha256": { "$ref": "#/$defs/Digest" }
+      }
+    },
+    "ExistingModelImportIntentV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "canonical_owner_task", "import_intent_id", "revision", "predecessor_sha256",
+        "project_manifest_sha256", "voice_profile_revision_sha256", "model_candidate_revision_sha256", "model_artifact_binding_sha256",
+        "h4_approval_sha256", "consent_currentness_sha256", "rights_currentness_sha256", "license_evidence_sha256",
+        "historical_provenance_reconciliation_sha256", "provider_id", "engine_id", "model_id", "runtime_build_sha256",
+        "model_pair_sha256", "artifacts", "protected_destination_class", "cipher_policy_sha256", "key_scope_sha256",
+        "principal_access_policy_sha256", "retention_policy_sha256", "revocation_policy_sha256", "human_import_authority_sha256",
+        "issued_at", "evaluated_at", "expires_at", "intent_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "EXISTING_MODEL_IMPORT_INTENT_V1" },
+        "record_type": { "const": "ExistingModelImportIntentV1" },
+        "canonical_owner_task": { "const": "TASK-101" },
+        "import_intent_id": { "$ref": "#/$defs/Id" },
+        "revision": { "$ref": "#/$defs/PositiveInt" },
+        "predecessor_sha256": { "oneOf": [{ "$ref": "#/$defs/Digest" }, { "type": "null" }] },
+        "project_manifest_sha256": { "$ref": "#/$defs/Digest" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/Digest" },
+        "model_candidate_revision_sha256": { "$ref": "#/$defs/Digest" },
+        "model_artifact_binding_sha256": { "$ref": "#/$defs/Digest" },
+        "h4_approval_sha256": { "$ref": "#/$defs/Digest" },
+        "consent_currentness_sha256": { "$ref": "#/$defs/Digest" },
+        "rights_currentness_sha256": { "$ref": "#/$defs/Digest" },
+        "license_evidence_sha256": { "$ref": "#/$defs/Digest" },
+        "historical_provenance_reconciliation_sha256": { "$ref": "#/$defs/Digest" },
+        "provider_id": { "$ref": "#/$defs/Id" },
+        "engine_id": { "$ref": "#/$defs/Id" },
+        "model_id": { "$ref": "#/$defs/Id" },
+        "runtime_build_sha256": { "$ref": "#/$defs/Digest" },
+        "model_pair_sha256": { "$ref": "#/$defs/Digest" },
+        "artifacts": {
+          "type": "array",
+          "prefixItems": [{ "$ref": "#/$defs/ArtifactSovits" }, { "$ref": "#/$defs/ArtifactGpt" }],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "protected_destination_class": { "const": "BVP_OWNER_VOICE_MODEL_CUSTODY_V1" },
+        "cipher_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "key_scope_sha256": { "$ref": "#/$defs/Digest" },
+        "principal_access_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "retention_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "revocation_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "human_import_authority_sha256": { "$ref": "#/$defs/Digest" },
+        "issued_at": { "$ref": "#/$defs/Timestamp" },
+        "evaluated_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "intent_sha256": { "$ref": "#/$defs/Digest" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "revision": { "const": 1 } }, "required": ["revision"] },
+          "then": { "properties": { "predecessor_sha256": { "type": "null" } } },
+          "else": { "properties": { "predecessor_sha256": { "$ref": "#/$defs/Digest" } } }
+        }
+      ]
+    },
+    "ExistingModelImportCustodyReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "canonical_owner_task", "operation_id", "import_intent_id", "intent_sha256",
+        "project_manifest_sha256", "voice_profile_revision_sha256", "model_candidate_revision_sha256", "model_artifact_binding_sha256",
+        "model_pair_sha256", "runtime_build_sha256", "source_physical_identity_set_sha256", "destination_instance_sha256",
+        "sealed_inventory_sha256", "artifacts", "cipher_backend_sha256", "cipher_policy_sha256", "key_scope_sha256",
+        "principal_access_policy_sha256", "import_event_chain_head_sha256", "seal_receipt_sha256", "durability_receipt_sha256",
+        "physical_readback_sha256", "started_at", "sealed_at", "read_back_at", "expires_at", "completion_state", "receipt_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "EXISTING_MODEL_IMPORT_CUSTODY_RECEIPT_V1" },
+        "record_type": { "const": "ExistingModelImportCustodyReceiptV1" },
+        "canonical_owner_task": { "const": "TASK-101" },
+        "operation_id": { "$ref": "#/$defs/Id" },
+        "import_intent_id": { "$ref": "#/$defs/Id" },
+        "intent_sha256": { "$ref": "#/$defs/Digest" },
+        "project_manifest_sha256": { "$ref": "#/$defs/Digest" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/Digest" },
+        "model_candidate_revision_sha256": { "$ref": "#/$defs/Digest" },
+        "model_artifact_binding_sha256": { "$ref": "#/$defs/Digest" },
+        "model_pair_sha256": { "$ref": "#/$defs/Digest" },
+        "runtime_build_sha256": { "$ref": "#/$defs/Digest" },
+        "source_physical_identity_set_sha256": { "$ref": "#/$defs/Digest" },
+        "destination_instance_sha256": { "$ref": "#/$defs/Digest" },
+        "sealed_inventory_sha256": { "$ref": "#/$defs/Digest" },
+        "artifacts": {
+          "type": "array",
+          "prefixItems": [{ "$ref": "#/$defs/ReceiptArtifactSovits" }, { "$ref": "#/$defs/ReceiptArtifactGpt" }],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "cipher_backend_sha256": { "$ref": "#/$defs/Digest" },
+        "cipher_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "key_scope_sha256": { "$ref": "#/$defs/Digest" },
+        "principal_access_policy_sha256": { "$ref": "#/$defs/Digest" },
+        "import_event_chain_head_sha256": { "$ref": "#/$defs/Digest" },
+        "seal_receipt_sha256": { "$ref": "#/$defs/Digest" },
+        "durability_receipt_sha256": { "$ref": "#/$defs/Digest" },
+        "physical_readback_sha256": { "$ref": "#/$defs/Digest" },
+        "started_at": { "$ref": "#/$defs/Timestamp" },
+        "sealed_at": { "$ref": "#/$defs/Timestamp" },
+        "read_back_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "completion_state": { "const": "SEALED_CURRENT" },
+        "receipt_sha256": { "$ref": "#/$defs/Digest" }
+      }
+    },
+    "ExistingModelImportCustodyReadbackV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "canonical_owner_task", "readback_id", "operation_id", "import_intent_id",
+        "intent_sha256", "receipt_sha256", "destination_instance_sha256", "sealed_inventory_sha256", "current_inventory_sha256",
+        "current_physical_identity_set_sha256", "model_pair_sha256", "runtime_build_sha256", "custody_generation",
+        "revocation_state", "decision", "reason_codes", "evaluated_at", "expires_at", "readback_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "EXISTING_MODEL_IMPORT_CUSTODY_READBACK_V1" },
+        "record_type": { "const": "ExistingModelImportCustodyReadbackV1" },
+        "canonical_owner_task": { "const": "TASK-101" },
+        "readback_id": { "$ref": "#/$defs/Id" },
+        "operation_id": { "$ref": "#/$defs/Id" },
+        "import_intent_id": { "$ref": "#/$defs/Id" },
+        "intent_sha256": { "$ref": "#/$defs/Digest" },
+        "receipt_sha256": { "$ref": "#/$defs/Digest" },
+        "destination_instance_sha256": { "$ref": "#/$defs/Digest" },
+        "sealed_inventory_sha256": { "$ref": "#/$defs/Digest" },
+        "current_inventory_sha256": { "$ref": "#/$defs/Digest" },
+        "current_physical_identity_set_sha256": { "$ref": "#/$defs/Digest" },
+        "model_pair_sha256": { "$ref": "#/$defs/Digest" },
+        "runtime_build_sha256": { "$ref": "#/$defs/Digest" },
+        "custody_generation": { "$ref": "#/$defs/PositiveInt" },
+        "revocation_state": { "enum": ["NOT_REVOKED", "REVOKED", "UNKNOWN"] },
+        "decision": { "enum": ["CURRENT", "STALE", "REVOKED", "IDENTITY_MISMATCH", "COMPLETION_UNKNOWN"] },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "enum": ["CURRENT", "STALE", "REVOKED", "REVOCATION_UNKNOWN", "INTENT_MISMATCH", "RECEIPT_MISMATCH", "INVENTORY_MISMATCH", "PHYSICAL_IDENTITY_MISMATCH", "PAIR_IDENTITY_MISMATCH", "RUNTIME_IDENTITY_MISMATCH", "COMPLETION_UNKNOWN"] }
+        },
+        "evaluated_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "readback_sha256": { "$ref": "#/$defs/Digest" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "CURRENT" } }, "required": ["decision"] },
+          "then": {
+            "properties": {
+              "revocation_state": { "const": "NOT_REVOKED" },
+              "reason_codes": { "const": ["CURRENT"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "STALE" } }, "required": ["decision"] },
+          "then": { "properties": { "reason_codes": { "contains": { "const": "STALE" } } } }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "REVOKED" } }, "required": ["decision"] },
+          "then": { "properties": { "revocation_state": { "const": "REVOKED" }, "reason_codes": { "contains": { "const": "REVOKED" } } } }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "IDENTITY_MISMATCH" } }, "required": ["decision"] },
+          "then": { "properties": { "reason_codes": { "contains": { "enum": ["INTENT_MISMATCH", "RECEIPT_MISMATCH", "INVENTORY_MISMATCH", "PHYSICAL_IDENTITY_MISMATCH", "PAIR_IDENTITY_MISMATCH", "RUNTIME_IDENTITY_MISMATCH"] } } } }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "COMPLETION_UNKNOWN" } }, "required": ["decision"] },
+          "then": { "properties": { "reason_codes": { "contains": { "enum": ["COMPLETION_UNKNOWN", "REVOCATION_UNKNOWN"] } } } }
+        }
+      ]
+    },
+    "ExistingModelImportCapabilityAuditV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "canonical_owner_task", "capability_id", "operation_id", "purpose", "consumer_task",
+        "custody_readback_sha256", "model_pair_sha256", "state", "predecessor_sha256", "issued_at", "expires_at",
+        "transitioned_at", "completed_at", "audit_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "EXISTING_MODEL_IMPORT_CAPABILITY_AUDIT_V1" },
+        "record_type": { "const": "ExistingModelImportCapabilityAuditV1" },
+        "canonical_owner_task": { "const": "TASK-101" },
+        "capability_id": { "$ref": "#/$defs/Id" },
+        "operation_id": { "$ref": "#/$defs/Id" },
+        "purpose": { "enum": ["INSTALLED_IDENTITY_OBSERVATION", "LOCAL_NARRATION_INFERENCE"] },
+        "consumer_task": { "enum": ["TASK-100", "TASK-075"] },
+        "custody_readback_sha256": { "$ref": "#/$defs/Digest" },
+        "model_pair_sha256": { "$ref": "#/$defs/Digest" },
+        "state": { "enum": ["ISSUED", "OPEN_STARTED", "CONSUMED", "EXPIRED", "COMPLETION_UNKNOWN", "FAILED_CLOSED"] },
+        "predecessor_sha256": { "oneOf": [{ "$ref": "#/$defs/Digest" }, { "type": "null" }] },
+        "issued_at": { "$ref": "#/$defs/Timestamp" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "transitioned_at": { "$ref": "#/$defs/Timestamp" },
+        "completed_at": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "audit_sha256": { "$ref": "#/$defs/Digest" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "purpose": { "const": "INSTALLED_IDENTITY_OBSERVATION" } }, "required": ["purpose"] },
+          "then": { "properties": { "consumer_task": { "const": "TASK-100" } } },
+          "else": { "properties": { "consumer_task": { "const": "TASK-075" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "ISSUED" } }, "required": ["state"] },
+          "then": { "properties": { "predecessor_sha256": { "type": "null" }, "completed_at": { "type": "null" } } },
+          "else": { "properties": { "predecessor_sha256": { "$ref": "#/$defs/Digest" } } }
+        },
+        {
+          "if": { "properties": { "state": { "enum": ["ISSUED", "OPEN_STARTED"] } }, "required": ["state"] },
+          "then": { "properties": { "completed_at": { "type": "null" } } },
+          "else": { "properties": { "completed_at": { "$ref": "#/$defs/Timestamp" } } }
+        }
+      ]
+    }
+  }
+}

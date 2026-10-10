@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_SOURCE_GATE_RELEASED / IMPLEMENTATION_OWNER_UNALLOCATED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACTIVE / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -57,3 +57,19 @@ R3 closes the sole R2 Medium by requiring every noninitial `ExistingModelImportC
 Frozen R3 HEAD `4709b274f37448140cb73fe1af5018e8905d4654` on current base `84d4fa75fa19bb99519dfb97f541dd0b6bfc7147`, with R3 unit commit `9cb5d58b2c3d4c59871e5d804d5809858b259de6`, received independent Critic `ACCEPT` C/H/M/L `0/0/0/0`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `R2_EXPLICIT_IMC_I_SOURCE_GATE_RELEASED` C/H/M/L `0/0/0/0`. Tester normative in-memory time vectors passed `9/9`; code/native tests were not applicable and no native/private effect ran. The accepted pre-record R3 design payload SHA-256 is `23ce20e29d4d92b9b2fe5e9b35eb0941fde0fa40ca3ed3d84e0890d805950208`.
 
 This acceptance releases only the R2 design/ABI source gate. IMC-I still has no implementation owner, exact Allowed Files or source-mutation authority. A separate Owner/canonical allocation must bind the proposed exact five files before implementation starts. IMC-N and every private model read/copy/encryption/key/DACL/destination/capability/load/inference/Product/Shell/Release/Deploy/Production effect remain blocked.
+
+## IMC-I implementation allocation — 2026-10-10
+
+The Owner explicitly approved `TASK-101 IMC-I exact5` after the authority-gate audit. PR #599 already merged accepted R3 to canonical main `53e4f0ea8e219b773a2976ba40b956830ff2e1df`. IMC-I continues TASK-101's unchanged import-custody responsibility; it does not allocate a new capability or reopen final history.
+
+Implementation owner is this TASK-101 voice-integration thread. Repository Allowed Files are exactly:
+
+1. `docs/ai-team/tasks/TASK-101/task.md`
+2. `src/ai_video_production/task101_existing_model_import_custody.py`
+3. `schemas/task101-existing-model-import-custody.schema.json`
+4. `src/ai_video_production/schema_resources/task101-existing-model-import-custody.schema.json`
+5. `tests/test_task101_existing_model_import_custody.py`
+
+IMC-I is governed as DEV-4 because it implements a security-sensitive state machine and canonical cross-owner contract. It may implement only strict parsing, exact validation, canonical digests, immutable public records, pure readback/currentness evaluation and an in-memory fake backend. It must remain effect-zero and must not read private audio or model bodies, open filesystem paths, create protected custody, issue a live private capability, load a runtime/model, run inference, call a Provider, download/install anything, connect Product/Shell, or perform Release/Deploy/Production work. IMC-N and IMC-L remain separately gated.
+
+Completion requires exact schema/mirror equality, focused positive/negative/parser/digest/currentness/lifecycle tests, independent Critic and Tester acceptance, DEV-4 Judge closure, exact-five diff/scope validation, and external Evidence write/readback under `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-i\<run-id>\`. Publication is not authorized by this allocation; the unit stops commit-ready unless a separate current publication authority is confirmed.

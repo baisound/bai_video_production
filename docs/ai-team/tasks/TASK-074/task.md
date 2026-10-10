@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / OWNER_ACCEPTANCE_NOT_ISSUED / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "record_type": "TASK036_AUDIO_COMPLETION_R24_OWNER_ACCEPTANCE_V1",
+  "owner_task": "TASK-036",
+  "contract_identity": "TASK036_AUDIO_COMPLETION_EXCLUSIVE_BINDER_CONTRACT_R24_V1",
+  "contract_path": "docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r24.md",
+  "contract_sha256": "31F37532D3110FAF44FCA308D9E398125A5169F8E60F04C74DA9D7F5733A8EC5",
+  "r24_path": "docs/ai-team/tasks/TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md",
+  "r24_sha256": "D9E700201B2C22FD5ACA301623F895E3796E43755E3577AF4269861964519A72",
+  "judge_receipt_path": "docs/ai-team/tasks/TASK-074/design-r24-independent-review-receipt.md",
+  "judge_receipt_sha256": "69A0193458210B7C907E0E642830FBEBADFB39D8F525D72A2BC6B3DE93B3A8F0",
+  "predecessor_owner_status_path": "docs/ai-team/tasks/TASK-036/p-ux-2d1-final-review-readiness-design-critic-judge-2026-08-17.md",
+  "predecessor_owner_status_sha256": "A6A582EBF673C492BCE90F865EEEC7353542A314E53CFB017E876FE373937B18",
+  "source_authority": false,
+  "effect_authority": false,
+  "issued_at": "2026-10-10T21:05:43Z",
+  "record_sha256": "78A998DDD65209EBF108755599A1AD755843F022B692277CADD18DD099BE5BAB"
+}

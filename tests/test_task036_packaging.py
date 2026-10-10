@@ -262,12 +262,15 @@ def _execute_controller_closure_only(tmp_path, *, case="valid"):
     before = {str(path.relative_to(worker)): path.read_bytes()
               for path in worker.rglob("*") if path.is_file()}
     source = (ROOT / "native/task047_obs_voice_capture/scripts/build-controller.ps1").read_text(encoding="utf-8")
+    hash_bootstrap = source[source.index("function Import-ShellOwnedFileHashCommand"):
+                            source.index("$pluginRoot =")]
     containment = source[source.index("function Assert-ContainedPath"):source.index("function Write-NewJson")]
     closure = source[source.index("$workerFiles = @()"):
                      source.index("New-Item -ItemType Directory -Path $controllerOutputRoot")]
     assert "$Compiler" not in closure and "Start-Process" not in closure
     assert "Remove-Item" not in closure and "Set-Content" not in closure
-    assert "Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256" in closure
+    assert "Get-TrustedSha256 -LiteralPath $entry.FullName" in closure
+    assert "Get-FileHash -LiteralPath" not in closure
     assert "Sort-Object path" in closure
 
     def quote(value):
@@ -299,16 +302,16 @@ function Get-ChildItem {
     [pscustomobject]@{FullName=($LiteralPath + '\\' + $name); PSIsContainer=$false; Attributes=0; Length=1}
   }
 }
-function Get-FileHash {
-  param([string]$LiteralPath, [string]$Algorithm)
-  [pscustomobject]@{Hash='SYNTHETIC_DIGEST'}
+function Get-TrustedSha256 {
+  param([string]$LiteralPath)
+  'SYNTHETIC_DIGEST'
 }
 """.replace("ENTRY_COUNT", str(count)).replace("SYNTHETIC_DIGEST", hashlib.sha256(b"synthetic").hexdigest())
     chosen_worker = tmp_path / "outside-build" if case == "outside" else worker
     script = (
         "$ErrorActionPreference='Stop'\n"
         "Import-Module Microsoft.PowerShell.Management,Microsoft.PowerShell.Utility\n"
-        + containment + overrides
+        + hash_bootstrap + containment + overrides
         + "\n$resolvedBuildRoot=" + quote(build)
         + "\n$MeterWorkerBundle=" + quote(chosen_worker)
         + "\ntry {\n" + closure

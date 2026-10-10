@@ -9,7 +9,87 @@ param(
   [switch]$PrepareShellBuild
 )
 $ErrorActionPreference = 'Stop'
-Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+
+# Replaces the legacy `Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop` contract;
+# the unqualified import is intentionally never executed because PSModulePath is inherited.
+function Import-ShellOwnedFileHashCommand([string]$ShellHome) {
+  if ([string]::IsNullOrWhiteSpace($ShellHome) -or
+      ![IO.Path]::IsPathRooted($ShellHome) -or $ShellHome.StartsWith('\\')) {
+    throw 'Trusted PowerShell home invalid'
+  }
+  $resolvedShellHome = [IO.Path]::GetFullPath($ShellHome).TrimEnd('\')
+  if (!(Test-Path -LiteralPath $resolvedShellHome -PathType Container)) {
+    throw 'Trusted PowerShell home missing'
+  }
+  $moduleRoot = [IO.Path]::GetFullPath(
+    (Join-Path $resolvedShellHome 'Modules\Microsoft.PowerShell.Utility')
+  ).TrimEnd('\')
+  $manifestPath = [IO.Path]::GetFullPath(
+    (Join-Path $moduleRoot 'Microsoft.PowerShell.Utility.psd1')
+  )
+  if (!(Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+    throw 'Trusted Microsoft.PowerShell.Utility manifest missing'
+  }
+  foreach ($trustedPath in @($resolvedShellHome, (Join-Path $resolvedShellHome 'Modules'), $moduleRoot, $manifestPath)) {
+    $trustedItem = Get-Item -Force -LiteralPath $trustedPath
+    if ($trustedItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw 'Trusted Microsoft.PowerShell.Utility path invalid'
+    }
+  }
+  $imported = @(Import-Module -Name $manifestPath -Force -PassThru -ErrorAction Stop)
+  $matchingImports = @($imported | Where-Object {
+    $_.Name -ceq 'Microsoft.PowerShell.Utility' -and
+    [IO.Path]::GetFullPath($_.Path) -eq $manifestPath
+  })
+  if ($matchingImports.Count -ne 1) {
+    throw 'Trusted Microsoft.PowerShell.Utility import identity mismatch'
+  }
+  $commands = @(Get-Command -Name 'Microsoft.PowerShell.Utility\Get-FileHash' -All -ErrorAction Stop)
+  $trustedCommands = @($commands | Where-Object {
+    $_.Name -ceq 'Get-FileHash' -and $_.ModuleName -ceq 'Microsoft.PowerShell.Utility' -and
+    $null -ne $_.Module -and ![string]::IsNullOrWhiteSpace($_.Module.Path) -and
+    [IO.Path]::GetFullPath($_.Module.Path).StartsWith(
+      $moduleRoot + '\', [StringComparison]::OrdinalIgnoreCase
+    )
+  })
+  if ($commands.Count -ne 1 -or $trustedCommands.Count -ne 1) {
+    throw 'Trusted Microsoft.PowerShell.Utility Get-FileHash command unavailable'
+  }
+  $commandPath = [IO.Path]::GetFullPath($trustedCommands[0].Module.Path)
+  if (!(Test-Path -LiteralPath $commandPath -PathType Leaf)) {
+    throw 'Trusted Microsoft.PowerShell.Utility command path invalid'
+  }
+  $commandPathCursor = $commandPath
+  while ($true) {
+    $commandPathItem = Get-Item -Force -LiteralPath $commandPathCursor
+    if ($commandPathItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw 'Trusted Microsoft.PowerShell.Utility command path invalid'
+    }
+    $commandPathIdentity = [IO.Path]::GetFullPath($commandPathItem.FullName).TrimEnd('\')
+    if (!$commandPathIdentity.Equals($commandPathCursor, [StringComparison]::OrdinalIgnoreCase)) {
+      throw 'Trusted Microsoft.PowerShell.Utility command path identity mismatch'
+    }
+    if ($commandPathCursor.Equals($moduleRoot, [StringComparison]::OrdinalIgnoreCase)) { break }
+    $commandPathParent = [IO.Path]::GetDirectoryName($commandPathCursor)
+    if ([string]::IsNullOrWhiteSpace($commandPathParent) -or
+        (!$commandPathParent.Equals($moduleRoot, [StringComparison]::OrdinalIgnoreCase) -and
+         !$commandPathParent.StartsWith($moduleRoot + '\', [StringComparison]::OrdinalIgnoreCase))) {
+      throw 'Trusted Microsoft.PowerShell.Utility command escaped module root'
+    }
+    $commandPathCursor = $commandPathParent.TrimEnd('\')
+  }
+  return $trustedCommands[0]
+}
+function Get-TrustedSha256([string]$LiteralPath) {
+  if ($null -eq $script:trustedFileHashCommand) { throw 'Trusted SHA-256 command unavailable' }
+  $hashResult = & $script:trustedFileHashCommand -LiteralPath $LiteralPath -Algorithm SHA256 -ErrorAction Stop
+  if ($null -eq $hashResult -or [string]::IsNullOrWhiteSpace($hashResult.Hash) -or
+      $hashResult.Hash -notmatch '^[a-fA-F0-9]{64}$') {
+    throw 'Trusted SHA-256 calculation failed'
+  }
+  return $hashResult.Hash.ToLowerInvariant()
+}
+$script:trustedFileHashCommand = Import-ShellOwnedFileHashCommand -ShellHome $PSHOME
 $pluginRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $repositoryRoot = (Resolve-Path (Join-Path $pluginRoot '..\..')).Path
 
@@ -112,7 +192,7 @@ $schemaSha = $null
 if ($ReadinessBuild) {
   if (@($readinessSources | Where-Object { !(Test-Path -LiteralPath $_ -PathType Leaf) }).Count -ne 0 -or
       !(Test-Path -LiteralPath $schemaSource -PathType Leaf)) { throw 'Readiness sources missing' }
-  $schemaSha = (Get-FileHash -LiteralPath $schemaSource -Algorithm SHA256).Hash.ToLowerInvariant()
+  $schemaSha = Get-TrustedSha256 -LiteralPath $schemaSource
   if ($schemaSha -ne '61e87d762db8d0fbc28a95dc4c3c7642b83c19bb1a6d197e2fdd1ebc6ff18472') {
     throw 'TASK-047 readiness schema identity mismatch'
   }
@@ -135,7 +215,7 @@ if ($MeterWorkerBundle) {
         $relative = 'worker\' + $entry.FullName.Substring($workerRoot.Length + 1)
         if ($relative -notmatch '^[a-zA-Z0-9 _.\-\\]+$') { throw 'Worker path unsupported' }
         if ($relative -ceq 'worker\BAI Meter Worker.exe' -and $entry.Length -eq 0) { throw 'Worker executable empty' }
-        $workerFiles += [pscustomobject]@{ path = $relative; sha256 = (Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+        $workerFiles += [pscustomobject]@{ path = $relative; sha256 = Get-TrustedSha256 -LiteralPath $entry.FullName }
       }
     }
   }
@@ -174,10 +254,10 @@ foreach ($mode in $selfTestModes) {
 }
 $closureFields = @{
   task = $taskIdentity; operation = $OperationId
-  controller_sha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+  controller_sha256 = Get-TrustedSha256 -LiteralPath $output
   worker_files = $workerFiles; result = 'PASS'; build_root = $resolvedBuildRoot; runtime_root = $resolvedRuntimeRoot
 }
 if ($ReadinessBuild) { $closureFields.readiness_schema_sha256 = $schemaSha }
 $closureReceipt = Write-NewJson (Join-Path $controllerOutputRoot 'meter-build-identity.json') $closureFields
-if ($closureReceipt.controller_sha256 -ne (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'Controller receipt readback failed' }
+if ($closureReceipt.controller_sha256 -ne (Get-TrustedSha256 -LiteralPath $output)) { throw 'Controller receipt readback failed' }
 Write-Output "CONTROLLER_BUILD_TEST_PASS exe=$output"

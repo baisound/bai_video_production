@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R23_BRANCH_PREDICATE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_ORDINARY_PENDING_ABORT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -415,6 +415,45 @@ Task record grants none.
 - `docs/ai-team/tasks/TASK-074/design-r22-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r23-branch-predicate-post-release-recovery.md`
 - `docs/ai-team/tasks/TASK-074/r23-global-terminal-closure-contract.md`
+
+Owner envelopes, amendments, source, schema, tests, current-state, task-index,
+roadmap, CHANGELOG, native state and private Evidence remain outside this
+allocation.
+
+R23 did not pass independent review. Tester returned `FAIL` `0/1/0/0`, Critic
+returned `PASS` `0/0/0/0`, and Judge was withheld. Exact bytes and finding are
+preserved in `../TASK-074/design-r23-independent-review-receipt.md`. R23 is
+immutable rejected Evidence and grants no owner acceptance or source authority.
+
+## D4 R24 ordinary pending-abort split candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md`.
+TASK-014 owns immutable contract `d4-coordinated-closure-contract-r24.md`.
+
+R24 keeps the R23 branch predicate, three-way continuity context and pre/post-
+release restart split. It clarifies the remaining normal path: an uninterrupted
+operation already at durable `PENDING_CLAIMED` remains
+`NO_PREPARE_RECOVERY_EVENT` and may execute owner `NEVER_ENTERED` plus canonical
+abort-wait directly. Only a live reply/write/delivery interruption performs a
+pending query/rejoin before using that same path. Restart-class loss performs
+neither.
+
+R24 and its four immutable contracts require fresh exact-byte Tester/Critic
+`Critical/High/Medium = 0/0/0` and Judge `PASS`. Owner envelopes, both
+four-owner amendments, source and runtime remain separately allocated; this
+Task record grants none.
+
+### D4 R24 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r24.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r24.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r24.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r23-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r24-global-terminal-closure-contract.md`
 
 Owner envelopes, amendments, source, schema, tests, current-state, task-index,
 roadmap, CHANGELOG, native state and private Evidence remain outside this

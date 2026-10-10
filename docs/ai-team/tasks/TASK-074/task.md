@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R23_BRANCH_PREDICATE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_ORDINARY_PENDING_ABORT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -140,15 +140,29 @@ withheld. Exact bytes and findings are preserved in
 `design-r22-independent-review-receipt.md`. R22 remains immutable rejected
 Evidence.
 
-R23 is the current correction candidate. It derives one predecessor kind and
+R23 was the then-current correction candidate. It derives one predecessor kind and
 compares that kind with its complete expected POST/Job-terminal/retirement
 vector, making the three known-closed branches and containment mutually
 exclusive. It adds an exact no-prepare-recovery context for ordinary late
 uncertainty. It also limits restart burned-unknown handling to explicit
 pre-release states and preserves pinned post-release STARTED child terminal
 recovery before fallback containment. Fresh exact-byte Tester/Critic/Judge
-review is required; this Task record grants no envelope, amendment, source or
+review was required; this Task record grants no envelope, amendment, source or
 runtime effect.
+
+R23 failed review: Tester `FAIL` `0/1/0/0`, Critic `PASS` `0/0/0/0`, Judge
+withheld. Exact bytes and finding are preserved in
+`design-r23-independent-review-receipt.md`. R23 remains immutable rejected
+Evidence.
+
+R24 is the current correction candidate. It retains R23's exhaustive/exclusive
+global branch predicate and exact pre/post-release restart split. It separates
+ordinary uninterrupted pending abort from recovery: an already durable
+`PENDING_CLAIMED` no-recovery operation may enter owner `NEVER_ENTERED` and
+abort-wait directly, while only a live interrupted pending observation performs
+query/rejoin first. Restart-class loss cannot use either path. Fresh exact-byte
+Tester/Critic/Judge review is required; this Task record grants no envelope,
+amendment, source or runtime effect.
 
 ### TASK074-B — Pure contracts and fixtures
 
@@ -211,6 +225,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r23.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r23.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r23.md`
+- `docs/ai-team/tasks/TASK-074/design-r23-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r24-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r24.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r24.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r24.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

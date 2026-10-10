@@ -1,6 +1,6 @@
 # TASK-108 — Central AI Model Save Handler Runtime Corrective
 
-Status: `ACTIVE / IMPLEMENTATION_VALIDATED / PR_PENDING`
+Status: `ACTIVE / IMPLEMENTATION_VALIDATED / PR_OPEN`
 
 Governance: `DEV-2 STANDARD`
 
@@ -114,6 +114,7 @@ performed. Detailed validation is recorded in
 
 ## Next action
 
-Commit and publish the bounded candidate through an Owner-authorized pull
-request. A replacement Windows package/native confirmation remains a separate
-later gate and is not implied by source-level acceptance.
+Pull request [#612](https://github.com/baisound/bai_video_production/pull/612)
+is open from `codex/task-108-ai-model-save-handler`. Await hosted checks and a
+separate merge decision. A replacement Windows package/native confirmation
+remains a separate later gate and is not implied by source-level acceptance.

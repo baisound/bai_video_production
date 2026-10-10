@@ -1,6 +1,6 @@
 # TASK-108 Atomic Unit A Implementation Validation — 2026-10-11
 
-Result: `PASS / SOURCE VALIDATED / PR PENDING`
+Result: `PASS / SOURCE VALIDATED / PR OPEN`
 
 ## Identity and scope
 
@@ -101,3 +101,15 @@ authority was inferred.
 - TASK-106 native-QA files and running Product state were not modified.
 - Replacement packaged-native confirmation remains `NOT_CONFIRMED` and needs a
   later explicit gate after integration.
+
+## Publication receipt
+
+- Source implementation commit:
+  `23da57d20978db079d2d9efbd5b562a7d82fc7c1`.
+- Documentation cleanup commit:
+  `4b3f1a3e746468646574119dd0f2e2948f63fc8d`.
+- Pull request:
+  [#612](https://github.com/baisound/bai_video_production/pull/612).
+- Base: `main`.
+- Head branch: `codex/task-108-ai-model-save-handler`.
+- Merge and packaged-native reacceptance are not authorized by this receipt.

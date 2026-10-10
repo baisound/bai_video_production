@@ -1,6 +1,6 @@
 # TASK-104 — Deterministic PowerShell Hash Resolution
 
-Status: `COMPLETED / VALIDATED / COMMIT_READY / PUBLICATION_PENDING`
+Status: `HOSTED_CLOSED / POST_MAIN_GREEN`
 
 Governance: `DEV-3 HIGH ASSURANCE`
 
@@ -73,4 +73,10 @@ The final independent Critic accepted the corrected candidate with `Critical 0 /
 
 This Atomic Unit is complete and commit-ready within its bounded claim. It proves deterministic shell-owned hash-command resolution and focused regression only. It does not prove a replacement Windows build: the consumed failed TASK-036 build remains preserved, and any replacement build, installer, Release, Deploy, Resolve or Production effect requires separate authority. Canonical tracked Evidence is `evidence/hash-resolution-corrective-20261010-r01.md`; the external Evidence checkpoint is under `C:\home\baisound\evidence\bai-video-production\TASK-104\powershell-hash-resolution\20261010-r01\`.
 
-Publication remains pending. No push, pull request or merge authority was inferred from implementation authority.
+## Hosted closure — 2026-10-10
+
+The Owner explicitly requested PR publication and then instructed the lane to process it through completion. PR #602 used exact head `4393ec2bf9fe2c21d19d83ea566f3be4eb0cbb28`; all `9 / 9` pull-request checks passed. It merged to `main` as `110d595acd7802d599914823760ed622ac1983c7` at `2026-10-10T00:36:26Z`, and exact remote-main read-back matched that merge commit.
+
+Post-merge CI run `38009777253` passed all six Ubuntu/Windows Python 3.11/3.12/3.13 jobs, and Security run `38009777209` passed both dependency-audit and secret-scan jobs. The canonical hosted-closure Evidence is `evidence/hosted-closure-20261010-r01.md`; the external receipt is `hosted-closure-receipt.json` in the Task's existing external Evidence run.
+
+TASK-104 is hosted-closed within its exact corrective responsibility. No replacement Windows build, installer, Product, Resolve, Release, Deploy or Production effect was performed or authorized by this closure.

@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R22_RESTART_SPLIT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R23_BRANCH_PREDICATE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -373,6 +373,48 @@ Task record grants none.
 - `docs/ai-team/tasks/TASK-074/design-r21-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r22-restart-split-reachable-containment.md`
 - `docs/ai-team/tasks/TASK-074/r22-global-terminal-closure-contract.md`
+
+Owner envelopes, amendments, source, schema, tests, current-state, task-index,
+roadmap, CHANGELOG, native state and private Evidence remain outside this
+allocation.
+
+R22 did not pass independent review. Tester returned `FAIL` `0/2/0/0`, Critic
+returned `REVISE` `0/2/0/0`, and Judge was withheld. Exact bytes and findings
+are preserved in `../TASK-074/design-r22-independent-review-receipt.md`. R22 is
+immutable rejected Evidence and grants no owner acceptance or source authority.
+
+## D4 R23 branch predicate and post-release recovery candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r23-branch-predicate-post-release-recovery.md`.
+TASK-014 owns immutable contract `d4-coordinated-closure-contract-r23.md`.
+
+R23 retains the exact live-continuation versus restart-class split, adds an
+owner-read no-prepare-recovery context for ordinary uninterrupted late joins,
+and limits restart burned-unknown rules to explicit pre-release states. A
+post-release STARTED child instead follows canonical fixed-child exit and exact
+noncurrent terminal recovery, with burned unknown only as fallback.
+
+The global terminal decision now derives exactly one predecessor kind and tests
+that kind's complete expected POST/Job-terminal/retirement vector. Known-closed
+branches and containment are mutually exclusive; correct POST FALSE for
+noncurrent/aborted never selects containment by itself.
+
+R23 and its four immutable contracts require fresh exact-byte Tester/Critic
+`Critical/High/Medium = 0/0/0` and Judge `PASS`. Owner envelopes, both
+four-owner amendments, source and runtime remain separately allocated; this
+Task record grants none.
+
+### D4 R23 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r23.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r23.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r23.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r22-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r23-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r23-global-terminal-closure-contract.md`
 
 Owner envelopes, amendments, source, schema, tests, current-state, task-index,
 roadmap, CHANGELOG, native state and private Evidence remain outside this

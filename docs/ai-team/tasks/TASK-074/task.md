@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R22_RESTART_SPLIT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R23_BRANCH_PREDICATE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -124,7 +124,7 @@ withheld. Exact bytes and findings are preserved in
 `design-r21-independent-review-receipt.md`. R21 remains immutable rejected
 Evidence.
 
-R22 is the current correction candidate. It makes exact terminal/retirement a
+R22 was the then-current correction candidate. It makes exact terminal/retirement a
 prerequisite only for known-closed global branches and makes partial-truth
 containment reachable from explicit false/unknown late joins. It also separates
 same-broker live-continuation interruption from Product/broker/worker/adapter/
@@ -132,8 +132,23 @@ coordinator restart or continuation loss. Only the live class may issue prepare
 `NEVER_ENTERED` and finish abort-wait; restart-class state follows pinned
 TASK-075 section 9.3.1 burned-unknown containment unless an exact pre-restart
 abort-pending claim already exists. Fresh exact-byte Tester/Critic/Judge review
-is required; this Task record grants no envelope, amendment, source or runtime
+was required; this Task record grants no envelope, amendment, source or runtime
 effect.
+
+R22 failed review: Tester `FAIL` `0/2/0/0`, Critic `REVISE` `0/2/0/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r22-independent-review-receipt.md`. R22 remains immutable rejected
+Evidence.
+
+R23 is the current correction candidate. It derives one predecessor kind and
+compares that kind with its complete expected POST/Job-terminal/retirement
+vector, making the three known-closed branches and containment mutually
+exclusive. It adds an exact no-prepare-recovery context for ordinary late
+uncertainty. It also limits restart burned-unknown handling to explicit
+pre-release states and preserves pinned post-release STARTED child terminal
+recovery before fallback containment. Fresh exact-byte Tester/Critic/Judge
+review is required; this Task record grants no envelope, amendment, source or
+runtime effect.
 
 ### TASK074-B — Pure contracts and fixtures
 
@@ -190,6 +205,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r22.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r22.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r22.md`
+- `docs/ai-team/tasks/TASK-074/design-r22-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r23-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r23-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r23.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r23.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r23.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

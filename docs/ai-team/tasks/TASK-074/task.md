@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R19_ACYCLIC_RUNTIME_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R20_RESERVATION_TAGGED_TERMINAL_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -76,7 +76,7 @@ R18 failed review: Tester `FAIL` `0/2/0/0`, Critic `REVISE` `0/3/1/0`, Judge
 withheld. Exact bytes and findings are preserved in
 `design-r18-independent-review-receipt.md`.
 
-R19 is the current correction candidate. It introduces distinct TASK-074
+R19 was the then-current correction candidate. It introduces distinct TASK-074
 operation-ready, child-pair-ready and terminal-current types; restores the
 TASK-014 one-use dispatch lease before TASK-076 arm; and moves TASK-075 result
 to terminal/POST gating only. It normatively binds the exact current-main
@@ -85,6 +85,24 @@ finishing with canonical REQUIRED/OPTIONAL/NOT_APPLICABLE policy plus a sealed
 TASK-035 owner-issued optional-skip current result. R19 requires fresh
 exact-byte Tester/Critic/Judge review. No owner envelope or source stage is
 allocated by this Task record.
+
+R19 failed review: Tester `FAIL` `0/3/0/0`, Critic `REVISE` `0/3/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r19-independent-review-receipt.md`. R19 remains immutable rejected
+Evidence and cannot issue owner acceptance or source authority.
+
+R20 is the current correction candidate. It replaces pre-arm TASK-014 call
+dispatch with a metadata-only reservation consumed by a future separately
+accepted TASK-014/072/075/076 adapter around the unchanged TASK-076 arm ABI.
+Actual call/sink dispatch begins only after exact Artifact-prepare pending.
+One second separately accepted four-owner adapter binds TASK-014 receipt-only
+prepare/terminal truth into the existing TASK-076 inputs.
+R20 separates SUCCESS, NONCURRENT, ABORTED and BURNED_UNKNOWN terminals,
+defines full TASK-014 session/reply-loss closure, lists every exact
+known-no-child result and preserves the canonical restart-safe unselected-orphan
+exception. Its four immutable contracts and exact sixteen-key owner-envelope
+schema require fresh exact-byte Tester/Critic/Judge review. This Task record
+allocates no envelope, either adapter, source or runtime effect.
 
 ### TASK074-B — Pure contracts and fixtures
 
@@ -123,6 +141,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-three-phase-runtime-contract-r19.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r19.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r19.md`
+- `docs/ai-team/tasks/TASK-074/design-r19-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r20-reservation-tagged-terminal-closure.md`
+- `docs/ai-team/tasks/TASK-074/r20-direct-transfer-tagged-terminal-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-reservation-closed-terminal-contract-r20.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r20.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r20.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

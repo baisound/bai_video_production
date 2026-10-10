@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R19_ACYCLIC_RUNTIME_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R20_RESERVATION_TAGGED_TERMINAL_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -208,7 +208,7 @@ or source authority.
 
 ## D4 R19 three-phase runtime candidate — 2026-10-11
 
-The current correction candidate is
+The then-current R19 correction candidate was
 `../TASK-074/complete-design-packet-r19-acyclic-runtime-exact-failure.md`.
 TASK-014 owns immutable contract
 `d4-three-phase-runtime-contract-r19.md`.
@@ -242,3 +242,52 @@ accept the contracts; envelopes still grant no source or runtime authority.
 
 Owner envelopes, source, schema, tests, current-state, task-index, roadmap,
 CHANGELOG, native state and private Evidence remain outside this allocation.
+
+R19 did not pass independent review. Tester returned `FAIL` `0/3/0/0`, Critic
+returned `REVISE` `0/3/1/0`, and Judge was withheld. Exact bytes and findings
+are preserved in `../TASK-074/design-r19-independent-review-receipt.md`. R19 is
+immutable rejected Evidence and grants no owner acceptance or source authority.
+
+## D4 R20 reservation and tagged-terminal candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r20-reservation-tagged-terminal-closure.md`.
+TASK-014 owns immutable contract
+`d4-reservation-closed-terminal-contract-r20.md`.
+
+R20 replaces the invalid pre-arm call-dispatch lease with a metadata-only,
+effect-zero reservation. A future separately accepted TASK-014/072/075/076
+adapter must consume it while invoking the unchanged TASK-076 arm ABI. Real
+TASK-014 call and sink dispatch starts only after exact
+`JOB_CHILD_ARTIFACT_PREPARE_PENDING_READBACK_V3`, matching canonical TASK-075
+section 9.5.
+
+A second separately accepted four-owner receipt-only terminal adapter binds
+TASK-014 prepare/fail-close truth into the existing TASK-076 prepare and
+terminal inputs. Neither adapter is accepted or allocated by R20.
+
+R20 defines exact queryable closure for arm rejected/unknown, orphan,
+prebootstrap, bootstrap rejection, bind/preflight failure, prepare abort/failure,
+release rejection, post-release noncurrent, result-bound success, restart and
+reply loss. SUCCESS, NONCURRENT, ABORTED and BURNED_UNKNOWN are disjoint nominal
+branches; only SUCCESS can mint POST and a later publication-current read.
+
+R20 and its four immutable owner contracts require fresh exact-byte
+Tester/Critic `Critical/High = 0/0` and Judge `PASS`. Only later owner-local
+envelopes may accept them. Both four-owner adapter amendments, source and
+runtime each require separate allocation; this Task record grants none.
+
+### D4 R20 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-reservation-closed-terminal-contract-r20.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r20.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r20.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r19-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r20-reservation-tagged-terminal-closure.md`
+- `docs/ai-team/tasks/TASK-074/r20-direct-transfer-tagged-terminal-contract.md`
+
+Owner envelopes, cross-owner amendments, source, schema, tests, current-state,
+task-index, roadmap, CHANGELOG, native state and private Evidence remain outside
+this allocation.

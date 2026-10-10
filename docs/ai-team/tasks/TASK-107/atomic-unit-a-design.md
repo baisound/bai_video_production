@@ -47,4 +47,3 @@ Static tests lock the height/overflow invariants and existing Settings
 accessibility markup. Focused regression confirms the generated Shell contract.
 Only a freshly integrated packaged-native run at the accepted viewport may
 convert the Owner's F3 reachability result from FAIL to PASS.
-

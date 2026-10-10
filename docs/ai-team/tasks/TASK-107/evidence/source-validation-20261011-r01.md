@@ -85,4 +85,3 @@ Additional checks:
   dedicated TASK-107 worktree pending Evidence persistence and commit.
 - Fresh integrated packaged-native verification is explicitly
   `NOT_CONFIRMED` and remains a separate post-integration Human Gate.
-

@@ -109,4 +109,3 @@ Canonical source evidence:
 This checkpoint does not close TASK-107. PR integration and a fresh integrated
 packaged-native reachability observation remain required before the repair may
 be reported as product-level PASS.
-

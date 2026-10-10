@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R21_COORDINATED_CLOSURE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R22_RESTART_SPLIT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -330,6 +330,49 @@ Task record grants none.
 - `docs/ai-team/tasks/TASK-074/design-r20-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r21-coordinated-closure-late-truth.md`
 - `docs/ai-team/tasks/TASK-074/r21-global-terminal-closure-contract.md`
+
+Owner envelopes, amendments, source, schema, tests, current-state, task-index,
+roadmap, CHANGELOG, native state and private Evidence remain outside this
+allocation.
+
+R21 did not pass independent review. Tester returned `FAIL` `0/1/0/0`, Critic
+returned `REVISE` `0/2/0/0`, and Judge was withheld. Exact bytes and findings
+are preserved in `../TASK-074/design-r21-independent-review-receipt.md`. R21 is
+immutable rejected Evidence and grants no owner acceptance or source authority.
+
+## D4 R22 restart split and reachable containment candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r22-restart-split-reachable-containment.md`.
+TASK-014 owns immutable contract `d4-coordinated-closure-contract-r22.md`.
+
+R22 makes prepare recovery continuity explicit. Only an interruption while the
+original broker, worker and private prepare continuation remain live may
+query-join pending, issue owner `NEVER_ENTERED` and complete canonical
+abort-wait. Product/broker/worker/adapter/coordinator restart or any loss of the
+continuation follows pinned TASK-075 section 9.3.1: finish only a durable
+pre-restart abort-pending claim; otherwise burned-unknown containment with no
+fresh abort, prepare, owner close, release or reconstructed session.
+
+R22 also makes global containment reachable. Exact Job terminal and retirement
+are required only for the three known-closed branches; false/unknown late joins
+are preserved as independent fields under an exact containment observation.
+
+R22 and its four immutable contracts require fresh exact-byte Tester/Critic
+`Critical/High/Medium = 0/0/0` and Judge `PASS`. Owner envelopes, both
+four-owner amendments, source and runtime remain separately allocated; this
+Task record grants none.
+
+### D4 R22 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r22.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r22.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r22.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r21-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r22-restart-split-reachable-containment.md`
+- `docs/ai-team/tasks/TASK-074/r22-global-terminal-closure-contract.md`
 
 Owner envelopes, amendments, source, schema, tests, current-state, task-index,
 roadmap, CHANGELOG, native state and private Evidence remain outside this

@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R21_COORDINATED_CLOSURE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R22_RESTART_SPLIT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -108,7 +108,7 @@ R20 failed review: Tester `FAIL` `0/2/2/0`, Critic `REVISE` `0/4/1/0`, Judge
 withheld. Exact bytes and findings are preserved in
 `design-r20-independent-review-receipt.md`. R20 is immutable rejected Evidence.
 
-R21 is the current correction candidate. It adds durable pre-arm coordinator
+R21 was the then-current correction candidate. It adds durable pre-arm coordinator
 and owner-query reconciliation, owner-issued prepare NEVER_ENTERED truth,
 canonical receipt-only adapter outputs and ordinary AFTER_PREPARE abort. It
 treats result/POST/role-close/lease facts as provisional until TASK-076 terminal
@@ -116,8 +116,24 @@ and TASK-074 retirement join; late uncertainty selects a containment branch
 that preserves those facts. The complete canonical TASK-075 success predicate
 gates POST, publication-current and downstream PASS. Exact owner contract paths
 and TASK-041 forked handling are closed. Fresh exact-byte Tester/Critic/Judge
-review is required; this Task record grants no envelope, amendment, source or
+review was required; this Task record grants no envelope, amendment, source or
 runtime effect.
+
+R21 failed review: Tester `FAIL` `0/1/0/0`, Critic `REVISE` `0/2/0/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r21-independent-review-receipt.md`. R21 remains immutable rejected
+Evidence.
+
+R22 is the current correction candidate. It makes exact terminal/retirement a
+prerequisite only for known-closed global branches and makes partial-truth
+containment reachable from explicit false/unknown late joins. It also separates
+same-broker live-continuation interruption from Product/broker/worker/adapter/
+coordinator restart or continuation loss. Only the live class may issue prepare
+`NEVER_ENTERED` and finish abort-wait; restart-class state follows pinned
+TASK-075 section 9.3.1 burned-unknown containment unless an exact pre-restart
+abort-pending claim already exists. Fresh exact-byte Tester/Critic/Judge review
+is required; this Task record grants no envelope, amendment, source or runtime
+effect.
 
 ### TASK074-B — Pure contracts and fixtures
 
@@ -168,6 +184,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r21.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r21.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r21.md`
+- `docs/ai-team/tasks/TASK-074/design-r21-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r22-restart-split-reachable-containment.md`
+- `docs/ai-team/tasks/TASK-074/r22-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r22.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r22.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r22.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

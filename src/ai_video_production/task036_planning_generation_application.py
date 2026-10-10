@@ -290,39 +290,123 @@ class Task036PlanningGenerationApplication:
         )
         return intent, proposal
 
+    def _recover_after_apply_os_error(
+        self,
+        pending: _Confirmation,
+        *,
+        provider_execution_started: bool,
+        cause: OSError,
+    ) -> dict[str, Any]:
+        """Classify canonical state after an apply-time OS failure without retrying."""
+
+        try:
+            if self._project_manifest() != pending.project_manifest_sha256:
+                raise ValueError("project coordinate changed during apply recovery")
+            profile, _, route, connection_sha, policy = self._connection()
+            del profile
+            if (
+                connection_sha != pending.connection_sha256
+                or route.route_id != pending.route_id
+                or policy.policy_sha256 != pending.policy_sha256
+            ):
+                raise ValueError("connection coordinate changed during apply recovery")
+            intent_id, proposal_id, blueprint_id = self._ids(pending.request_sha256)
+            existing = self._existing(
+                proposal_id=proposal_id,
+                intent_id=intent_id,
+                blueprint_id=blueprint_id,
+                policy=policy,
+                request_sha256=pending.request_sha256,
+                provenance_body=pending.provenance_body,
+            )
+            proposal_sha256 = (
+                existing["workspace"]["latest_proposal_sha256"]
+                if existing is not None
+                else None
+            )
+        except Exception as readback_error:
+            raise ProductError(
+                "ERR_TASK036_PLANNING_APPLY_STATE_UNKNOWN",
+                "Planning generation result could not be confirmed from canonical state",
+                ProductErrorCategory.STATE,
+                retryable=False,
+                details={
+                    "canonical_proposal_state": "UNKNOWN",
+                    "provider_execution_started": provider_execution_started,
+                    "automatic_retry_started": False,
+                },
+            ) from readback_error
+        if existing is None:
+            raise ProductError(
+                "ERR_TASK036_PLANNING_APPLY_NOT_COMMITTED",
+                "Planning generation did not commit a canonical Proposal",
+                ProductErrorCategory.STATE,
+                retryable=False,
+                details={
+                    "canonical_proposal_state": "ABSENT",
+                    "provider_execution_started": provider_execution_started,
+                    "automatic_retry_started": False,
+                },
+            ) from cause
+        return {
+            "idempotent": not provider_execution_started,
+            "proposal_id": proposal_id,
+            "proposal_sha256": proposal_sha256,
+            "application": existing,
+            "provider_execution_started": provider_execution_started,
+            "provider_family": route.provider_family.value,
+            "model_id": route.model_id,
+            "cost_class": route.cost_class.value,
+            "paid_execution_authorized": False,
+            "human_go_approved": False,
+            "apply_recovery_state": "COMMITTED_READBACK",
+            "automatic_retry_started": False,
+        }
+
     def apply(self, *, confirmation_id: str) -> dict[str, Any]:
         with self._confirmation_lock:
             pending = self._confirmations.pop(confirmation_id, None)
         if pending is None:
             raise ProductError("ERR_TASK036_PLANNING_CONFIRMATION_INVALID", "Planning confirmation is missing or already used", ProductErrorCategory.AUTHORIZATION)
-        with _exclusive_snapshot_lock(self._operation_lock):
-            if self._project_manifest() != pending.project_manifest_sha256:
-                raise ProductError("ERR_TASK036_PLANNING_PROJECT_STALE", "Product Project changed after confirmation", ProductErrorCategory.STATE)
-            profile, _, route, connection_sha, policy = self._connection()
-            if connection_sha != pending.connection_sha256 or route.route_id != pending.route_id or policy.policy_sha256 != pending.policy_sha256:
-                raise ProductError("ERR_TASK036_PLANNING_CONNECTION_STALE", "Planning connection changed after confirmation", ProductErrorCategory.STATE)
-            intent_id, proposal_id, blueprint_id = self._ids(pending.request_sha256)
-            existing = self._existing(proposal_id=proposal_id, intent_id=intent_id, blueprint_id=blueprint_id, policy=policy, request_sha256=pending.request_sha256, provenance_body=pending.provenance_body)
-            if existing is not None:
-                return {"idempotent": True, "proposal_id": proposal_id, "application": existing, "provider_execution_started": False, "paid_execution_authorized": False}
-            planning = self.planning.snapshot()
-            if planning["snapshot_sha256"] != pending.planning_snapshot_sha256:
-                raise ProductError("ERR_TASK036_PLANNING_SNAPSHOT_STALE", "Planning state changed after confirmation", ProductErrorCategory.STATE)
-            candidate = self._adapter_factory(route).generate(self._compile_prompt(pending.request_text))
-            _, _, route_after, connection_after, policy_after = self._connection()
-            if self._project_manifest() != pending.project_manifest_sha256:
-                raise ProductError("ERR_TASK036_PLANNING_PROJECT_STALE", "Product Project changed during local generation", ProductErrorCategory.STATE)
-            if (
-                connection_after != pending.connection_sha256
-                or route_after.route_id != pending.route_id
-                or policy_after.policy_sha256 != pending.policy_sha256
-            ):
-                raise ProductError("ERR_TASK036_PLANNING_CONNECTION_STALE", "Planning authority changed during local generation", ProductErrorCategory.STATE)
-            intent, proposal = self._records(candidate, request_sha256=pending.request_sha256, policy=policy, provenance_body=pending.provenance_body)
-            application = self.planning.append_initial_proposal(
-                intent=intent, proposal=proposal,
-                expected_snapshot_sha256=pending.planning_snapshot_sha256,
-                expected_project_manifest_sha256=pending.project_manifest_sha256,
+        provider_execution_started = False
+        try:
+            with _exclusive_snapshot_lock(self._operation_lock):
+                if self._project_manifest() != pending.project_manifest_sha256:
+                    raise ProductError("ERR_TASK036_PLANNING_PROJECT_STALE", "Product Project changed after confirmation", ProductErrorCategory.STATE)
+                profile, _, route, connection_sha, policy = self._connection()
+                if connection_sha != pending.connection_sha256 or route.route_id != pending.route_id or policy.policy_sha256 != pending.policy_sha256:
+                    raise ProductError("ERR_TASK036_PLANNING_CONNECTION_STALE", "Planning connection changed after confirmation", ProductErrorCategory.STATE)
+                intent_id, proposal_id, blueprint_id = self._ids(pending.request_sha256)
+                existing = self._existing(proposal_id=proposal_id, intent_id=intent_id, blueprint_id=blueprint_id, policy=policy, request_sha256=pending.request_sha256, provenance_body=pending.provenance_body)
+                if existing is not None:
+                    return {"idempotent": True, "proposal_id": proposal_id, "application": existing, "provider_execution_started": False, "paid_execution_authorized": False}
+                planning = self.planning.snapshot()
+                if planning["snapshot_sha256"] != pending.planning_snapshot_sha256:
+                    raise ProductError("ERR_TASK036_PLANNING_SNAPSHOT_STALE", "Planning state changed after confirmation", ProductErrorCategory.STATE)
+                adapter = self._adapter_factory(route)
+                prompt = self._compile_prompt(pending.request_text)
+                provider_execution_started = True
+                candidate = adapter.generate(prompt)
+                _, _, route_after, connection_after, policy_after = self._connection()
+                if self._project_manifest() != pending.project_manifest_sha256:
+                    raise ProductError("ERR_TASK036_PLANNING_PROJECT_STALE", "Product Project changed during local generation", ProductErrorCategory.STATE)
+                if (
+                    connection_after != pending.connection_sha256
+                    or route_after.route_id != pending.route_id
+                    or policy_after.policy_sha256 != pending.policy_sha256
+                ):
+                    raise ProductError("ERR_TASK036_PLANNING_CONNECTION_STALE", "Planning authority changed during local generation", ProductErrorCategory.STATE)
+                intent, proposal = self._records(candidate, request_sha256=pending.request_sha256, policy=policy, provenance_body=pending.provenance_body)
+                application = self.planning.append_initial_proposal(
+                    intent=intent, proposal=proposal,
+                    expected_snapshot_sha256=pending.planning_snapshot_sha256,
+                    expected_project_manifest_sha256=pending.project_manifest_sha256,
+                )
+        except OSError as exc:
+            return self._recover_after_apply_os_error(
+                pending,
+                provider_execution_started=provider_execution_started,
+                cause=exc,
             )
         return {
             "idempotent": False, "proposal_id": proposal.proposal_id,

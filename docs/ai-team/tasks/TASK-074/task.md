@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R20_RESERVATION_TAGGED_TERMINAL_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R21_COORDINATED_CLOSURE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -104,6 +104,21 @@ exception. Its four immutable contracts and exact sixteen-key owner-envelope
 schema require fresh exact-byte Tester/Critic/Judge review. This Task record
 allocates no envelope, either adapter, source or runtime effect.
 
+R20 failed review: Tester `FAIL` `0/2/2/0`, Critic `REVISE` `0/4/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r20-independent-review-receipt.md`. R20 is immutable rejected Evidence.
+
+R21 is the current correction candidate. It adds durable pre-arm coordinator
+and owner-query reconciliation, owner-issued prepare NEVER_ENTERED truth,
+canonical receipt-only adapter outputs and ordinary AFTER_PREPARE abort. It
+treats result/POST/role-close/lease facts as provisional until TASK-076 terminal
+and TASK-074 retirement join; late uncertainty selects a containment branch
+that preserves those facts. The complete canonical TASK-075 success predicate
+gates POST, publication-current and downstream PASS. Exact owner contract paths
+and TASK-041 forked handling are closed. Fresh exact-byte Tester/Critic/Judge
+review is required; this Task record grants no envelope, amendment, source or
+runtime effect.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -147,6 +162,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-reservation-closed-terminal-contract-r20.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r20.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r20.md`
+- `docs/ai-team/tasks/TASK-074/design-r20-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r21-coordinated-closure-late-truth.md`
+- `docs/ai-team/tasks/TASK-074/r21-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r21.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r21.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r21.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

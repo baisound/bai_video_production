@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R20_RESERVATION_TAGGED_TERMINAL_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R21_COORDINATED_CLOSURE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -291,3 +291,46 @@ runtime each require separate allocation; this Task record grants none.
 Owner envelopes, cross-owner amendments, source, schema, tests, current-state,
 task-index, roadmap, CHANGELOG, native state and private Evidence remain outside
 this allocation.
+
+R20 did not pass independent review. Tester returned `FAIL` `0/2/2/0`, Critic
+returned `REVISE` `0/4/1/0`, and Judge was withheld. Exact bytes and findings
+are preserved in `../TASK-074/design-r20-independent-review-receipt.md`. R20 is
+immutable rejected Evidence and grants no owner acceptance or source authority.
+
+## D4 R21 coordinated closure candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r21-coordinated-closure-late-truth.md`.
+TASK-014 owns immutable contract `d4-coordinated-closure-contract-r21.md`.
+
+R21 gives pre-arm reservation a durable RESERVED/ARMING/JOIN_PENDING/terminal
+coordinator, with owner-issued no-vector or burned-unknown reconciliation and no
+second arm. It records a prepare-attempt before TASK-014 session entry, so an
+abort in that microgap follows canonical abort-wait using sealed NEVER_ENTERED
+truth. It also closes ordinary AFTER_PREPARE abort.
+
+TASK-014 result-bound and POST become immutable provisional facts. Positive
+publication-current is withheld until exact TASK-076 terminal, TASK-074
+retirement and the full canonical TASK-075 SUCCESS/RESULT_VERIFIED predicate
+are current. Late uncertainty preserves result/POST/close facts in containment
+instead of overwriting them.
+
+R21 and its four immutable contracts require fresh exact-byte Tester/Critic
+`Critical/High/Medium = 0/0/0` and Judge `PASS`. Owner envelopes, both
+four-owner amendments, source and runtime remain separately allocated; this
+Task record grants none.
+
+### D4 R21 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r21.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r21.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r21.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r20-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r21-coordinated-closure-late-truth.md`
+- `docs/ai-team/tasks/TASK-074/r21-global-terminal-closure-contract.md`
+
+Owner envelopes, amendments, source, schema, tests, current-state, task-index,
+roadmap, CHANGELOG, native state and private Evidence remain outside this
+allocation.

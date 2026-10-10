@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_ORDINARY_PENDING_ABORT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / OWNER_ACCEPTANCE_NOT_ISSUED / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -458,3 +458,9 @@ Task record grants none.
 Owner envelopes, amendments, source, schema, tests, current-state, task-index,
 roadmap, CHANGELOG, native state and private Evidence remain outside this
 allocation.
+
+R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
+`Critical/High/Medium/Low = 0/0/0/0`. The immutable decision and reviewed hashes
+are preserved in `../TASK-074/design-r24-independent-review-receipt.md`. This
+closes R24-S0 only. TASK-014 owner acceptance, cross-owner amendments, source,
+runtime and every effect remain separately gated and unissued.

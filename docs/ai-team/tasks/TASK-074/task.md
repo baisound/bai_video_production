@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_ORDINARY_PENDING_ABORT_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / OWNER_ACCEPTANCE_NOT_ISSUED / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -164,6 +164,13 @@ query/rejoin first. Restart-class loss cannot use either path. Fresh exact-byte
 Tester/Critic/Judge review is required; this Task record grants no envelope,
 amendment, source or runtime effect.
 
+R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
+`Critical/High/Medium/Low = 0/0/0/0`; the immutable decision and hashes are in
+`design-r24-independent-review-receipt.md`. This closes R24-S0 only. The four
+owner envelopes, both coordinated amendments, source/runtime, private/native/
+model/audio effects, publication-current and downstream PASS remain unissued
+and separately gated.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -231,6 +238,7 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r24.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r24.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r24.md`
+- `docs/ai-team/tasks/TASK-074/design-r24-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

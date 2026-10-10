@@ -129,6 +129,30 @@ def test_home_export_and_settings_keep_canonical_information_composition() -> No
     assert "Projectの技術的な状態を表示" in SHELL_HTML
 
 
+def test_settings_modal_routes_bounded_height_to_scrollable_panes() -> None:
+    assert (
+        ".modal{width:min(920px,95vw);height:min(760px,90vh);max-height:90vh;"
+        "display:grid;grid-template-rows:40px minmax(0,1fr)"
+    ) in SHELL_HTML
+    assert (
+        ".settings-layout{display:grid;grid-template-columns:190px minmax(0,1fr);"
+        "min-height:0;height:100%;overflow:hidden}"
+    ) in SHELL_HTML
+    assert (
+        ".settings-nav{border-right:1px solid var(--line);padding:6px;"
+        "min-height:0;overflow-y:auto}"
+    ) in SHELL_HTML
+    assert (
+        ".settings-content{padding:10px;min-width:0;min-height:0;overflow:auto;"
+        "overscroll-behavior:contain;scrollbar-gutter:stable}"
+    ) in SHELL_HTML
+    assert (
+        ".settings-layout{grid-template-columns:1fr;"
+        "grid-template-rows:auto minmax(0,1fr)}"
+    ) in SHELL_HTML
+    assert 'class="settings-content stack" role="tabpanel" tabindex="0"' in SHELL_HTML
+
+
 def test_model_editor_is_central_and_feature_pages_offer_read_only_recovery() -> None:
     for workload in ("PLANNING", "IMAGE", "VIDEO", "AUDIO", "MUSIC"):
         assert f"'{workload}'" in SHELL_HTML

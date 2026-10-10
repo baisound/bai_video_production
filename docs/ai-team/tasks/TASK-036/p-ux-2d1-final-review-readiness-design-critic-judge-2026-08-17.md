@@ -3,6 +3,8 @@
 Date: 2026-08-17
 Atomic unit: `P-UX-2D1_FINAL_REVIEW_READINESS_R0`
 
+Status: `R24_OWNER_ACCEPTANCE_ISSUED / SOURCE_START0 / EFFECT0`
+
 ## Boundary and design
 
 The V6.1.1 Final Review page previously recomputed only Production and Audit

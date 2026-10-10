@@ -11,9 +11,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import re
+import threading
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 import unicodedata
+from weakref import WeakKeyDictionary
 
 from .owner_voice_private_reference import MEDIA_POLICY_SHA256
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
@@ -26,12 +28,19 @@ PUBLIC_CONTRACT_VERSION = "TASK074_OWNER_VOICE_AUTHORITY_PUBLIC_V1"
 EXECUTION_INPUT_CONTRACT_VERSION = "TASK074_TO_TASK075_EXECUTION_INPUT_V2"
 HUMAN_ACTION_REGISTRY_VERSION = "HUMAN_ACTION_REGISTRY_V2"
 OPERATION_PROFILE_REGISTRY_VERSION = "ACTION_REGISTRY_V2"
+R24_S1_PRODUCER_VERSION = "TASK074_R24_S1_EFFECT_ZERO_PRODUCER_V1"
+R24_S1_FIXTURE_SCOPE = "TASK074_R24_S1_FAKE_NON_BIOMETRIC_EFFECT_ZERO"
+R24_OWNER_ACCEPTANCE_RECORD_SHA256 = (
+    "8EDDD5E86CD21A779ADBCF889A9478E67520F4E0E48748983D7ABE6F2D710BB0"
+)
 
 _REGISTRY_DOMAIN = b"TASK074_OWNER_VOICE_REGISTRY_AMENDMENT_V1\0"
 _COMPLETION_DOMAIN = b"TASK074_OWNER_VOICE_AUTHORITY_COMPLETION_RECEIPT_V1\0"
 _PUBLIC_DOMAIN = b"TASK074_OWNER_VOICE_AUTHORITY_PUBLIC_V1\0"
 _EXECUTION_INPUT_DOMAIN = b"TASK074_TO_TASK075_EXECUTION_INPUT_V2\0"
 _ZERO_SHOT_LINEAGE_DOMAIN = b"TASK074_TO_TASK075_ZERO_SHOT_COMPOSITE_LINEAGE_V2\0"
+_R24_S1_COORDINATE_DOMAIN = b"TASK074_R24_S1_EFFECT_ZERO_COORDINATE_V1\0"
+_R24_S1_DECISION_DOMAIN = b"TASK074_R24_S1_EFFECT_ZERO_DECISION_V1\0"
 _CONSTRUCTION_TOKEN = object()
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9][A-Za-z0-9_-]*)*$")
 _PUBLIC_ROUTE_KEY_RE = re.compile(r"^narration(?:\.[a-z0-9][a-z0-9_-]*){2,7}$")
@@ -74,6 +83,32 @@ class DurabilityVariant(str, Enum):
 class RouteInputVariant(str, Enum):
     ZERO_SHOT_REFERENCE_INPUT_V2 = "ZERO_SHOT_REFERENCE_INPUT_V2"
     FINE_TUNED_MODEL_INPUT_V2 = "FINE_TUNED_MODEL_INPUT_V2"
+
+
+class R24PredecessorKind(str, Enum):
+    SUCCESS = "SUCCESS"
+    NONCURRENT = "NONCURRENT"
+    ABORTED = "ABORTED"
+    UNKNOWN = "UNKNOWN"
+
+
+class R24TruthValue(str, Enum):
+    TRUE = "TRUE"
+    FALSE = "FALSE"
+    UNKNOWN = "UNKNOWN"
+
+
+class R24GlobalBranch(str, Enum):
+    SUCCESS_CLOSED = "SUCCESS_CLOSED"
+    NONCURRENT_CLOSED = "NONCURRENT_CLOSED"
+    ABORTED_CLOSED = "ABORTED_CLOSED"
+    CONTAINED_PARTIAL_TRUTH = "CONTAINED_PARTIAL_TRUTH"
+
+
+class R24PrepareContinuityContext(str, Enum):
+    NO_PREPARE_RECOVERY_EVENT = "NO_PREPARE_RECOVERY_EVENT"
+    LIVE_CONTINUATION_INTERRUPTION = "LIVE_CONTINUATION_INTERRUPTION"
+    RESTART_CLASS_LOSS = "RESTART_CLASS_LOSS"
 
 
 _COMPLETION_FALSE_FLAGS = MappingProxyType(
@@ -925,6 +960,338 @@ class Task074ToTask075ExecutionInputV2:
         return _thaw(self._data)
 
 
+def _r24_exact_enum(enum_type: type[Enum], value: Any, name: str) -> Enum:
+    if type(value) is not enum_type:
+        raise ValueError(f"{name} must be an exact {enum_type.__name__} member")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class _R24DecisionState:
+    branch: R24GlobalBranch
+    coordinate_sha256: str
+    decision_sha256: str
+    job_terminal: R24TruthValue
+    owner_acceptance_record_sha256: str
+    post: R24TruthValue
+    predecessor_kind: R24PredecessorKind
+    prepare_continuity_context: R24PrepareContinuityContext
+    retirement: R24TruthValue
+
+
+@dataclass(slots=True)
+class _R24ProducerState:
+    lock: threading.Lock
+    burned: bool
+    owner_acceptance_record_sha256: str
+
+
+_R24_DECISION_STATES: WeakKeyDictionary[object, _R24DecisionState] = WeakKeyDictionary()
+_R24_PRODUCER_STATES: WeakKeyDictionary[object, _R24ProducerState] = WeakKeyDictionary()
+_R24_REGISTRY_LOCK = threading.RLock()
+
+
+def _r24_decision_field(value: object, name: str) -> Any:
+    if type(value) is not _Task074R24EffectZeroDecision:
+        raise TypeError("R24-S1 decision type is invalid")
+    with _R24_REGISTRY_LOCK:
+        state = _R24_DECISION_STATES.get(value)
+    if type(state) is not _R24DecisionState:
+        raise TypeError("R24-S1 decision provenance is invalid")
+    if name == "branch":
+        return state.branch
+    if name == "coordinate_sha256":
+        return state.coordinate_sha256
+    if name == "decision_sha256":
+        return state.decision_sha256
+    if name == "job_terminal":
+        return state.job_terminal
+    if name == "owner_acceptance_record_sha256":
+        return state.owner_acceptance_record_sha256
+    if name == "post":
+        return state.post
+    if name == "predecessor_kind":
+        return state.predecessor_kind
+    if name == "prepare_continuity_context":
+        return state.prepare_continuity_context
+    if name == "retirement":
+        return state.retirement
+    raise TypeError("R24-S1 decision field is invalid")
+
+
+class _Task074R24EffectZeroDecision:
+    """Sealed body-free S1 result; deliberately not a runtime current type."""
+
+    __slots__ = ("__weakref__",)
+
+    def __init__(self, *_: Any, **__: Any) -> None:
+        raise TypeError("R24-S1 decisions may only be minted by the effect-zero producer")
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        raise TypeError("R24-S1 decision types are sealed")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise AttributeError("R24-S1 decisions are immutable")
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("R24-S1 decisions are immutable")
+
+    def __copy__(self) -> None:
+        raise TypeError("R24-S1 decisions are non-copyable")
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> None:
+        raise TypeError("R24-S1 decisions are non-copyable")
+
+    def __reduce__(self) -> None:
+        raise TypeError("R24-S1 decisions are non-serializable")
+
+    def __reduce_ex__(self, protocol: int) -> None:
+        raise TypeError("R24-S1 decisions are non-serializable")
+
+    def __getstate__(self) -> None:
+        raise TypeError("R24-S1 decisions are non-serializable")
+
+    @property
+    def branch(self) -> R24GlobalBranch:
+        return _r24_decision_field(self, "branch")
+
+    @property
+    def coordinate_sha256(self) -> str:
+        return _r24_decision_field(self, "coordinate_sha256")
+
+    @property
+    def decision_sha256(self) -> str:
+        return _r24_decision_field(self, "decision_sha256")
+
+    @property
+    def job_terminal(self) -> R24TruthValue:
+        return _r24_decision_field(self, "job_terminal")
+
+    @property
+    def owner_acceptance_record_sha256(self) -> str:
+        return _r24_decision_field(self, "owner_acceptance_record_sha256")
+
+    @property
+    def post(self) -> R24TruthValue:
+        return _r24_decision_field(self, "post")
+
+    @property
+    def predecessor_kind(self) -> R24PredecessorKind:
+        return _r24_decision_field(self, "predecessor_kind")
+
+    @property
+    def prepare_continuity_context(self) -> R24PrepareContinuityContext:
+        return _r24_decision_field(self, "prepare_continuity_context")
+
+    @property
+    def retirement(self) -> R24TruthValue:
+        return _r24_decision_field(self, "retirement")
+
+    @property
+    def fixture_only(self) -> bool:
+        return True
+
+    @property
+    def source_authority(self) -> bool:
+        return False
+
+    @property
+    def effect_authority(self) -> bool:
+        return False
+
+    @property
+    def canonical_runtime_type_minted(self) -> bool:
+        return False
+
+    @property
+    def child_created(self) -> bool:
+        return False
+
+    @property
+    def process_created(self) -> bool:
+        return False
+
+    @property
+    def private_body_present(self) -> bool:
+        return False
+
+    @property
+    def model_entered(self) -> bool:
+        return False
+
+    @property
+    def provider_entered(self) -> bool:
+        return False
+
+    @property
+    def audio_entered(self) -> bool:
+        return False
+
+    @property
+    def wav_created(self) -> bool:
+        return False
+
+    @property
+    def publication_current(self) -> bool:
+        return False
+
+
+class Task074R24EffectZeroProducer:
+    """One-use fake producer for the R24 branch predicate and no effects."""
+
+    __slots__ = ("__weakref__",)
+
+    def __init__(self, *, owner_acceptance_record_sha256: str) -> None:
+        if (
+            type(owner_acceptance_record_sha256) is not str
+            or owner_acceptance_record_sha256 != R24_OWNER_ACCEPTANCE_RECORD_SHA256
+        ):
+            raise ValueError("R24-S1 producer requires the exact R24 Owner acceptance record")
+        if type(self) is not Task074R24EffectZeroProducer:
+            raise TypeError("R24-S1 producer type is invalid")
+        with _R24_REGISTRY_LOCK:
+            if self in _R24_PRODUCER_STATES:
+                raise TypeError("R24-S1 producer is already initialized")
+            _R24_PRODUCER_STATES[self] = _R24ProducerState(
+                lock=threading.Lock(),
+                burned=False,
+                owner_acceptance_record_sha256=owner_acceptance_record_sha256,
+            )
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        raise TypeError("R24-S1 producer types are sealed")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise AttributeError("R24-S1 producers are sealed")
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("R24-S1 producers are sealed")
+
+    def __copy__(self) -> None:
+        raise TypeError("R24-S1 producers are non-copyable")
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> None:
+        raise TypeError("R24-S1 producers are non-copyable")
+
+    def __reduce__(self) -> None:
+        raise TypeError("R24-S1 producers are non-serializable")
+
+    def __reduce_ex__(self, protocol: int) -> None:
+        raise TypeError("R24-S1 producers are non-serializable")
+
+    def __getstate__(self) -> None:
+        raise TypeError("R24-S1 producers are non-serializable")
+
+    def produce(
+        self,
+        *,
+        project_id: str,
+        operation_id: str,
+        ticket_id: str,
+        predecessor_kind: R24PredecessorKind,
+        post: R24TruthValue,
+        job_terminal: R24TruthValue,
+        retirement: R24TruthValue,
+        prepare_continuity_context: R24PrepareContinuityContext,
+    ) -> _Task074R24EffectZeroDecision:
+        if type(self) is not Task074R24EffectZeroProducer:
+            raise TypeError("R24-S1 producer type is invalid")
+        with _R24_REGISTRY_LOCK:
+            state = _R24_PRODUCER_STATES.get(self)
+        if type(state) is not _R24ProducerState:
+            raise TypeError("R24-S1 producer provenance is invalid")
+        with state.lock:
+            if state.burned:
+                raise RuntimeError("R24-S1 producer has already been burned")
+            state.burned = True
+
+        for name, value in (
+            ("project_id", project_id),
+            ("operation_id", operation_id),
+            ("ticket_id", ticket_id),
+        ):
+            if type(value) is not str:
+                raise ValueError(f"{name} must be an exact string")
+            _identifier(value, name)
+        predecessor = _r24_exact_enum(R24PredecessorKind, predecessor_kind, "predecessor_kind")
+        post_value = _r24_exact_enum(R24TruthValue, post, "post")
+        job_value = _r24_exact_enum(R24TruthValue, job_terminal, "job_terminal")
+        retirement_value = _r24_exact_enum(R24TruthValue, retirement, "retirement")
+        continuity = _r24_exact_enum(
+            R24PrepareContinuityContext,
+            prepare_continuity_context,
+            "prepare_continuity_context",
+        )
+
+        if (
+            predecessor is R24PredecessorKind.SUCCESS
+            and post_value is R24TruthValue.TRUE
+            and job_value is R24TruthValue.TRUE
+            and retirement_value is R24TruthValue.TRUE
+        ):
+            branch = R24GlobalBranch.SUCCESS_CLOSED
+        elif (
+            predecessor is R24PredecessorKind.NONCURRENT
+            and post_value is R24TruthValue.FALSE
+            and job_value is R24TruthValue.TRUE
+            and retirement_value is R24TruthValue.TRUE
+        ):
+            branch = R24GlobalBranch.NONCURRENT_CLOSED
+        elif (
+            predecessor is R24PredecessorKind.ABORTED
+            and post_value is R24TruthValue.FALSE
+            and job_value is R24TruthValue.TRUE
+            and retirement_value is R24TruthValue.TRUE
+        ):
+            branch = R24GlobalBranch.ABORTED_CLOSED
+        else:
+            branch = R24GlobalBranch.CONTAINED_PARTIAL_TRUTH
+
+        coordinate_body = {
+            "producer_version": R24_S1_PRODUCER_VERSION,
+            "fixture_scope": R24_S1_FIXTURE_SCOPE,
+            "owner_acceptance_record_sha256": state.owner_acceptance_record_sha256,
+            "project_id": project_id,
+            "operation_id": operation_id,
+            "ticket_id": ticket_id,
+            "predecessor_kind": predecessor.value,
+            "post": post_value.value,
+            "job_terminal": job_value.value,
+            "retirement": retirement_value.value,
+            "prepare_continuity_context": continuity.value,
+        }
+        coordinate_sha256 = sha256_bytes(
+            _R24_S1_COORDINATE_DOMAIN + canonical_json_bytes(coordinate_body)
+        )
+        decision_sha256 = sha256_bytes(
+            _R24_S1_DECISION_DOMAIN
+            + canonical_json_bytes(
+                {
+                    "branch": branch.value,
+                    "coordinate_sha256": coordinate_sha256,
+                    "effect_authority": False,
+                    "fixture_only": True,
+                    "source_authority": False,
+                }
+            )
+        )
+        result = object.__new__(_Task074R24EffectZeroDecision)
+        result_state = _R24DecisionState(
+            branch=branch,
+            coordinate_sha256=coordinate_sha256,
+            decision_sha256=decision_sha256,
+            job_terminal=job_value,
+            owner_acceptance_record_sha256=state.owner_acceptance_record_sha256,
+            post=post_value,
+            predecessor_kind=predecessor,
+            prepare_continuity_context=continuity,
+            retirement=retirement_value,
+        )
+        with _R24_REGISTRY_LOCK:
+            _R24_DECISION_STATES[result] = result_state
+        return result
+
+
 __all__ = [
     "CompletionClass",
     "DurabilityVariant",
@@ -935,7 +1302,15 @@ __all__ = [
     "PersistenceState",
     "PrivateReferenceState",
     "PublicReferenceStatus",
+    "R24GlobalBranch",
+    "R24PredecessorKind",
+    "R24PrepareContinuityContext",
+    "R24TruthValue",
+    "R24_OWNER_ACCEPTANCE_RECORD_SHA256",
+    "R24_S1_FIXTURE_SCOPE",
+    "R24_S1_PRODUCER_VERSION",
     "RouteInputVariant",
     "Task074OwnerVoiceAuthorityCompletionReceipt",
+    "Task074R24EffectZeroProducer",
     "Task074ToTask075ExecutionInputV2",
 ]

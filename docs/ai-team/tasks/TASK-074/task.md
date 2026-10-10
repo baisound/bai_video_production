@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_ALLOCATED / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -178,6 +178,15 @@ effect-zero TASK-074 producer and focused tests. It cannot mint a canonical
 runtime type or authorize R24-S2, either coordinated amendment, private/native/
 model/audio effects, publication-current or downstream PASS. Those remain
 unissued and separately gated.
+
+R24-S1 implementation and independent DEV-4 review passed with unresolved
+`Critical/High = 0/0`. The fake producer is Owner-acceptance-bound, one-use,
+weak-provenance-sealed and effect-zero; it evaluates all 108 closed branch
+tuples without minting a canonical runtime type. The exact verification and
+remaining merge predicate are recorded in
+`r24-s1-effect-zero-producer-completion-receipt.md`. R24-S1 remains
+`MERGE_PENDING` until hosted checks and the exact PR merge are read back. R24-S2
+and every later authority remain unissued.
 
 ### TASK074-B — Pure contracts and fixtures
 

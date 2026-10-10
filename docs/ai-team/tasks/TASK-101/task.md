@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACTIVE / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -73,3 +73,17 @@ Implementation owner is this TASK-101 voice-integration thread. Repository Allow
 IMC-I is governed as DEV-4 because it implements a security-sensitive state machine and canonical cross-owner contract. It may implement only strict parsing, exact validation, canonical digests, immutable public records, pure readback/currentness evaluation and an in-memory fake backend. It must remain effect-zero and must not read private audio or model bodies, open filesystem paths, create protected custody, issue a live private capability, load a runtime/model, run inference, call a Provider, download/install anything, connect Product/Shell, or perform Release/Deploy/Production work. IMC-N and IMC-L remain separately gated.
 
 Completion requires exact schema/mirror equality, focused positive/negative/parser/digest/currentness/lifecycle tests, independent Critic and Tester acceptance, DEV-4 Judge closure, exact-five diff/scope validation, and external Evidence write/readback under `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-i\<run-id>\`. Publication is not authorized by this allocation; the unit stops commit-ready unless a separate current publication authority is confirmed.
+
+## IMC-I implementation acceptance — 2026-10-10
+
+IMC-I is accepted as the bounded, effect-zero pure contract/fake-backend unit. The implementation baseline is `53e4f0ea8e219b773a2976ba40b956830ff2e1df`; the frozen reviewed implementation HEAD is `3f67316466718fbe29fac3359c17d441ce17321e`. The three implementation commits are `153be2fbde1659eb94f8a32ced93e6a1aa3a9b9f`, `a405c6132d3fd654aedc305d66826906783ebde3`, and `3f67316466718fbe29fac3359c17d441ce17321e`.
+
+The accepted surface implements strict record parsing, exact field and cross-record validation, canonical domain-separated digests, immutable public records, pure readback/currentness evaluation, the closed section 6.1 native failure classification, one-way capability audit validation, and a non-authoritative in-memory backend whose outputs are explicitly `FIXTURE_ONLY`. It does not open a path, read model bodies, create protected custody, issue a live capability, load a model/runtime, run inference, call a Provider, connect Product/Shell, or perform Release, Deploy, or Production work.
+
+The initial independent review found Critic C/H/M/L `0/3/1/0` and Tester `0/3/0/0`. Recovery R1 closed the audit-chain, receipt-expiry/currentness, fake/live authority and failure-matrix findings; its Critic accepted `0/0/0/0`, while its Tester found two new High issues. Recovery R2 removed the unfrozen readback generation/time sequencing constraints and made `NativeImportFailureClassification` factory-only. The final independent Critic and Tester both accepted R2 at C/H/M/L `0/0/0/0`; the DEV-4 Judge accepted the unit with no unresolved finding after the maximum two bounded fix cycles.
+
+Final local verification is TASK-101 focused `37 / 37 PASS`, TASK-101 plus direct TASK-100/TASK-084 regression `213 / 213 PASS`, compileall `PASS`, `git diff --check` `PASS`, and exact-five scope `PASS`. Independent Tester verification is TASK-101 focused `37 / 37 PASS`, its selected TASK-100/TASK-084 regression `185 / 185 PASS`, bounded prior-High probes `2 / 2 PASS`, effect-zero probe `1 / 1 PASS`, AST/import `PASS`, and exact-five scope `PASS`. The canonical schema and package mirror are byte-identical at SHA-256 `bf319c30c99f7586c272984ed96d0bb737e61cb00e67adcac26c9fcadc764195`.
+
+During final verification, test caches and bytecode were disabled. Compile output was bound to the operation-specific WSL system-temp root `/tmp/bvp-task101-imci-r2-20261010-001/pycache`; it is the only intentional temporary residual. The final public-safe external checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-i\20261010-imc-i-final-001\` and must be written and read back after this completion record is committed.
+
+IMC-I acceptance does not complete TASK-101. IMC-N, IMC-L, private/native import, key/DACL work, protected destination creation, live capability/load/inference, consumer integration, publication, Release, Deploy, and Production remain separately blocked or unallocated. Current `origin/main` advanced to `110d595acd7802d599914823760ed622ac1983c7` after the implementation baseline; its changed paths have zero overlap with the exact-five IMC-I scope. Publication remains unauthorized, so this unit stops commit-ready without push or PR.

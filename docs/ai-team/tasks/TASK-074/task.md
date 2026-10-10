@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R17_DEPENDENCY_SEQUENCING_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R18_STABLE_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -59,6 +59,19 @@ Tester/Critic/Judge review with `Critical/High = 0/0` and Judge `PASS` before
 either record may be marked accepted. No R17 source stage is allocated by this
 Task record.
 
+R17 failed that review: Tester `FAIL` `0/3/0/0`, Critic `REVISE` `0/4/2/0`,
+Judge withheld. Its exact rejected bytes and findings are preserved in
+`design-r17-independent-review-receipt.md`.
+
+R18 is the current correction candidate. It keeps reviewed contract bodies
+immutable and moves each owner's acceptance into a later, separate,
+digest-stable envelope. It separates source eligibility from same-operation
+live minting; restores the full TASK-076 V3 bootstrap/bind/preflight sequence;
+corrects TASK-043/TASK-074 transaction ownership and LOCAL-only compute
+admission; and makes TASK-041/TASK-036 ordering acyclic with a closed PASS input
+table. R18 requires fresh exact-byte Tester/Critic/Judge review. No R18 owner
+envelope or source stage is allocated by this Task record.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -83,6 +96,13 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-074/design-r16-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r17-dependency-sequencing-amendment.md`
 - `docs/ai-team/tasks/TASK-074/r17-direct-transfer-producer-contract-acceptance-r0.md`
+- `docs/ai-team/tasks/TASK-074/design-r17-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r18-stable-acceptance-split-gates.md`
+- `docs/ai-team/tasks/TASK-074/r18-direct-transfer-producer-contract.md`
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-restricted-consumer-port-contract-r18.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r18.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r18.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

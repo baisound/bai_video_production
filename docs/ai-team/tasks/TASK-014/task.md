@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R17_OWNER_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R18_STABLE_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -119,7 +119,7 @@ before any source allocation.
 Canonical readiness evidence:
 `local-primary-d4-dependency-readiness-r2-evidence-2026-09-27.md`.
 
-## D4 non-circular owner acceptance candidate — 2026-10-10
+## D4 R17 rejected candidate — 2026-10-10
 
 Independent review of TASK-074 R16 confirmed that the old TASK-014 D4 and
 TASK-074 producer source-start rules form a cycle, but rejected R16 because it
@@ -159,3 +159,43 @@ this Task record grants none.
 
 Source, schema, tests, current-state, task-index, roadmap, CHANGELOG, native
 state and private Evidence are outside this design-review allocation.
+
+R17 did not pass independent review. Exact Tester `FAIL`, Critic `REVISE` and
+the withheld Judge result are preserved in
+`../TASK-074/design-r17-independent-review-receipt.md`. The R17 amendment and
+its acceptance candidates remain immutable rejected Evidence. They must not be
+marked accepted, edited into a new status or used for source start.
+
+## D4 R18 stable acceptance candidate — 2026-10-10
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r18-stable-acceptance-split-gates.md`.
+TASK-014 owns the immutable contract body
+`d4-restricted-consumer-port-contract-r18.md` with identity
+`TASK014_D4_RESTRICTED_CONSUMER_PORT_CONTRACT_R18_V1`.
+
+R18 never edits the reviewed contract body to insert acceptance state or its
+own hash. Only after exact-byte Tester/Critic `Critical/High = 0/0` and Judge
+`PASS` may a separately allocated TASK-014 administrative owner writer create
+`d4-r18-owner-acceptance.json`. That envelope binds the predecessor Task record;
+the later Task status may reference the fixed envelope without changing it.
+
+The owner envelope still grants no source or effect authority. The accepted
+TASK-014/TASK-074 envelope pair makes only a separately allocated effect-zero
+restricted consumer/POST unit eligible. Real call/sink, body, model, audio/WAV,
+Asset publication and `NarrationPublicationReceipt` minting remain blocked on
+the exact current TASK-074 live type and every R18 runtime row.
+
+### D4 R18 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-restricted-consumer-port-contract-r18.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r17-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r18-stable-acceptance-split-gates.md`
+- `docs/ai-team/tasks/TASK-074/r18-direct-transfer-producer-contract.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r18.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r18.md`
+
+Acceptance envelopes, source, schema, tests, current-state, task-index, roadmap,
+CHANGELOG, native state and private Evidence are outside this review allocation.

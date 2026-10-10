@@ -1,6 +1,6 @@
 # TASK-106 — Planning Generation Deadlock Recovery
 
-Status: `ACTIVE / ATOMIC_UNIT_A_SOURCE_ACCEPTED / PR_PUBLICATION_AUTHORIZED / NATIVE_GATE_PENDING`
+Status: `ACTIVE / ATOMIC_UNIT_A_PR_OPEN / CI_AND_NATIVE_GATES_PENDING`
 
 Governance: `DEV-4 FOUNDATION CRITICAL`
 
@@ -137,3 +137,9 @@ for this accepted source unit. That authority covers an explicit-file commit,
 task-branch push and PR creation. It does not authorize merge,
 packaged/native Product acceptance, build/package, Release, Deploy or
 Production Activation; those remain separate gates.
+
+Publication occurred on the authorized task branch as source commit
+`080ca951242aaa313859bd8a209e83f8aec0ecc7`. Pull request
+`https://github.com/baisound/bai_video_production/pull/608` is open against
+`main`. The PR was mergeable when observed; hosted CI and security checks were
+still running. No merge authority has been exercised.

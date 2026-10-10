@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "record_type": "TASK074_R24_OWNER_ACCEPTANCE_V1",
+  "owner_task": "TASK-074",
+  "contract_identity": "TASK074_GLOBAL_TERMINAL_CLOSURE_CONTRACT_R24_V1",
+  "contract_path": "docs/ai-team/tasks/TASK-074/r24-global-terminal-closure-contract.md",
+  "contract_sha256": "504F6A84021ACA8AD0489F8F136F21A81AEA582C8751C9D886B030FD5EE865D7",
+  "r24_path": "docs/ai-team/tasks/TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md",
+  "r24_sha256": "D9E700201B2C22FD5ACA301623F895E3796E43755E3577AF4269861964519A72",
+  "judge_receipt_path": "docs/ai-team/tasks/TASK-074/design-r24-independent-review-receipt.md",
+  "judge_receipt_sha256": "69A0193458210B7C907E0E642830FBEBADFB39D8F525D72A2BC6B3DE93B3A8F0",
+  "predecessor_owner_status_path": "docs/ai-team/tasks/TASK-074/task.md",
+  "predecessor_owner_status_sha256": "22BDA61E493102B928E199440C23B2EA0BF2E05A7943264F855AC27318891472",
+  "source_authority": false,
+  "effect_authority": false,
+  "issued_at": "2026-10-10T21:05:41Z",
+  "record_sha256": "8EDDD5E86CD21A779ADBCF889A9478E67520F4E0E48748983D7ABE6F2D710BB0"
+}

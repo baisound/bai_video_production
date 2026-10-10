@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / TASK074_B_IMPLEMENTATION_ELIGIBLE / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / OWNER_ACCEPTANCE_NOT_ISSUED / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -47,6 +47,130 @@ TASK-074はmodel download/load、training、inference、playback、WAV生成、A
 
 The accepted design is the immutable R9 packet plus R10、R11、R12 and R13 addenda. R13 closes V2 terminal-current retirement/repeated-operation issuance and the legacy V1 `REVOKE_PENDING` terminal finalize-only recovery seam. Fresh independent DEV-4 review reproduced the exact frozen set、reported `Critical/High/Medium/Low = 0/0/0/0` and returned Judge `PASS`. TASK074-B pure contracts may therefore start after fresh Git/worktree/dirty/overlap verification. TASK074-C and TASK074-D retain their explicit producer、native and Human Gates; design acceptance does not authorize those gated effects.
 
+R16 later identified the circular dependency between TASK-074 producer work and
+TASK-014 D4 work, but independent review returned `FAIL / REVISE` with
+unresolved High findings. R16 is superseded as a candidate and remains
+`SOURCE_START0`. R17 is the current effect-zero correction candidate. It adds
+separate TASK-014/TASK-074 owner contract acceptances, owner-specific nominal
+completion layers, the full direct-transfer/recovery rules, a closed live
+prerequisite table and the exclusive TASK-041-to-TASK-036 AUDIO_COMPLETION
+boundary. R17 and both owner acceptance candidates require fresh exact-byte
+Tester/Critic/Judge review with `Critical/High = 0/0` and Judge `PASS` before
+either record may be marked accepted. No R17 source stage is allocated by this
+Task record.
+
+R17 failed that review: Tester `FAIL` `0/3/0/0`, Critic `REVISE` `0/4/2/0`,
+Judge withheld. Its exact rejected bytes and findings are preserved in
+`design-r17-independent-review-receipt.md`.
+
+R18 is the current correction candidate. It keeps reviewed contract bodies
+immutable and moves each owner's acceptance into a later, separate,
+digest-stable envelope. It separates source eligibility from same-operation
+live minting; restores the full TASK-076 V3 bootstrap/bind/preflight sequence;
+corrects TASK-043/TASK-074 transaction ownership and LOCAL-only compute
+admission; and makes TASK-041/TASK-036 ordering acyclic with a closed PASS input
+table. R18 requires fresh exact-byte Tester/Critic/Judge review. No R18 owner
+envelope or source stage is allocated by this Task record.
+
+R18 failed review: Tester `FAIL` `0/2/0/0`, Critic `REVISE` `0/3/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r18-independent-review-receipt.md`.
+
+R19 was the then-current correction candidate. It introduces distinct TASK-074
+operation-ready, child-pair-ready and terminal-current types; restores the
+TASK-014 one-use dispatch lease before TASK-076 arm; and moves TASK-075 result
+to terminal/POST gating only. It normatively binds the exact current-main
+TASK-076 V3 prepare/abort/release/containment failure graph and closes TASK-041
+finishing with canonical REQUIRED/OPTIONAL/NOT_APPLICABLE policy plus a sealed
+TASK-035 owner-issued optional-skip current result. R19 requires fresh
+exact-byte Tester/Critic/Judge review. No owner envelope or source stage is
+allocated by this Task record.
+
+R19 failed review: Tester `FAIL` `0/3/0/0`, Critic `REVISE` `0/3/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r19-independent-review-receipt.md`. R19 remains immutable rejected
+Evidence and cannot issue owner acceptance or source authority.
+
+R20 is the current correction candidate. It replaces pre-arm TASK-014 call
+dispatch with a metadata-only reservation consumed by a future separately
+accepted TASK-014/072/075/076 adapter around the unchanged TASK-076 arm ABI.
+Actual call/sink dispatch begins only after exact Artifact-prepare pending.
+One second separately accepted four-owner adapter binds TASK-014 receipt-only
+prepare/terminal truth into the existing TASK-076 inputs.
+R20 separates SUCCESS, NONCURRENT, ABORTED and BURNED_UNKNOWN terminals,
+defines full TASK-014 session/reply-loss closure, lists every exact
+known-no-child result and preserves the canonical restart-safe unselected-orphan
+exception. Its four immutable contracts and exact sixteen-key owner-envelope
+schema require fresh exact-byte Tester/Critic/Judge review. This Task record
+allocates no envelope, either adapter, source or runtime effect.
+
+R20 failed review: Tester `FAIL` `0/2/2/0`, Critic `REVISE` `0/4/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r20-independent-review-receipt.md`. R20 is immutable rejected Evidence.
+
+R21 was the then-current correction candidate. It adds durable pre-arm coordinator
+and owner-query reconciliation, owner-issued prepare NEVER_ENTERED truth,
+canonical receipt-only adapter outputs and ordinary AFTER_PREPARE abort. It
+treats result/POST/role-close/lease facts as provisional until TASK-076 terminal
+and TASK-074 retirement join; late uncertainty selects a containment branch
+that preserves those facts. The complete canonical TASK-075 success predicate
+gates POST, publication-current and downstream PASS. Exact owner contract paths
+and TASK-041 forked handling are closed. Fresh exact-byte Tester/Critic/Judge
+review was required; this Task record grants no envelope, amendment, source or
+runtime effect.
+
+R21 failed review: Tester `FAIL` `0/1/0/0`, Critic `REVISE` `0/2/0/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r21-independent-review-receipt.md`. R21 remains immutable rejected
+Evidence.
+
+R22 was the then-current correction candidate. It makes exact terminal/retirement a
+prerequisite only for known-closed global branches and makes partial-truth
+containment reachable from explicit false/unknown late joins. It also separates
+same-broker live-continuation interruption from Product/broker/worker/adapter/
+coordinator restart or continuation loss. Only the live class may issue prepare
+`NEVER_ENTERED` and finish abort-wait; restart-class state follows pinned
+TASK-075 section 9.3.1 burned-unknown containment unless an exact pre-restart
+abort-pending claim already exists. Fresh exact-byte Tester/Critic/Judge review
+was required; this Task record grants no envelope, amendment, source or runtime
+effect.
+
+R22 failed review: Tester `FAIL` `0/2/0/0`, Critic `REVISE` `0/2/0/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r22-independent-review-receipt.md`. R22 remains immutable rejected
+Evidence.
+
+R23 was the then-current correction candidate. It derives one predecessor kind and
+compares that kind with its complete expected POST/Job-terminal/retirement
+vector, making the three known-closed branches and containment mutually
+exclusive. It adds an exact no-prepare-recovery context for ordinary late
+uncertainty. It also limits restart burned-unknown handling to explicit
+pre-release states and preserves pinned post-release STARTED child terminal
+recovery before fallback containment. Fresh exact-byte Tester/Critic/Judge
+review was required; this Task record grants no envelope, amendment, source or
+runtime effect.
+
+R23 failed review: Tester `FAIL` `0/1/0/0`, Critic `PASS` `0/0/0/0`, Judge
+withheld. Exact bytes and finding are preserved in
+`design-r23-independent-review-receipt.md`. R23 remains immutable rejected
+Evidence.
+
+R24 is the current correction candidate. It retains R23's exhaustive/exclusive
+global branch predicate and exact pre/post-release restart split. It separates
+ordinary uninterrupted pending abort from recovery: an already durable
+`PENDING_CLAIMED` no-recovery operation may enter owner `NEVER_ENTERED` and
+abort-wait directly, while only a live interrupted pending observation performs
+query/rejoin first. Restart-class loss cannot use either path. Fresh exact-byte
+Tester/Critic/Judge review is required; this Task record grants no envelope,
+amendment, source or runtime effect.
+
+R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
+`Critical/High/Medium/Low = 0/0/0/0`; the immutable decision and hashes are in
+`design-r24-independent-review-receipt.md`. This closes R24-S0 only. The four
+owner envelopes, both coordinated amendments, source/runtime, private/native/
+model/audio effects, publication-current and downstream PASS remain unissued
+and separately gated.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -67,6 +191,54 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r11-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r12-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r13-addendum.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r16-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/design-r16-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r17-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/r17-direct-transfer-producer-contract-acceptance-r0.md`
+- `docs/ai-team/tasks/TASK-074/design-r17-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r18-stable-acceptance-split-gates.md`
+- `docs/ai-team/tasks/TASK-074/r18-direct-transfer-producer-contract.md`
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-restricted-consumer-port-contract-r18.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r18.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r18.md`
+- `docs/ai-team/tasks/TASK-074/design-r18-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r19-acyclic-runtime-exact-failure.md`
+- `docs/ai-team/tasks/TASK-074/r19-direct-transfer-runtime-phases-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-three-phase-runtime-contract-r19.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r19.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r19.md`
+- `docs/ai-team/tasks/TASK-074/design-r19-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r20-reservation-tagged-terminal-closure.md`
+- `docs/ai-team/tasks/TASK-074/r20-direct-transfer-tagged-terminal-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-reservation-closed-terminal-contract-r20.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r20.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r20.md`
+- `docs/ai-team/tasks/TASK-074/design-r20-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r21-coordinated-closure-late-truth.md`
+- `docs/ai-team/tasks/TASK-074/r21-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r21.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r21.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r21.md`
+- `docs/ai-team/tasks/TASK-074/design-r21-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r22-restart-split-reachable-containment.md`
+- `docs/ai-team/tasks/TASK-074/r22-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r22.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r22.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r22.md`
+- `docs/ai-team/tasks/TASK-074/design-r22-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r23-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r23-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r23.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r23.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r23.md`
+- `docs/ai-team/tasks/TASK-074/design-r23-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r24-branch-predicate-post-release-recovery.md`
+- `docs/ai-team/tasks/TASK-074/r24-global-terminal-closure-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-coordinated-closure-contract-r24.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r24.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r24.md`
+- `docs/ai-team/tasks/TASK-074/design-r24-independent-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

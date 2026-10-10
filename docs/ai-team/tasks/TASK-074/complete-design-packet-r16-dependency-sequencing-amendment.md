@@ -1,6 +1,6 @@
 # TASK-074 R16 Dependency Sequencing Amendment
 
-Status: `DESIGN_CANDIDATE_R16 / DEV-4 / EFFECT0 / SOURCE_START0 / INDEPENDENT_REVIEW_REQUIRED`
+Status: `INDEPENDENT_REVIEW_REVISE / SUPERSEDED_BY_R17_CANDIDATE / DEV-4 / EFFECT0 / SOURCE_START0`
 
 Date: `2026-10-10`
 
@@ -22,6 +22,12 @@ Historical inputs only:
 This amendment is a review candidate. It creates no source-start, implementation,
 native, private-audio, model, process, publication, provider, Release, Deploy or
 Production authority.
+
+Independent review of exact file SHA-256
+`42490B33BB7061A6BCE65F537CB82DFBF51CEB3B3F9E24B1249D5E8B0789D732`
+returned Tester `FAIL` and Critic `REVISE`. The durable review result is
+`design-r16-independent-review-receipt.md`. R16 is retained as rejected design
+Evidence and must not be implemented, accepted or used as source authority.
 
 ## 1. Blocking finding
 

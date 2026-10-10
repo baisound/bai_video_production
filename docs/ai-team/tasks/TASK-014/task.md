@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R17_OWNER_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -118,3 +118,44 @@ before any source allocation.
 
 Canonical readiness evidence:
 `local-primary-d4-dependency-readiness-r2-evidence-2026-09-27.md`.
+
+## D4 non-circular owner acceptance candidate — 2026-10-10
+
+Independent review of TASK-074 R16 confirmed that the old TASK-014 D4 and
+TASK-074 producer source-start rules form a cycle, but rejected R16 because it
+did not create separate owner acceptance roots or fully close the live and
+downstream PASS gates. The findings are preserved in
+`../TASK-074/design-r16-independent-review-receipt.md`.
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r17-dependency-sequencing-amendment.md`.
+TASK-014 owns the paired candidate record
+`d4-restricted-consumer-port-contract-acceptance-r0.md`, whose exact record type
+is `TASK014_D4_RESTRICTED_CONSUMER_PORT_CONTRACT_ACCEPTANCE_V1`.
+
+This candidate accepts only an effect-zero, parent-authority-zero consumer-port
+and POST/current-read contract boundary. It does not accept or authorize a
+private handle, child/process creation, body read, model action, audio/WAV,
+Asset publication, `NarrationPublicationReceipt`, TASK-041 PASS or TASK-036
+AUDIO_COMPLETION PASS. Real call/sink and POST minting remain blocked on the
+exact current TASK-074 live producer plus every R17 closed live prerequisite.
+
+R17, both owner acceptance candidates and both canonical Task record updates
+must receive fresh exact-byte Tester/Critic/Judge review with unresolved
+`Critical/High = 0/0` and Judge `PASS`. Only then may a body-preserving
+administrative update mark the owner records accepted. Each later R17 source
+stage still requires its own named allocation, owner lock and Allowed Files;
+this Task record grants none.
+
+### D4 R17 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-restricted-consumer-port-contract-acceptance-r0.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r16-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/design-r16-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r17-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/r17-direct-transfer-producer-contract-acceptance-r0.md`
+
+Source, schema, tests, current-state, task-index, roadmap, CHANGELOG, native
+state and private Evidence are outside this design-review allocation.

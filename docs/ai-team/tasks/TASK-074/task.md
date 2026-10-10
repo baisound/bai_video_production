@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / TASK074_B_IMPLEMENTATION_ELIGIBLE / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R17_DEPENDENCY_SEQUENCING_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -47,6 +47,18 @@ TASK-074はmodel download/load、training、inference、playback、WAV生成、A
 
 The accepted design is the immutable R9 packet plus R10、R11、R12 and R13 addenda. R13 closes V2 terminal-current retirement/repeated-operation issuance and the legacy V1 `REVOKE_PENDING` terminal finalize-only recovery seam. Fresh independent DEV-4 review reproduced the exact frozen set、reported `Critical/High/Medium/Low = 0/0/0/0` and returned Judge `PASS`. TASK074-B pure contracts may therefore start after fresh Git/worktree/dirty/overlap verification. TASK074-C and TASK074-D retain their explicit producer、native and Human Gates; design acceptance does not authorize those gated effects.
 
+R16 later identified the circular dependency between TASK-074 producer work and
+TASK-014 D4 work, but independent review returned `FAIL / REVISE` with
+unresolved High findings. R16 is superseded as a candidate and remains
+`SOURCE_START0`. R17 is the current effect-zero correction candidate. It adds
+separate TASK-014/TASK-074 owner contract acceptances, owner-specific nominal
+completion layers, the full direct-transfer/recovery rules, a closed live
+prerequisite table and the exclusive TASK-041-to-TASK-036 AUDIO_COMPLETION
+boundary. R17 and both owner acceptance candidates require fresh exact-byte
+Tester/Critic/Judge review with `Critical/High = 0/0` and Judge `PASS` before
+either record may be marked accepted. No R17 source stage is allocated by this
+Task record.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -67,6 +79,10 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r11-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r12-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r13-addendum.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r16-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/design-r16-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r17-dependency-sequencing-amendment.md`
+- `docs/ai-team/tasks/TASK-074/r17-direct-transfer-producer-contract-acceptance-r0.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

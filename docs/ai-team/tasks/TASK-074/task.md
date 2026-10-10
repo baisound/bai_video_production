@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R18_STABLE_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R19_ACYCLIC_RUNTIME_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -72,6 +72,20 @@ admission; and makes TASK-041/TASK-036 ordering acyclic with a closed PASS input
 table. R18 requires fresh exact-byte Tester/Critic/Judge review. No R18 owner
 envelope or source stage is allocated by this Task record.
 
+R18 failed review: Tester `FAIL` `0/2/0/0`, Critic `REVISE` `0/3/1/0`, Judge
+withheld. Exact bytes and findings are preserved in
+`design-r18-independent-review-receipt.md`.
+
+R19 is the current correction candidate. It introduces distinct TASK-074
+operation-ready, child-pair-ready and terminal-current types; restores the
+TASK-014 one-use dispatch lease before TASK-076 arm; and moves TASK-075 result
+to terminal/POST gating only. It normatively binds the exact current-main
+TASK-076 V3 prepare/abort/release/containment failure graph and closes TASK-041
+finishing with canonical REQUIRED/OPTIONAL/NOT_APPLICABLE policy plus a sealed
+TASK-035 owner-issued optional-skip current result. R19 requires fresh
+exact-byte Tester/Critic/Judge review. No owner envelope or source stage is
+allocated by this Task record.
+
 ### TASK074-B — Pure contracts and fixtures
 
 TASK074-Aのaccept後に開始する。route selection、private-reference receipt、registry amendment、completion receiptのpure/body-free validatorsとfixturesを実装する。real Project store、real encryption、native picker、private audio、model runtimeは使わない。
@@ -103,6 +117,12 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-014/d4-restricted-consumer-port-contract-r18.md`
 - `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r18.md`
 - `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r18.md`
+- `docs/ai-team/tasks/TASK-074/design-r18-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r19-acyclic-runtime-exact-failure.md`
+- `docs/ai-team/tasks/TASK-074/r19-direct-transfer-runtime-phases-contract.md`
+- `docs/ai-team/tasks/TASK-014/d4-three-phase-runtime-contract-r19.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r19.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r19.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`

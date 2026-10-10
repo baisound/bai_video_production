@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R18_STABLE_ACCEPTANCE_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R19_ACYCLIC_RUNTIME_REVIEW_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -199,3 +199,46 @@ the exact current TASK-074 live type and every R18 runtime row.
 
 Acceptance envelopes, source, schema, tests, current-state, task-index, roadmap,
 CHANGELOG, native state and private Evidence are outside this review allocation.
+
+R18 did not pass independent review. Exact Tester `FAIL`, Critic `REVISE` and
+the withheld Judge result are preserved in
+`../TASK-074/design-r18-independent-review-receipt.md`. The R18 design and
+contracts remain immutable rejected Evidence and cannot issue owner envelopes
+or source authority.
+
+## D4 R19 three-phase runtime candidate — 2026-10-11
+
+The current correction candidate is
+`../TASK-074/complete-design-packet-r19-acyclic-runtime-exact-failure.md`.
+TASK-014 owns immutable contract
+`d4-three-phase-runtime-contract-r19.md`.
+
+R19 separates:
+
+1. pre-arm one-use call dispatch authorization;
+2. post-transfer receipt-only preparation and later released execution;
+3. post-result publication/POST minting.
+
+The call dispatch lease is created before TASK-076 arm from a TASK-074
+operation-ready type that proves no child or body effect. A different TASK-074
+child-pair-ready type enables receipt-only preparation after direct transfer and
+validated preflight. TASK-075 result and TASK-074 terminal currentness gate only
+POST publication, never initial dispatch or transfer.
+
+R19 and its four immutable owner contracts require exact-byte Tester/Critic
+`Critical/High = 0/0` and Judge `PASS`. Only later owner-local envelopes may
+accept the contracts; envelopes still grant no source or runtime authority.
+
+### D4 R19 design-review Allowed Files
+
+- `docs/ai-team/tasks/TASK-014/task.md`
+- `docs/ai-team/tasks/TASK-014/d4-three-phase-runtime-contract-r19.md`
+- `docs/ai-team/tasks/TASK-036/audio-completion-exclusive-binder-contract-r19.md`
+- `docs/ai-team/tasks/TASK-041/audio-completion-pass-contract-r19.md`
+- `docs/ai-team/tasks/TASK-074/task.md`
+- `docs/ai-team/tasks/TASK-074/design-r18-independent-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r19-acyclic-runtime-exact-failure.md`
+- `docs/ai-team/tasks/TASK-074/r19-direct-transfer-runtime-phases-contract.md`
+
+Owner envelopes, source, schema, tests, current-state, task-index, roadmap,
+CHANGELOG, native state and private Evidence remain outside this allocation.

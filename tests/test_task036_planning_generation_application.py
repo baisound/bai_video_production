@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import replace
 from decimal import Decimal
 import json
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock
 import shutil
 
 import pytest
+
+import ai_video_production.task036_planning_generation_application as planning_generation_module
 
 from ai_video_production.ai_connections import AiConnectionProfile, AiWorkload, ConnectionAvailability, CostClass, ModelRoute, ProviderFamily, SelectionMode
 from ai_video_production.errors import ProductError, ProductErrorCategory
@@ -203,6 +206,392 @@ def test_provider_failure_leaves_canonical_store_absent(tmp_path: Path):
         app.apply(confirmation_id=prepared["confirmation_id"])
     assert exc.value.code == "ERR_FAKE_OLLAMA"
     assert adapter.generate_calls == 1 and not (tmp_path / "production-proposal.json").exists()
+
+
+def test_apply_os_error_before_guard_body_is_typed_absent_without_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="guard acquisition failure",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    @contextmanager
+    def failing_guard(_target):
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\proposal.json")
+        yield
+
+    monkeypatch.setattr(planning_generation_module, "_exclusive_snapshot_lock", failing_guard)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_NOT_COMMITTED"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "ABSENT",
+        "provider_execution_started": False,
+        "automatic_retry_started": False,
+    }
+    assert "deadlock" not in json.dumps(exc.value.to_envelope()).lower()
+    assert "private" not in json.dumps(exc.value.to_envelope()).lower()
+    assert adapter.generate_calls == 0
+    assert not (tmp_path / "production-proposal.json").exists()
+
+
+def test_apply_os_error_before_store_is_typed_absent_and_confirmation_is_consumed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="store failure",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    def failing_append(**_kwargs):
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\proposal.json")
+
+    monkeypatch.setattr(app.planning, "append_initial_proposal", failing_append)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_NOT_COMMITTED"
+    assert exc.value.retryable is False
+    assert exc.value.details["provider_execution_started"] is True
+    assert exc.value.details["automatic_retry_started"] is False
+    assert adapter.generate_calls == 1
+    assert not (tmp_path / "production-proposal.json").exists()
+    with pytest.raises(ProductError) as replay:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+    assert replay.value.code == "ERR_TASK036_PLANNING_CONFIRMATION_INVALID"
+    assert adapter.generate_calls == 1
+
+
+def test_apply_os_error_after_commit_reprojects_exact_canonical_proposal_without_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="committed before unlock failure",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    @contextmanager
+    def failing_unwind_guard(_target):
+        yield
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\lock")
+
+    monkeypatch.setattr(
+        planning_generation_module,
+        "_exclusive_snapshot_lock",
+        failing_unwind_guard,
+    )
+    result = app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert result["apply_recovery_state"] == "COMMITTED_READBACK"
+    assert result["automatic_retry_started"] is False
+    assert result["provider_execution_started"] is True
+    assert result["idempotent"] is False
+    assert adapter.generate_calls == 1
+    reopened = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+    ).snapshot(proposal_id=result["proposal_id"])
+    assert result["application"] == reopened
+    assert result["proposal_sha256"] == reopened["workspace"]["latest_proposal_sha256"]
+
+
+def test_apply_os_error_with_unreadable_readback_is_typed_unknown_without_raw_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="unreadable recovery",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+    original_existing = app._existing
+    calls = 0
+
+    def unreadable_existing(**kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return original_existing(**kwargs)
+        raise OSError(5, "Access denied: C:\\private\\secret-proposal.json")
+
+    def failing_append(**_kwargs):
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\proposal.json")
+
+    monkeypatch.setattr(app, "_existing", unreadable_existing)
+    monkeypatch.setattr(app.planning, "append_initial_proposal", failing_append)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_STATE_UNKNOWN"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "UNKNOWN",
+        "provider_execution_started": True,
+        "automatic_retry_started": False,
+    }
+    envelope = json.dumps(exc.value.to_envelope())
+    assert "deadlock" not in envelope.lower()
+    assert "access denied" not in envelope.lower()
+    assert "private" not in envelope.lower()
+    assert adapter.generate_calls == 1
+
+
+def test_adapter_factory_os_error_is_not_reported_as_provider_execution_started(
+    tmp_path: Path,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="factory failure",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    def failing_factory(_route):
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\factory")
+
+    app._adapter_factory = failing_factory
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_NOT_COMMITTED"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "ABSENT",
+        "provider_execution_started": False,
+        "automatic_retry_started": False,
+    }
+    assert "deadlock" not in json.dumps(exc.value.to_envelope()).lower()
+    assert adapter.generate_calls == 0
+
+
+def test_apply_os_error_with_project_drift_recovers_as_unknown_without_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="recovery project drift",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    def drifting_append(**_kwargs):
+        current = ProductProjectManifestStore.load(tmp_path)
+        changed = ProductProjectManifest.create(
+            project_id=current.project_id,
+            project_revision=current.project_revision + 1,
+            product_version=current.product_version,
+            timebase=current.timebase,
+            child_bindings=current.child_bindings,
+            created_at=current.created_at,
+        )
+        ProductProjectManifestStore.save(
+            tmp_path,
+            changed,
+            expected_previous_manifest_sha256=current.project_manifest_sha256,
+        )
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\project-lock")
+
+    monkeypatch.setattr(app.planning, "append_initial_proposal", drifting_append)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_STATE_UNKNOWN"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "UNKNOWN",
+        "provider_execution_started": True,
+        "automatic_retry_started": False,
+    }
+    envelope = json.dumps(exc.value.to_envelope()).lower()
+    assert "deadlock" not in envelope and "private" not in envelope
+    assert adapter.generate_calls == 1
+    assert not (tmp_path / "production-proposal.json").exists()
+
+
+def test_apply_os_error_with_connection_route_policy_drift_recovers_as_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    state = {"model": "qwen3:8b"}
+    adapter = Adapter()
+    app = application(
+        tmp_path,
+        adapter,
+        connection_provider=lambda: connection(state["model"]),
+    )
+    prepared = app.prepare(
+        vague_request="recovery connection drift",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+
+    def drifting_append(**_kwargs):
+        state["model"] = "qwen3:14b"
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\connection-lock")
+
+    monkeypatch.setattr(app.planning, "append_initial_proposal", drifting_append)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_STATE_UNKNOWN"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "UNKNOWN",
+        "provider_execution_started": True,
+        "automatic_retry_started": False,
+    }
+    envelope = json.dumps(exc.value.to_envelope()).lower()
+    assert "deadlock" not in envelope and "private" not in envelope
+    assert adapter.generate_calls == 1
+    assert not (tmp_path / "production-proposal.json").exists()
+
+
+def test_apply_os_error_with_deterministic_identity_conflict_recovers_as_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    adapter = Adapter()
+    app = application(tmp_path, adapter)
+    prepared = app.prepare(
+        vague_request="recovery identity conflict",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+    real_append = app.planning.append_initial_proposal
+
+    def conflicting_append(**kwargs):
+        proposal = kwargs["proposal"]
+        conflicting_sections = tuple(
+            replace(section, body="sha256:" + "f" * 64)
+            if section.section_id == "task036_request_binding"
+            else section
+            for section in proposal.sections
+        )
+        real_append(
+            **{
+                **kwargs,
+                "proposal": replace(proposal, sections=conflicting_sections),
+            }
+        )
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\identity-lock")
+
+    monkeypatch.setattr(app.planning, "append_initial_proposal", conflicting_append)
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+
+    assert exc.value.code == "ERR_TASK036_PLANNING_APPLY_STATE_UNKNOWN"
+    assert exc.value.retryable is False
+    assert exc.value.details == {
+        "canonical_proposal_state": "UNKNOWN",
+        "provider_execution_started": True,
+        "automatic_retry_started": False,
+    }
+    envelope = json.dumps(exc.value.to_envelope()).lower()
+    assert "deadlock" not in envelope and "private" not in envelope
+    assert adapter.generate_calls == 1
+    reopened = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+    ).snapshot()
+    assert len(reopened["proposal_ids"]) == 1
+    with pytest.raises(ProductError) as replay:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+    assert replay.value.code == "ERR_TASK036_PLANNING_CONFIRMATION_INVALID"
+    assert adapter.generate_calls == 1
+
+
+def test_slow_overlapping_apply_recovers_second_from_exact_committed_readback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    provider_entered = Event()
+    release_provider = Event()
+
+    class SlowAdapter(Adapter):
+        def generate(self, prompt):
+            provider_entered.set()
+            assert release_provider.wait(timeout=5)
+            return super().generate(prompt)
+
+    adapter = SlowAdapter()
+    first = application(tmp_path, adapter, token="first")
+    second = application(tmp_path, adapter, token="second")
+    snapshot = first.planning.snapshot()["snapshot_sha256"]
+    first_prepared = first.prepare(
+        vague_request="overlapping exact request",
+        expected_planning_snapshot_sha256=snapshot,
+    )
+    second_prepared = second.prepare(
+        vague_request="overlapping exact request",
+        expected_planning_snapshot_sha256=snapshot,
+    )
+    guard = Lock()
+    first_guard_exited = Event()
+    contended_guard_entered = Event()
+
+    @contextmanager
+    def deterministic_contended_guard(_target):
+        if guard.acquire(blocking=False):
+            try:
+                yield
+            finally:
+                guard.release()
+                first_guard_exited.set()
+            return
+        contended_guard_entered.set()
+        assert first_guard_exited.wait(timeout=5)
+        raise OSError(36, "Resource deadlock avoided: C:\\private\\contended-lock")
+        yield
+
+    monkeypatch.setattr(
+        planning_generation_module,
+        "_exclusive_snapshot_lock",
+        deterministic_contended_guard,
+    )
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first_future = pool.submit(
+            first.apply,
+            confirmation_id=first_prepared["confirmation_id"],
+        )
+        assert provider_entered.wait(timeout=5)
+        second_future = pool.submit(
+            second.apply,
+            confirmation_id=second_prepared["confirmation_id"],
+        )
+        assert contended_guard_entered.wait(timeout=5)
+        release_provider.set()
+        first_result = first_future.result(timeout=5)
+        second_result = second_future.result(timeout=5)
+
+    assert first_result["idempotent"] is False
+    assert second_result["idempotent"] is True
+    assert second_result["apply_recovery_state"] == "COMMITTED_READBACK"
+    assert second_result["provider_execution_started"] is False
+    assert second_result["automatic_retry_started"] is False
+    assert second_result["proposal_id"] == first_result["proposal_id"]
+    assert second_result["proposal_sha256"] == first_result["application"]["workspace"]["latest_proposal_sha256"]
+    assert adapter.generate_calls == 1
+    reopened = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+    ).snapshot()
+    assert len(reopened["proposal_ids"]) == 1
+    with pytest.raises(ProductError) as replay:
+        second.apply(confirmation_id=second_prepared["confirmation_id"])
+    assert replay.value.code == "ERR_TASK036_PLANNING_CONFIRMATION_INVALID"
+    assert adapter.generate_calls == 1
 
 
 def test_unrelated_proposal_change_makes_confirmation_stale_before_provider(tmp_path: Path):

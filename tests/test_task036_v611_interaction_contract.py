@@ -148,7 +148,7 @@ assert.equal(featureReadinessState(centralSelection,'planning',{{state:'STARTING
 assert.equal(featureReadinessState(centralSelection,'planning',{{state:'READY'}},{{workloads:[]}},{{available:false}}).ready,false);
 const missing=planningGenerationPresentation({{available:false,blocker_code:'ERR_TASK036_PLANNING_CONNECTION_STALE'}},{{selectionReady:false,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
 assert.equal(missing.ready,false);
-assert.equal(missing.state,'MODEL_SETTINGS_REQUIRED');
+assert.equal(missing.state,'MODEL_SELECTION_MISSING');
 assert.match(missing.message,/設定/);
 assert.doesNotMatch(missing.message,/ERR_TASK036/);
 const starting=planningGenerationPresentation({{available:true,model_id:'qwen3:8b'}},{{selectionReady:true,computeReady:true,runtimeReady:false,runtimeState:'STARTING'}});
@@ -159,6 +159,9 @@ const unbound=planningGenerationPresentation({{available:false}},{{selectionRead
 assert.equal(unbound.ready,false);
 assert.equal(unbound.state,'APPLICATION_UNBOUND');
 assert.match(unbound.message,/プロジェクト/);
+const configuredBlocker=planningGenerationPresentation({{available:false,blocker_code:'ERR_TASK036_PLANNING_CONNECTION_STALE'}},{{selectionReady:true,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
+assert.equal(configuredBlocker.ready,false);
+assert.equal(configuredBlocker.state,'MODEL_CONFIGURATION_INVALID');
 const ready=planningGenerationPresentation({{available:true,model_id:'qwen3:8b'}},{{selectionReady:true,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
 assert.equal(ready.ready,true);
 assert.equal(ready.state,'READY');
@@ -169,6 +172,262 @@ function card(title,body){{return `${{title}}\n${{body}}`;}}
 renderOllamaRuntimeStatus(host,{{state:'FAILED',message_ja:'ERR_TASK036_SECRET C:\\Users\\owner\\token.txt'}});
 assert.doesNotMatch(host.items.join(String.fromCharCode(10)),/ERR_TASK036|token\\.txt|C:\\Users/);
 console.log('OK');
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_planning_generation_is_single_flight_public_safe_and_header_synced_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Planning generation behavior contract")
+
+    def javascript_function(name: str) -> str:
+        match = re.search(rf"(?:async )?function {re.escape(name)}\([^\r\n]+", HTML)
+        assert match is not None
+        return match.group(0)
+
+    presentation = javascript_function("planningGenerationPresentation")
+    render_global = javascript_function("renderGlobalPlanningAiStatus")
+    render_status = javascript_function("renderPlanningGenerationStatus")
+    generate = javascript_function("generatePlanning")
+    script = f"""
+const assert=require('node:assert/strict');
+const PLANNING_GENERATION_SAFE_ERROR='企画候補を作成できませんでした。企画の保存状態を再確認します。自動では再実行しません。';
+const calls=[];
+const notifications=[];
+const elements={{
+  planningGenerateButton:{{disabled:false,attrs:new Map(),setAttribute(k,v){{this.attrs.set(k,v)}}}},
+  planningGenerationStatus:{{textContent:''}},
+  planningRequest:{{value:'2秒の紹介動画'}},
+  globalModelButton:{{textContent:'',title:''}},
+  planningContent:{{querySelector(){{return null}}}},
+}};
+function $(id){{return elements[id]}}
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+let confirmValue=true;
+const window={{confirm(){{return confirmValue}}}};
+let releasePrepare;
+let prepareGate=new Promise(resolve=>{{releasePrepare=resolve}});
+let failApply=false;
+async function call(method,args={{}},publicError=null){{
+  calls.push({{method,args,publicError}});
+  if(method==='planning_generation_prepare'){{
+    await prepareGate;
+    return {{confirmation_id:'confirm-1',already_generated:false}};
+  }}
+  if(method==='planning_generation_apply'){{
+    if(failApply){{
+      notify(publicError||'planning_generation_apply: [Errno 36] C:\\private\\proposal.json',true);
+      return null;
+    }}
+    return {{idempotent:false}};
+  }}
+  if(method==='planning_generation_cancel')return {{cancelled:true}};
+  throw new Error('unexpected method '+method);
+}}
+let refreshCount=0;
+async function refreshPlanning(){{refreshCount+=1;renderPlanningGenerationStatus(currentPlanningGeneration,currentPlanningReadiness)}}
+let currentPlanningModel={{snapshot_sha256:'sha256:'+'a'.repeat(64),workspace:{{}}}};
+let currentPlanningGeneration={{available:true}};
+let currentPlanningReadiness={{selectionReady:true,computeReady:true,runtimeReady:true,runtimeState:'READY'}};
+let planningGenerationInFlight=false;
+{presentation}
+{render_global}
+{render_status}
+{generate}
+(async()=>{{
+  renderPlanningGenerationStatus(currentPlanningGeneration,currentPlanningReadiness);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 設定済み');
+  assert.equal(elements.planningGenerateButton.attrs.get('aria-busy'),'false');
+  const first=generatePlanning();
+  const duplicate=generatePlanning();
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 生成中');
+  assert.equal(elements.planningGenerateButton.attrs.get('aria-busy'),'true');
+  releasePrepare();
+  await Promise.all([first,duplicate]);
+  assert.equal(calls.filter(item=>item.method==='planning_generation_prepare').length,1);
+  assert.equal(calls.filter(item=>item.method==='planning_generation_apply').length,1);
+  assert.equal(refreshCount,1);
+  assert.equal(planningGenerationInFlight,false);
+  assert.equal(elements.planningGenerateButton.attrs.get('aria-busy'),'false');
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 設定済み');
+
+  elements.planningRequest.value='キャンセル';
+  confirmValue=false;
+  prepareGate=Promise.resolve();
+  await generatePlanning();
+  assert.equal(calls.filter(item=>item.method==='planning_generation_cancel').length,1);
+  assert.equal(refreshCount,2);
+  assert.equal(planningGenerationInFlight,false);
+
+  elements.planningRequest.value='失敗';
+  confirmValue=true;
+  failApply=true;
+  await generatePlanning();
+  assert.equal(calls.filter(item=>item.method==='planning_generation_apply').length,2);
+  assert.equal(refreshCount,3);
+  assert.equal(planningGenerationInFlight,false);
+  assert.equal(notifications.at(-1).message,PLANNING_GENERATION_SAFE_ERROR);
+  assert.doesNotMatch(notifications.at(-1).message,/Errno|planning_generation_apply|private|proposal\\.json/i);
+  for(const item of calls.filter(item=>item.method.startsWith('planning_generation_'))){{
+    assert.equal(item.publicError,PLANNING_GENERATION_SAFE_ERROR);
+  }}
+
+  currentPlanningReadiness={{selectionReady:true,computeReady:true,runtimeReady:false,runtimeState:'STARTING'}};
+  renderPlanningGenerationStatus(currentPlanningGeneration,currentPlanningReadiness);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 準備中');
+  currentPlanningReadiness={{selectionReady:false,computeReady:true,runtimeReady:true,runtimeState:'READY'}};
+  renderPlanningGenerationStatus(currentPlanningGeneration,currentPlanningReadiness);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 未設定');
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_home_startup_settings_save_and_close_refresh_global_planning_header_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the global Planning header lifecycle contract")
+
+    def javascript_function(name: str) -> str:
+        match = re.search(rf"(?:async )?function {re.escape(name)}\([^\r\n]+", HTML)
+        assert match is not None
+        return match.group(0)
+
+    copy_match = re.search(r"const FEATURE_MODEL_COPY=Object\.freeze\(\{[^\r\n]+", HTML)
+    assert copy_match is not None
+    lifecycle_match = re.search(
+        r"window\.addEventListener\('pywebviewready',initializeShell\);"
+        r"window\.setTimeout\(async\(\)=>\{if\(window\.pywebview\)await initializeShell\(\)\},350\);",
+        HTML,
+    )
+    assert lifecycle_match is not None
+    functions = "\n".join(
+        javascript_function(name)
+        for name in (
+            "featureSelectionState",
+            "featureReadinessState",
+            "planningGenerationPresentation",
+            "renderGlobalPlanningAiStatus",
+            "refreshGlobalPlanningAiStatus",
+            "refreshPage",
+            "initializeShell",
+            "closeSettings",
+            "renderCentralModelSettings",
+        )
+    )
+    script = f"""
+const assert=require('node:assert/strict');
+const PLANNING_STATE_SAFE_ERROR='企画の状態を確認できませんでした。プロジェクトを開き直してから、もう一度確認してください。';
+{copy_match.group(0)}
+const CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC']);
+const lifecycle={{}};
+const window={{pywebview:null,addEventListener(name,handler){{lifecycle[name]=handler}},setTimeout(handler,delay){{lifecycle.fallback=handler;lifecycle.delay=delay}}}};
+function node(text=''){{return {{textContent:text,children:[],dataset:{{}},listeners:{{}},attrs:new Map(),disabled:false,append(...items){{this.children.push(...items)}},replaceChildren(...items){{this.children=[...items]}},addEventListener(name,listener){{this.listeners[name]=listener}},setAttribute(name,value){{this.attrs.set(name,value)}},removeAttribute(name){{this.attrs.delete(name)}},focus(){{this.focused=true}}}}}}
+const elements={{
+  globalModelButton:node(),
+  settingsContent:node(),
+  settingsOverlay:node(),
+  settingsButton:node(),
+}};
+elements.settingsOverlay.classList={{open:true,contains(name){{return name==='open'&&this.open}},remove(name){{if(name==='open')this.open=false}}}};
+function $(id){{return elements[id]}}
+function clear(host){{host.replaceChildren()}}
+function element(_tag,_className,text){{return node(text)}}
+function card(title,body){{const item=node(title);item.body=body;return item}}
+function renderOllamaRuntimeStatus(){{}}
+function renderComputeSettings(){{}}
+function settingsWorkloadName(row){{return row.workload}}
+function settingsModelLabel(route){{return route.model_id||''}}
+function settingsAvailabilityText(){{return ''}}
+function centralPreferredRouteValue(){{return null}}
+function q(){{return null}}
+const notifications=[];
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+let renderSettingsCount=0;
+async function renderSettingsView(){{renderSettingsCount+=1}}
+let refreshShellCount=0;
+async function refreshShell(){{refreshShellCount+=1}}
+let planningStatus={{available:false}};
+let selection={{available:true,selectors:[]}};
+let runtime={{state:'READY'}};
+let compute={{workloads:[]}};
+const rpc=[];
+async function call(method,args={{}},publicError=null){{
+  rpc.push({{method,args,publicError}});
+  if(method==='planning_generation_status')return planningStatus;
+  if(method==='model_selection_snapshot')return selection;
+  if(method==='ollama_runtime_snapshot')return runtime;
+  if(method==='desktop_compute_settings_snapshot')return compute;
+  if(method==='connection_settings_update'){{
+    selection={{available:true,selectors:[{{page_id:'PLANNING',available:true,preferred_route_id:'plan-route',candidates:[{{route_id:'plan-route',configuration_selectable:true,model_id:'qwen3:8b'}}]}}]}};
+    planningStatus={{available:false,blocker_code:'ERR_TASK036_PLANNING_CONNECTION_STALE'}};
+    return {{revision:2}};
+  }}
+  throw new Error('unexpected method '+method);
+}}
+let planningGenerationInFlight=false;
+let currentPage='home';
+let currentSettingsView='models';
+let currentOwnerSigningKeyImport=null;
+function ownerSigningKeyImportId(){{return null}}
+{functions}
+{lifecycle_match.group(0)}
+(async()=>{{
+  assert.equal(lifecycle.delay,350);
+  await lifecycle.pywebviewready();
+  assert.equal(refreshShellCount,1);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 未設定');
+  const startupReads=rpc.filter(item=>['planning_generation_status','model_selection_snapshot','ollama_runtime_snapshot','desktop_compute_settings_snapshot'].includes(item.method));
+  assert.equal(startupReads.length,4);
+  startupReads.forEach(item=>assert.equal(item.publicError,PLANNING_STATE_SAFE_ERROR));
+
+  renderCentralModelSettings({{available:true,revision:1,workloads:[]}},compute,runtime);
+  const save=elements.settingsContent.children.find(item=>item.textContent==='AIモデル設定を保存');
+  assert.ok(save);
+  await save.listeners.click();
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 要確認');
+  assert.equal(renderSettingsCount,1);
+  assert.equal(save.attrs.has('aria-busy'),false);
+  assert.equal(rpc.find(item=>item.method==='connection_settings_update').publicError,PLANNING_STATE_SAFE_ERROR);
+
+  planningStatus={{available:true}};
+  await closeSettings();
+  assert.equal(elements.settingsOverlay.classList.open,false);
+  assert.equal(elements.settingsButton.focused,true);
+  assert.equal(refreshShellCount,2);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 設定済み');
+
+  runtime={{state:'STARTING'}};
+  await refreshGlobalPlanningAiStatus();
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 準備中');
+
+  runtime={{state:'READY'}};
+  selection=null;
+  window.pywebview={{}};
+  await lifecycle.fallback();
+  assert.equal(refreshShellCount,3);
+  assert.equal(elements.globalModelButton.textContent,'企画AI: 要確認');
+  assert.ok(rpc.filter(item=>['planning_generation_status','model_selection_snapshot','ollama_runtime_snapshot','desktop_compute_settings_snapshot'].includes(item.method)).every(item=>item.publicError===PLANNING_STATE_SAFE_ERROR));
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
 """
     completed = subprocess.run(
         [node, "-e", script],

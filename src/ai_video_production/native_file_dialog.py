@@ -275,6 +275,7 @@ class WindowsNativeFileDialog:
         $owner = New-BaiDialogOwner
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = 'BAI Video Production プロジェクトフォルダーを選択 / Select Project folder'
+        $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
         $dialog.ShowNewFolderButton = $true
         if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
             Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath
@@ -302,6 +303,7 @@ class WindowsNativeFileDialog:
         $owner = New-BaiDialogOwner
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = 'EDITOR_WORK の出力先を選択 / Choose EDITOR_WORK destination'
+        $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
         $dialog.ShowNewFolderButton = $true
         if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
             Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath
@@ -329,6 +331,7 @@ class WindowsNativeFileDialog:
         $owner = New-BaiDialogOwner
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = 'FasterWhisperモデルフォルダーを選択 / Select FasterWhisper model folder'
+        $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
         $dialog.ShowNewFolderButton = $false
         if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
             Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath

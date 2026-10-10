@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_ALLOCATED / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -166,10 +166,18 @@ amendment, source or runtime effect.
 
 R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
 `Critical/High/Medium/Low = 0/0/0/0`; the immutable decision and hashes are in
-`design-r24-independent-review-receipt.md`. This closes R24-S0 only. The four
-owner envelopes, both coordinated amendments, source/runtime, private/native/
-model/audio effects, publication-current and downstream PASS remain unissued
-and separately gated.
+`design-r24-independent-review-receipt.md`. R24-S0 is closed. R24-S0A then
+issued all four exact Owner envelopes and closed through PR #611 at merge
+commit `afcd4e7176884e7da79947933f086ec7c58b930a`; its canonical independent
+receipt is `r24-s0a-owner-acceptance-independent-review-receipt.md`.
+
+Owner direction `つぎへ` on 2026-10-11 allocates only the next ordered source
+unit, R24-S1, under
+`r24-s1-effect-zero-producer-allocation.md`. It may add a fake/non-biometric,
+effect-zero TASK-074 producer and focused tests. It cannot mint a canonical
+runtime type or authorize R24-S2, either coordinated amendment, private/native/
+model/audio effects, publication-current or downstream PASS. Those remain
+unissued and separately gated.
 
 ### TASK074-B — Pure contracts and fixtures
 

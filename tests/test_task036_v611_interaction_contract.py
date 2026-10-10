@@ -425,7 +425,7 @@ def test_home_and_file_media_controls_use_the_canonical_ingest_route() -> None:
     for marker in (
         "async function chooseAndIngestMedia()",
         "workflow.next_recommended_action==='media.choose_and_ingest'",
-        "call('choose_and_ingest_media',{})",
+        "call('choose_and_ingest_media',{},MEDIA_INGEST_PUBLIC_ERROR)",
         "result.status==='CANCELLED'",
         "result.status==='INGESTED'?mediaIngestIdentity(result):null",
         "Assetは登録していません",
@@ -437,6 +437,13 @@ def test_home_and_file_media_controls_use_the_canonical_ingest_route() -> None:
     assert "chooseAndReport('choose_media_source','メディア')" not in HTML
     assert "source_name" not in HTML
     assert "source_path" not in HTML
+
+
+def test_native_dialog_failures_use_public_japanese_messages() -> None:
+    assert "const FOLDER_SELECTION_PUBLIC_ERROR='フォルダー選択画面を開けませんでした。" in HTML
+    assert "const MEDIA_INGEST_PUBLIC_ERROR='動画を読み込めませんでした。" in HTML
+    assert "call(method,{},FOLDER_SELECTION_PUBLIC_ERROR)" in HTML
+    assert "call('choose_and_ingest_media',{},MEDIA_INGEST_PUBLIC_ERROR)" in HTML
 
 
 def test_media_controls_fail_closed_after_the_single_source_stage() -> None:

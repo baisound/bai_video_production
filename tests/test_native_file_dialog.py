@@ -120,6 +120,7 @@ def test_native_project_folder_dialog_is_folder_browser() -> None:
     assert result == r"C:\BAI\Projects\DbD"
     script = base64.b64decode(captured["args"][7]).decode("utf-16le")
     assert "FolderBrowserDialog" in script
+    assert "RootFolder = [System.Environment+SpecialFolder]::MyComputer" in script
     assert "ShowNewFolderButton = $true" in script
     assert "SelectedPath" in script
 
@@ -129,6 +130,23 @@ def test_native_handoff_folder_cancel_is_not_error() -> None:
         return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("cancel"), stderr=b"")
 
     assert native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_handoff_folder() is None
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    ["choose_handoff_folder", "choose_faster_whisper_model_folder"],
+)
+def test_native_folder_dialogs_use_profile_independent_root(method_name: str) -> None:
+    captured = {}
+
+    def runner(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("cancel"), stderr=b"")
+
+    dialog = native.WindowsNativeFileDialog(runner=runner, platform_name="nt")
+    assert getattr(dialog, method_name)() is None
+    script = base64.b64decode(captured["args"][7]).decode("utf-16le")
+    assert "RootFolder = [System.Environment+SpecialFolder]::MyComputer" in script
 
 @pytest.mark.parametrize(
     ("method_name", "expected_filter", "selected"),

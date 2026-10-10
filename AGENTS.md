@@ -1,6 +1,6 @@
 # BAISOUND Codex Development Workspace Policy
 
-Version: `2.2`
+Version: `2.3`
 Status: `CURRENT`
 Primary use: `BAI VIDEO PRODUCTION development under BAI Development OS governance`
 
@@ -42,6 +42,10 @@ This rule is an **Owner-mandated safety invariant**. It applies before every bui
 - Existing `C:\BVP-QA-471-*` directories are preserved historical QA artifacts. Do not delete, overwrite, append to, or reuse them without a separate explicit cleanup authority.
 
 A path-placement violation is a pre-effect `STOP`, not a warning. Existing Allowed Files and native, Release, Deploy, and Production Gates still apply.
+
+### 1.2 Mandatory image-review preflight
+
+Before inspecting the first screenshot, image attachment, rendered page, or other visual Evidence in **any Codex task**, read and apply [`docs/ai-team/image-review-preflight.md`](docs/ai-team/image-review-preflight.md). Do not issue a visual `PASS`, `FAIL`, `NOT_CONFIRMED`, finding, or next-step instruction until that preflight is complete.
 
 ---
 

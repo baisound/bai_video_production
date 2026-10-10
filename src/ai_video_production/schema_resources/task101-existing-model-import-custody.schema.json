@@ -32,6 +32,25 @@
       "minimum": 1,
       "maximum": 9007199254740991
     },
+    "NativeImportBoundary": {
+      "type": "string",
+      "enum": [
+        "BEFORE_NATIVE_EFFECT_FAILURE",
+        "DESTINATION_PREFLIGHT_COLLISION",
+        "SOURCE_OPENED_VALIDATION_FAILURE_CLOSED",
+        "SOURCE_CLOSE_IDENTITY_UNCERTAIN",
+        "OWNED_TEMPORARY_FAILURE_PROVED",
+        "TEMPORARY_IDENTITY_OR_CLEANUP_UNCERTAIN",
+        "FINAL_NAMESPACE_OR_DURABILITY_AMBIGUOUS",
+        "SEALED_READBACK_MISMATCH",
+        "COMPLETE_READBACK_CURRENT",
+        "RESTART_INCOMPLETE_OR_UNTRUSTED"
+      ]
+    },
+    "NativeImportTerminalResult": {
+      "type": "string",
+      "enum": ["NO_EFFECT", "FAILED_CLOSED", "COMPLETION_UNKNOWN", "READBACK_CURRENT"]
+    },
     "ArtifactSovits": {
       "type": "object",
       "additionalProperties": false,

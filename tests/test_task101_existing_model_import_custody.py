@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+import pickle
 
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
@@ -14,7 +15,11 @@ from ai_video_production.task101_existing_model_import_custody import (
     ExistingModelImportCustodyReceiptV1,
     ExistingModelImportIntentV1,
     FakeExistingModelImportCustodyBackend,
+    FixtureOnlyRecordRef,
     MAX_JSON_BYTES,
+    NativeImportBoundary,
+    NativeImportTerminalResult,
+    classify_native_import_boundary,
     create_existing_model_import_capability_audit,
     create_existing_model_import_custody_receipt,
     create_existing_model_import_intent,
@@ -257,9 +262,12 @@ def test_fake_backend_binds_intent_receipt_readback_and_exact_replay() -> None:
     intent = make_intent()
     receipt = make_receipt(intent)
     readback = make_readback(receipt)
-    assert backend.admit_intent(intent) is backend.admit_intent(intent)
-    assert backend.admit_receipt(receipt) is backend.admit_receipt(receipt)
-    assert backend.admit_readback(readback).readback_sha256 == readback.readback_sha256
+    intent_ref = backend.admit_intent(intent)
+    assert backend.admit_intent(intent) == intent_ref
+    receipt_ref = backend.admit_receipt(receipt)
+    assert backend.admit_receipt(receipt) == receipt_ref
+    readback_ref = backend.admit_readback(readback)
+    assert readback_ref.record_sha256 == readback.readback_sha256
     crossed = make_receipt(
         intent,
         operation_id="operation-cross",
@@ -296,6 +304,44 @@ def test_readback_rejects_reason_order_decision_and_current_inventory_lies() -> 
     rehash(body, "readback_sha256")
     with pytest.raises(ValueError, match="lexicographically"):
         ExistingModelImportCustodyReadbackV1.from_dict(body)
+
+
+def test_readback_evaluator_cannot_extend_or_renew_expired_receipt() -> None:
+    receipt = make_receipt(expires_at="2026-10-10T00:06:00Z")
+    stale = make_readback(
+        receipt,
+        evaluated_at="2026-10-10T00:06:00Z",
+        expires_at="2026-10-10T00:06:00Z",
+    )
+    assert stale.to_dict()["decision"] == "STALE"
+    assert stale.to_dict()["reason_codes"] == ["STALE"]
+    with pytest.raises(ValueError, match="exceeds receipt authority"):
+        make_readback(
+            receipt,
+            evaluated_at="2026-10-10T00:05:30Z",
+            expires_at="2026-10-10T00:06:01Z",
+        )
+
+    backend = FakeExistingModelImportCustodyBackend()
+    intent = make_intent()
+    canonical_receipt = make_receipt(intent, expires_at="2026-10-10T00:06:00Z")
+    backend.admit_intent(intent)
+    backend.admit_receipt(canonical_receipt)
+    forged = make_readback(
+        canonical_receipt,
+        evaluated_at="2026-10-10T00:05:00Z",
+        expires_at="2026-10-10T00:06:00Z",
+    ).to_dict()
+    forged["expires_at"] = "2026-10-10T00:06:01Z"
+    rehash(forged, "readback_sha256")
+    forged_record = ExistingModelImportCustodyReadbackV1.from_dict(forged)
+    with pytest.raises(ValueError, match="expiry exceeds"):
+        backend.admit_readback(forged_record)
+
+
+def test_readback_evaluator_requires_exact_physical_identity_boolean() -> None:
+    with pytest.raises(ValueError, match="exact boolean"):
+        make_readback(physical_identity_matches=1)
     body = make_readback().to_dict()
     body["current_inventory_sha256"] = h("different")
     rehash(body, "readback_sha256")
@@ -305,12 +351,15 @@ def test_readback_rejects_reason_order_decision_and_current_inventory_lies() -> 
 
 def test_capability_audit_lifecycle_is_monotonic_one_way_and_body_free() -> None:
     backend = FakeExistingModelImportCustodyBackend()
-    intent = backend.admit_intent(make_intent())
-    receipt = backend.admit_receipt(make_receipt(intent))
-    readback = backend.admit_readback(make_readback(receipt))
+    intent = make_intent()
+    receipt = make_receipt(intent)
+    readback = make_readback(receipt)
+    backend.admit_intent(intent)
+    backend.admit_receipt(receipt)
+    backend.admit_readback(readback)
     issued = make_audit(readback)
-    assert backend.admit_capability_audit(issued).audit_sha256 == issued.audit_sha256
-    assert backend.admit_capability_audit(issued).audit_sha256 == issued.audit_sha256
+    assert backend.admit_capability_audit(issued).record_sha256 == issued.audit_sha256
+    assert backend.admit_capability_audit(issued).record_sha256 == issued.audit_sha256
     opened = make_audit(readback, issued)
     backend.admit_capability_audit(opened)
     consumed = make_audit(
@@ -321,11 +370,99 @@ def test_capability_audit_lifecycle_is_monotonic_one_way_and_body_free() -> None
         completed_at="2026-10-10T00:08:00Z",
     )
     backend.admit_capability_audit(consumed)
-    assert backend.current_audit("capability-1").audit_sha256 == consumed.audit_sha256
+    assert backend.current_audit("capability-1").record_sha256 == consumed.audit_sha256
     with pytest.raises(ValueError, match="transition"):
         make_audit(readback, consumed, state="FAILED_CLOSED", transitioned_at="2026-10-10T00:08:30Z", completed_at="2026-10-10T00:08:30Z")
     for body in (issued.to_dict(), opened.to_dict(), consumed.to_dict()):
         assert "path" not in json.dumps(body).casefold()
+
+
+def test_fake_backend_rechecks_latest_readback_generation_revocation_and_expiry() -> None:
+    backend = FakeExistingModelImportCustodyBackend()
+    intent = make_intent()
+    receipt = make_receipt(intent)
+    current = make_readback(receipt, expires_at="2026-10-10T00:08:30Z")
+    backend.admit_intent(intent)
+    backend.admit_receipt(receipt)
+    backend.admit_readback(current)
+    issued = make_audit(current)
+    backend.admit_capability_audit(issued)
+    revoked = make_readback(
+        receipt,
+        readback_id="readback-2",
+        custody_generation=2,
+        revocation_state="REVOKED",
+        evaluated_at="2026-10-10T00:06:30Z",
+        expires_at="2026-10-10T00:08:30Z",
+    )
+    backend.admit_readback(revoked)
+    old_issued = make_audit(current, capability_id="capability-old")
+    with pytest.raises(ValueError, match="no longer the current"):
+        backend.admit_capability_audit(old_issued)
+    opened = make_audit(current, issued)
+    with pytest.raises(ValueError, match="no longer the current"):
+        backend.admit_capability_audit(opened)
+
+    second_backend = FakeExistingModelImportCustodyBackend()
+    second_backend.admit_intent(intent)
+    second_backend.admit_receipt(receipt)
+    short = make_readback(
+        receipt,
+        readback_id="readback-short",
+        expires_at="2026-10-10T00:06:30Z",
+    )
+    second_backend.admit_readback(short)
+    expired_issue = make_audit(
+        short,
+        capability_id="capability-expired",
+        issued_at="2026-10-10T00:06:30Z",
+        transitioned_at="2026-10-10T00:06:30Z",
+    )
+    with pytest.raises(ValueError, match="not current at use time"):
+        second_backend.admit_capability_audit(expired_issue)
+
+
+def test_fake_backend_results_are_nonserializable_fixture_only_refs() -> None:
+    backend = FakeExistingModelImportCustodyBackend()
+    intent = make_intent()
+    ref = backend.admit_intent(intent)
+    assert type(ref) is FixtureOnlyRecordRef
+    assert ref.source == "FIXTURE_ONLY"
+    assert ref.record_type == "ExistingModelImportIntentV1"
+    assert not isinstance(ref, ExistingModelImportIntentV1)
+    assert not hasattr(ref, "to_dict")
+    with pytest.raises(TypeError, match="nonserializable"):
+        pickle.dumps(ref)
+    with pytest.raises(TypeError):
+        FakeExistingModelImportCustodyBackend().admit_intent(ref)  # type: ignore[arg-type]
+
+
+def test_native_failure_matrix_is_closed_effect_zero_and_complete() -> None:
+    expected = {
+        "BEFORE_NATIVE_EFFECT_FAILURE": "NO_EFFECT",
+        "DESTINATION_PREFLIGHT_COLLISION": "NO_EFFECT",
+        "SOURCE_OPENED_VALIDATION_FAILURE_CLOSED": "FAILED_CLOSED",
+        "SOURCE_CLOSE_IDENTITY_UNCERTAIN": "COMPLETION_UNKNOWN",
+        "OWNED_TEMPORARY_FAILURE_PROVED": "FAILED_CLOSED",
+        "TEMPORARY_IDENTITY_OR_CLEANUP_UNCERTAIN": "COMPLETION_UNKNOWN",
+        "FINAL_NAMESPACE_OR_DURABILITY_AMBIGUOUS": "COMPLETION_UNKNOWN",
+        "SEALED_READBACK_MISMATCH": "COMPLETION_UNKNOWN",
+        "COMPLETE_READBACK_CURRENT": "READBACK_CURRENT",
+        "RESTART_INCOMPLETE_OR_UNTRUSTED": "COMPLETION_UNKNOWN",
+    }
+    assert {item.value for item in NativeImportBoundary} == set(expected)
+    for boundary, result in expected.items():
+        classification = classify_native_import_boundary(boundary)
+        assert classification.terminal_result is NativeImportTerminalResult(result)
+        assert classification.required_behavior
+    with pytest.raises(ValueError, match="unsupported"):
+        classify_native_import_boundary("OTHER")
+
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    assert set(schema["$defs"]["NativeImportBoundary"]["enum"]) == set(expected)
+    assert set(schema["$defs"]["NativeImportTerminalResult"]["enum"]) == {
+        "NO_EFFECT", "FAILED_CLOSED", "COMPLETION_UNKNOWN", "READBACK_CURRENT"
+    }
 
 
 def test_audit_predecessor_is_reparsed_linked_and_checked_before_monotonic_time() -> None:
@@ -347,12 +484,37 @@ def test_audit_predecessor_is_reparsed_linked_and_checked_before_monotonic_time(
     opened = make_audit(readback, issued).to_dict()
     bad_predecessor = issued.to_dict()
     bad_predecessor["audit_sha256"] = h("forged")
-    with pytest.raises(ValueError, match="canonical content"):
+    with pytest.raises(ValueError, match="canonical predecessor"):
         ExistingModelImportCapabilityAuditV1.from_dict(opened, predecessor=bad_predecessor)
     opened["predecessor_sha256"] = h("wrong-link")
     rehash(opened, "audit_sha256")
     with pytest.raises(ValueError, match="exact predecessor"):
         ExistingModelImportCapabilityAuditV1.from_dict(opened, predecessor=issued)
+
+
+def test_noninitial_audit_rejects_raw_or_truncated_predecessor_chain() -> None:
+    readback = make_readback()
+    issued = make_audit(readback)
+    opened = make_audit(readback, issued)
+    consumed = make_audit(
+        readback,
+        opened,
+        state="CONSUMED",
+        transitioned_at="2026-10-10T00:08:00Z",
+        completed_at="2026-10-10T00:08:00Z",
+    )
+    forged_opened = opened.to_dict()
+    forged_opened["predecessor_sha256"] = h("unavailable-predecessor")
+    rehash(forged_opened, "audit_sha256")
+    consumed_body = consumed.to_dict()
+    consumed_body["predecessor_sha256"] = forged_opened["audit_sha256"]
+    rehash(consumed_body, "audit_sha256")
+    with pytest.raises(ValueError, match="canonical predecessor"):
+        ExistingModelImportCapabilityAuditV1.from_dict(consumed_body, predecessor=forged_opened)
+    with pytest.raises(ValueError, match="canonical predecessor"):
+        parse_existing_model_import_json(
+            canonical_json_bytes(consumed_body), predecessor=forged_opened
+        )
 
 
 def test_audit_rejects_purpose_consumer_crossing_and_immutable_change() -> None:

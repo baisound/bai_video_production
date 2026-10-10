@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 import json
 import re
 from types import MappingProxyType
@@ -144,6 +145,86 @@ _AUDIT_TRANSITIONS = {
 _AUDIT_MUTABLE_FIELDS = {
     "state", "predecessor_sha256", "transitioned_at", "completed_at", "audit_sha256",
 }
+
+
+class NativeImportBoundary(str, Enum):
+    BEFORE_NATIVE_EFFECT_FAILURE = "BEFORE_NATIVE_EFFECT_FAILURE"
+    DESTINATION_PREFLIGHT_COLLISION = "DESTINATION_PREFLIGHT_COLLISION"
+    SOURCE_OPENED_VALIDATION_FAILURE_CLOSED = "SOURCE_OPENED_VALIDATION_FAILURE_CLOSED"
+    SOURCE_CLOSE_IDENTITY_UNCERTAIN = "SOURCE_CLOSE_IDENTITY_UNCERTAIN"
+    OWNED_TEMPORARY_FAILURE_PROVED = "OWNED_TEMPORARY_FAILURE_PROVED"
+    TEMPORARY_IDENTITY_OR_CLEANUP_UNCERTAIN = "TEMPORARY_IDENTITY_OR_CLEANUP_UNCERTAIN"
+    FINAL_NAMESPACE_OR_DURABILITY_AMBIGUOUS = "FINAL_NAMESPACE_OR_DURABILITY_AMBIGUOUS"
+    SEALED_READBACK_MISMATCH = "SEALED_READBACK_MISMATCH"
+    COMPLETE_READBACK_CURRENT = "COMPLETE_READBACK_CURRENT"
+    RESTART_INCOMPLETE_OR_UNTRUSTED = "RESTART_INCOMPLETE_OR_UNTRUSTED"
+
+
+class NativeImportTerminalResult(str, Enum):
+    NO_EFFECT = "NO_EFFECT"
+    FAILED_CLOSED = "FAILED_CLOSED"
+    COMPLETION_UNKNOWN = "COMPLETION_UNKNOWN"
+    READBACK_CURRENT = "READBACK_CURRENT"
+
+
+@dataclass(frozen=True, slots=True)
+class NativeImportFailureClassification:
+    boundary: NativeImportBoundary
+    terminal_result: NativeImportTerminalResult
+    required_behavior: str
+
+
+_NATIVE_FAILURE_MATRIX = {
+    NativeImportBoundary.BEFORE_NATIVE_EFFECT_FAILURE: (
+        NativeImportTerminalResult.NO_EFFECT,
+        "OPEN_READ_CREATE_WRITE_ZERO",
+    ),
+    NativeImportBoundary.DESTINATION_PREFLIGHT_COLLISION: (
+        NativeImportTerminalResult.NO_EFFECT,
+        "PRESERVE_DESTINATION_OPEN_READ_CREATE_WRITE_ZERO",
+    ),
+    NativeImportBoundary.SOURCE_OPENED_VALIDATION_FAILURE_CLOSED: (
+        NativeImportTerminalResult.FAILED_CLOSED,
+        "CLOSE_IDENTITY_READBACK_EXACT_NO_DESTINATION_ARTIFACT",
+    ),
+    NativeImportBoundary.SOURCE_CLOSE_IDENTITY_UNCERTAIN: (
+        NativeImportTerminalResult.COMPLETION_UNKNOWN,
+        "PRESERVE_EVIDENCE_PROHIBIT_RETRY",
+    ),
+    NativeImportBoundary.OWNED_TEMPORARY_FAILURE_PROVED: (
+        NativeImportTerminalResult.FAILED_CLOSED,
+        "PRESERVE_UNLESS_SEPARATELY_AUTHORIZED_EXACT_CLEANUP",
+    ),
+    NativeImportBoundary.TEMPORARY_IDENTITY_OR_CLEANUP_UNCERTAIN: (
+        NativeImportTerminalResult.COMPLETION_UNKNOWN,
+        "PRESERVE_RECORD_PROHIBIT_RETRY",
+    ),
+    NativeImportBoundary.FINAL_NAMESPACE_OR_DURABILITY_AMBIGUOUS: (
+        NativeImportTerminalResult.COMPLETION_UNKNOWN,
+        "PRESERVE_ALL_NO_RETRY_OR_ALTERNATE_TARGET",
+    ),
+    NativeImportBoundary.SEALED_READBACK_MISMATCH: (
+        NativeImportTerminalResult.COMPLETION_UNKNOWN,
+        "DO_NOT_ISSUE_CURRENT_RECEIPT_OR_READBACK",
+    ),
+    NativeImportBoundary.COMPLETE_READBACK_CURRENT: (
+        NativeImportTerminalResult.READBACK_CURRENT,
+        "ISSUE_EXACT_RECEIPT_THEN_CURRENT_READBACK",
+    ),
+    NativeImportBoundary.RESTART_INCOMPLETE_OR_UNTRUSTED: (
+        NativeImportTerminalResult.COMPLETION_UNKNOWN,
+        "EVIDENCE_ONLY_NO_AUTO_RESUME",
+    ),
+}
+
+
+def classify_native_import_boundary(boundary: NativeImportBoundary | str) -> NativeImportFailureClassification:
+    try:
+        exact_boundary = NativeImportBoundary(boundary)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("native import boundary is unsupported") from exc
+    terminal_result, required_behavior = _NATIVE_FAILURE_MATRIX[exact_boundary]
+    return NativeImportFailureClassification(exact_boundary, terminal_result, required_behavior)
 
 
 def _exact(value: Mapping[str, Any], fields: set[str], name: str) -> None:
@@ -455,14 +536,14 @@ class ExistingModelImportCapabilityAuditV1(_ImmutableRecord):
         cls,
         value: Mapping[str, Any],
         *,
-        predecessor: "ExistingModelImportCapabilityAuditV1 | Mapping[str, Any] | None" = None,
+        predecessor: "ExistingModelImportCapabilityAuditV1 | None" = None,
     ) -> "ExistingModelImportCapabilityAuditV1":
         body = copy.deepcopy(dict(value))
         _validate_audit_intrinsic(body)
         if body["state"] != "ISSUED":
-            if predecessor is None:
+            if type(predecessor) is not cls:
                 raise ValueError("noninitial audit requires its canonical predecessor")
-            predecessor_body = predecessor.to_dict() if type(predecessor) is cls else copy.deepcopy(dict(predecessor))
+            predecessor_body = predecessor.to_dict()
             _validate_audit_intrinsic(predecessor_body)
             _validate_audit_transition(body, predecessor_body)
         elif predecessor is not None:
@@ -539,9 +620,19 @@ def evaluate_existing_model_import_custody_readback(
     """Purely derive a closed readback decision from body-free observations."""
     if type(receipt) is not ExistingModelImportCustodyReceiptV1:
         raise TypeError("receipt must be an exact validated custody receipt")
+    if type(physical_identity_matches) is not bool:
+        raise ValueError("physical_identity_matches must be an exact boolean")
     receipt_body = ExistingModelImportCustodyReceiptV1.from_dict(receipt.to_dict()).to_dict()
+    evaluated = _timestamp(evaluated_at, "evaluated_at")
+    readback_expires = _timestamp(expires_at, "expires_at")
+    receipt_expires = _timestamp(receipt_body["expires_at"], "receipt.expires_at")
     reasons: set[str] = set()
-    if revocation_state == "REVOKED":
+    if readback_expires > receipt_expires:
+        raise ValueError("readback expires_at exceeds receipt authority")
+    if evaluated >= receipt_expires:
+        decision = "STALE"
+        reasons.add("STALE")
+    elif revocation_state == "REVOKED":
         decision = "REVOKED"
         reasons.add("REVOKED")
     elif revocation_state == "UNKNOWN":
@@ -621,7 +712,7 @@ def _validate_json_limits(value: Any) -> None:
 def parse_existing_model_import_json(
     payload: bytes,
     *,
-    predecessor: ExistingModelImportCapabilityAuditV1 | Mapping[str, Any] | None = None,
+    predecessor: ExistingModelImportCapabilityAuditV1 | None = None,
 ) -> (
     ExistingModelImportIntentV1
     | ExistingModelImportCustodyReceiptV1
@@ -666,6 +757,31 @@ def parse_existing_model_import_json(
     raise ValueError("security JSON record_type is unsupported")
 
 
+@dataclass(frozen=True, slots=True)
+class FixtureOnlyRecordRef:
+    """Non-authoritative fake-backend result; never a canonical record or capability."""
+
+    source: str
+    record_type: str
+    record_sha256: str
+
+    def __reduce__(self) -> Any:
+        raise TypeError("FIXTURE_ONLY references are nonserializable")
+
+
+def _fixture_ref(record: _ImmutableRecord) -> FixtureOnlyRecordRef:
+    body = record.to_dict()
+    digest_field = {
+        "ExistingModelImportIntentV1": "intent_sha256",
+        "ExistingModelImportCustodyReceiptV1": "receipt_sha256",
+        "ExistingModelImportCustodyReadbackV1": "readback_sha256",
+        "ExistingModelImportCapabilityAuditV1": "audit_sha256",
+    }.get(str(body.get("record_type")))
+    if digest_field is None:
+        raise ValueError("fixture record type has no canonical digest")
+    return FixtureOnlyRecordRef("FIXTURE_ONLY", str(body["record_type"]), str(body[digest_field]))
+
+
 class FakeExistingModelImportCustodyBackend:
     """In-memory, body-free contract backend.  It has no native effect surface."""
 
@@ -673,27 +789,28 @@ class FakeExistingModelImportCustodyBackend:
         self._intents: dict[str, list[ExistingModelImportIntentV1]] = {}
         self._receipts: dict[str, ExistingModelImportCustodyReceiptV1] = {}
         self._readbacks: dict[str, ExistingModelImportCustodyReadbackV1] = {}
+        self._current_readback_by_operation: dict[str, ExistingModelImportCustodyReadbackV1] = {}
         self._audits: dict[str, ExistingModelImportCapabilityAuditV1] = {}
 
-    def admit_intent(self, intent: ExistingModelImportIntentV1) -> ExistingModelImportIntentV1:
+    def admit_intent(self, intent: ExistingModelImportIntentV1) -> FixtureOnlyRecordRef:
         if type(intent) is not ExistingModelImportIntentV1:
             raise TypeError("intent must be an exact validated record")
         canonical = ExistingModelImportIntentV1.from_dict(intent.to_dict())
         body = canonical.to_dict()
         history = self._intents.setdefault(body["import_intent_id"], [])
         if history and history[-1].intent_sha256 == canonical.intent_sha256:
-            return history[-1]
+            return _fixture_ref(history[-1])
         expected_revision = len(history) + 1
         expected_predecessor = history[-1].intent_sha256 if history else None
         if body["revision"] != expected_revision or body["predecessor_sha256"] != expected_predecessor:
             raise ValueError("intent revision does not extend the exact current predecessor")
         history.append(canonical)
-        return canonical
+        return _fixture_ref(canonical)
 
     def admit_receipt(
         self,
         receipt: ExistingModelImportCustodyReceiptV1,
-    ) -> ExistingModelImportCustodyReceiptV1:
+    ) -> FixtureOnlyRecordRef:
         if type(receipt) is not ExistingModelImportCustodyReceiptV1:
             raise TypeError("receipt must be an exact validated record")
         canonical = ExistingModelImportCustodyReceiptV1.from_dict(receipt.to_dict())
@@ -701,7 +818,7 @@ class FakeExistingModelImportCustodyBackend:
         existing = self._receipts.get(body["operation_id"])
         if existing is not None:
             if existing.receipt_sha256 == canonical.receipt_sha256:
-                return existing
+                return _fixture_ref(existing)
             raise ValueError("operation_id replay differs from the current receipt")
         history = self._intents.get(body["import_intent_id"])
         if not history:
@@ -733,16 +850,19 @@ class FakeExistingModelImportCustodyBackend:
         if actual_artifacts != expected_artifacts:
             raise ValueError("receipt artifact inventory does not equal intent")
         self._receipts[body["operation_id"]] = canonical
-        return canonical
+        return _fixture_ref(canonical)
 
     def admit_readback(
         self,
         readback: ExistingModelImportCustodyReadbackV1,
-    ) -> ExistingModelImportCustodyReadbackV1:
+    ) -> FixtureOnlyRecordRef:
         if type(readback) is not ExistingModelImportCustodyReadbackV1:
             raise TypeError("readback must be an exact validated record")
         canonical = ExistingModelImportCustodyReadbackV1.from_dict(readback.to_dict())
         body = canonical.to_dict()
+        existing = self._readbacks.get(body["readback_sha256"])
+        if existing is not None:
+            return _fixture_ref(existing)
         receipt = self._receipts.get(body["operation_id"])
         if receipt is None:
             raise ValueError("readback has no admitted receipt")
@@ -754,38 +874,71 @@ class FakeExistingModelImportCustodyBackend:
             expected = receipt_body["receipt_sha256"] if field == "receipt_sha256" else receipt_body[field]
             if body[field] != expected:
                 raise ValueError(f"readback does not equal receipt field: {field}")
+        if _timestamp(body["expires_at"], "readback.expires_at") > _timestamp(
+            receipt_body["expires_at"], "receipt.expires_at"
+        ):
+            raise ValueError("readback expiry exceeds receipt authority")
+        if body["decision"] == "CURRENT" and _timestamp(
+            body["evaluated_at"], "readback.evaluated_at"
+        ) >= _timestamp(receipt_body["expires_at"], "receipt.expires_at"):
+            raise ValueError("CURRENT readback was evaluated after receipt expiry")
         if body["decision"] == "CURRENT" and (
             body["model_pair_sha256"] != receipt_body["model_pair_sha256"]
             or body["runtime_build_sha256"] != receipt_body["runtime_build_sha256"]
         ):
             raise ValueError("CURRENT readback pair/runtime does not equal receipt")
+        previous = self._current_readback_by_operation.get(body["operation_id"])
+        expected_generation = 1 if previous is None else int(previous.data["custody_generation"]) + 1
+        if body["custody_generation"] != expected_generation:
+            raise ValueError("readback custody_generation does not extend the current operation head")
+        if previous is not None and _timestamp(body["evaluated_at"], "evaluated_at") < _timestamp(
+            previous.data["evaluated_at"], "previous.evaluated_at"
+        ):
+            raise ValueError("readback evaluated_at moved backward")
         self._readbacks[body["readback_sha256"]] = canonical
-        return canonical
+        self._current_readback_by_operation[body["operation_id"]] = canonical
+        return _fixture_ref(canonical)
+
+    def _require_current_bound_readback(self, audit_body: Mapping[str, Any], at: str) -> None:
+        readback = self._readbacks.get(str(audit_body["custody_readback_sha256"]))
+        if readback is None:
+            raise ValueError("capability audit references no admitted readback")
+        readback_body = readback.to_dict()
+        latest = self._current_readback_by_operation.get(readback_body["operation_id"])
+        if latest is None or latest.readback_sha256 != readback.readback_sha256:
+            raise ValueError("capability audit readback is no longer the current operation head")
+        if readback_body["decision"] != "CURRENT":
+            raise ValueError("capability audit requires a CURRENT readback")
+        current_time = _timestamp(at, "capability currentness time")
+        if not _timestamp(readback_body["evaluated_at"], "readback.evaluated_at") <= current_time < _timestamp(
+            readback_body["expires_at"], "readback.expires_at"
+        ):
+            raise ValueError("capability audit readback is not current at use time")
+        if readback_body["model_pair_sha256"] != audit_body["model_pair_sha256"]:
+            raise ValueError("capability audit model pair does not equal readback")
 
     def admit_capability_audit(
         self,
         audit: ExistingModelImportCapabilityAuditV1,
-    ) -> ExistingModelImportCapabilityAuditV1:
+    ) -> FixtureOnlyRecordRef:
         if type(audit) is not ExistingModelImportCapabilityAuditV1:
             raise TypeError("audit must be an exact validated record")
         body = audit.to_dict()
         current = self._audits.get(body["capability_id"])
         if current is not None and current.audit_sha256 == body["audit_sha256"]:
-            return current
+            return _fixture_ref(current)
         canonical = ExistingModelImportCapabilityAuditV1.from_dict(body, predecessor=current)
         if current is None:
-            readback = self._readbacks.get(body["custody_readback_sha256"])
-            if readback is None or readback.data["decision"] != "CURRENT":
-                raise ValueError("initial capability audit requires an admitted CURRENT readback")
-            if readback.data["model_pair_sha256"] != body["model_pair_sha256"]:
-                raise ValueError("capability audit model pair does not equal readback")
+            self._require_current_bound_readback(body, body["issued_at"])
+        elif body["state"] == "OPEN_STARTED":
+            self._require_current_bound_readback(body, body["transitioned_at"])
         self._audits[body["capability_id"]] = canonical
-        return canonical
+        return _fixture_ref(canonical)
 
-    def current_audit(self, capability_id: str) -> ExistingModelImportCapabilityAuditV1:
+    def current_audit(self, capability_id: str) -> FixtureOnlyRecordRef:
         _identifier(capability_id, "capability_id")
         try:
-            return self._audits[capability_id]
+            return _fixture_ref(self._audits[capability_id])
         except KeyError as exc:
             raise ValueError("capability_id is unknown") from exc
 
@@ -798,14 +951,19 @@ __all__ = [
     "ExistingModelImportCustodyReceiptV1",
     "ExistingModelImportIntentV1",
     "FakeExistingModelImportCustodyBackend",
+    "FixtureOnlyRecordRef",
     "INTENT_VERSION",
     "MAX_JSON_BYTES",
+    "NativeImportBoundary",
+    "NativeImportFailureClassification",
+    "NativeImportTerminalResult",
     "READBACK_VERSION",
     "RECEIPT_VERSION",
     "create_existing_model_import_capability_audit",
     "create_existing_model_import_custody_readback",
     "create_existing_model_import_custody_receipt",
     "create_existing_model_import_intent",
+    "classify_native_import_boundary",
     "evaluate_existing_model_import_custody_readback",
     "parse_existing_model_import_json",
 ]

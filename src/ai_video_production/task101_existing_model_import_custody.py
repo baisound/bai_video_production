@@ -167,11 +167,25 @@ class NativeImportTerminalResult(str, Enum):
     READBACK_CURRENT = "READBACK_CURRENT"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class NativeImportFailureClassification:
     boundary: NativeImportBoundary
     terminal_result: NativeImportTerminalResult
     required_behavior: str
+
+    def __init__(
+        self,
+        boundary: NativeImportBoundary,
+        terminal_result: NativeImportTerminalResult,
+        required_behavior: str,
+        *,
+        _token: object | None = None,
+    ) -> None:
+        if _token is not _FACTORY_KEY:
+            raise TypeError("native import failure classification is factory-only")
+        object.__setattr__(self, "boundary", boundary)
+        object.__setattr__(self, "terminal_result", terminal_result)
+        object.__setattr__(self, "required_behavior", required_behavior)
 
 
 _NATIVE_FAILURE_MATRIX = {
@@ -224,7 +238,12 @@ def classify_native_import_boundary(boundary: NativeImportBoundary | str) -> Nat
     except (TypeError, ValueError) as exc:
         raise ValueError("native import boundary is unsupported") from exc
     terminal_result, required_behavior = _NATIVE_FAILURE_MATRIX[exact_boundary]
-    return NativeImportFailureClassification(exact_boundary, terminal_result, required_behavior)
+    return NativeImportFailureClassification(
+        exact_boundary,
+        terminal_result,
+        required_behavior,
+        _token=_FACTORY_KEY,
+    )
 
 
 def _exact(value: Mapping[str, Any], fields: set[str], name: str) -> None:
@@ -887,14 +906,6 @@ class FakeExistingModelImportCustodyBackend:
             or body["runtime_build_sha256"] != receipt_body["runtime_build_sha256"]
         ):
             raise ValueError("CURRENT readback pair/runtime does not equal receipt")
-        previous = self._current_readback_by_operation.get(body["operation_id"])
-        expected_generation = 1 if previous is None else int(previous.data["custody_generation"]) + 1
-        if body["custody_generation"] != expected_generation:
-            raise ValueError("readback custody_generation does not extend the current operation head")
-        if previous is not None and _timestamp(body["evaluated_at"], "evaluated_at") < _timestamp(
-            previous.data["evaluated_at"], "previous.evaluated_at"
-        ):
-            raise ValueError("readback evaluated_at moved backward")
         self._readbacks[body["readback_sha256"]] = canonical
         self._current_readback_by_operation[body["operation_id"]] = canonical
         return _fixture_ref(canonical)

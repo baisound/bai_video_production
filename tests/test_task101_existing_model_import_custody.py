@@ -18,6 +18,7 @@ from ai_video_production.task101_existing_model_import_custody import (
     FixtureOnlyRecordRef,
     MAX_JSON_BYTES,
     NativeImportBoundary,
+    NativeImportFailureClassification,
     NativeImportTerminalResult,
     classify_native_import_boundary,
     create_existing_model_import_capability_audit,
@@ -422,6 +423,36 @@ def test_fake_backend_rechecks_latest_readback_generation_revocation_and_expiry(
         second_backend.admit_capability_audit(expired_issue)
 
 
+def test_fake_backend_does_not_invent_readback_sequence_rules() -> None:
+    backend = FakeExistingModelImportCustodyBackend()
+    intent = make_intent()
+    receipt = make_receipt(intent)
+    first = make_readback(
+        receipt,
+        readback_id="readback-generation-5",
+        custody_generation=5,
+        evaluated_at="2026-10-10T00:06:00Z",
+    )
+    later_admitted = make_readback(
+        receipt,
+        readback_id="readback-generation-2",
+        custody_generation=2,
+        evaluated_at="2026-10-10T00:05:00Z",
+    )
+    backend.admit_intent(intent)
+    backend.admit_receipt(receipt)
+    backend.admit_readback(first)
+    backend.admit_readback(later_admitted)
+
+    with pytest.raises(ValueError, match="no longer the current"):
+        backend.admit_capability_audit(
+            make_audit(first, capability_id="capability-old-sequence")
+        )
+    assert backend.admit_capability_audit(
+        make_audit(later_admitted, capability_id="capability-latest-admission")
+    ).record_sha256
+
+
 def test_fake_backend_results_are_nonserializable_fixture_only_refs() -> None:
     backend = FakeExistingModelImportCustodyBackend()
     intent = make_intent()
@@ -457,6 +488,12 @@ def test_native_failure_matrix_is_closed_effect_zero_and_complete() -> None:
         assert classification.required_behavior
     with pytest.raises(ValueError, match="unsupported"):
         classify_native_import_boundary("OTHER")
+    with pytest.raises(TypeError, match="factory-only"):
+        NativeImportFailureClassification(
+            NativeImportBoundary.BEFORE_NATIVE_EFFECT_FAILURE,
+            NativeImportTerminalResult.READBACK_CURRENT,
+            "",
+        )
 
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert set(schema["$defs"]["NativeImportBoundary"]["enum"]) == set(expected)

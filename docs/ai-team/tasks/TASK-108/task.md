@@ -117,4 +117,3 @@ performed. Detailed validation is recorded in
 Commit and publish the bounded candidate through an Owner-authorized pull
 request. A replacement Windows package/native confirmation remains a separate
 later gate and is not implied by source-level acceptance.
-

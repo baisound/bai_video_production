@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import ast
-from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
+from copy import copy, deepcopy
+from enum import Enum
 import json
+import pickle
 from pathlib import Path
+from typing import Mapping
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
@@ -18,12 +22,21 @@ from ai_video_production.owner_voice_authority import (
     PersistenceState,
     PrivateReferenceState,
     PublicReferenceStatus,
+    R24GlobalBranch,
+    R24PredecessorKind,
+    R24PrepareContinuityContext,
+    R24TruthValue,
+    R24_OWNER_ACCEPTANCE_RECORD_SHA256,
+    R24_S1_FIXTURE_SCOPE,
+    R24_S1_PRODUCER_VERSION,
     Task074OwnerVoiceAuthorityCompletionReceipt,
+    Task074R24EffectZeroProducer,
     Task074ToTask075ExecutionInputV2,
 )
 from ai_video_production.owner_voice_private_reference import MEDIA_POLICY_SHA256
 from ai_video_production.serialization import sha256_bytes
 from ai_video_production.voice_profile_route_selection import ComputePreference, RouteMode
+import ai_video_production.owner_voice_authority as owner_voice_authority_module
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -594,6 +607,292 @@ def test_outer_durable_live_fields_cannot_mix() -> None:
     value["durable_completion_receipt_sha256"] = digest("illegal-durable")
     with pytest.raises(ValueError, match="outer union"):
         Task074ToTask075ExecutionInputV2.from_dict(value)
+
+
+def r24_producer() -> Task074R24EffectZeroProducer:
+    return Task074R24EffectZeroProducer(
+        owner_acceptance_record_sha256=R24_OWNER_ACCEPTANCE_RECORD_SHA256
+    )
+
+
+def r24_decision(
+    *,
+    predecessor: R24PredecessorKind = R24PredecessorKind.SUCCESS,
+    post: R24TruthValue = R24TruthValue.TRUE,
+    job: R24TruthValue = R24TruthValue.TRUE,
+    retirement: R24TruthValue = R24TruthValue.TRUE,
+    continuity: R24PrepareContinuityContext = (
+        R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT
+    ),
+):
+    return r24_producer().produce(
+        project_id="project.synthetic",
+        operation_id="operation.synthetic.1",
+        ticket_id="ticket.synthetic.1",
+        predecessor_kind=predecessor,
+        post=post,
+        job_terminal=job,
+        retirement=retirement,
+        prepare_continuity_context=continuity,
+    )
+
+
+@pytest.mark.parametrize("predecessor", list(R24PredecessorKind))
+@pytest.mark.parametrize("post", list(R24TruthValue))
+@pytest.mark.parametrize("job", list(R24TruthValue))
+@pytest.mark.parametrize("retirement", list(R24TruthValue))
+def test_r24_s1_branch_predicate_is_total_and_exact(
+    predecessor: R24PredecessorKind,
+    post: R24TruthValue,
+    job: R24TruthValue,
+    retirement: R24TruthValue,
+) -> None:
+    expected = R24GlobalBranch.CONTAINED_PARTIAL_TRUTH
+    if (
+        predecessor is R24PredecessorKind.SUCCESS
+        and post is R24TruthValue.TRUE
+        and job is R24TruthValue.TRUE
+        and retirement is R24TruthValue.TRUE
+    ):
+        expected = R24GlobalBranch.SUCCESS_CLOSED
+    elif (
+        predecessor is R24PredecessorKind.NONCURRENT
+        and post is R24TruthValue.FALSE
+        and job is R24TruthValue.TRUE
+        and retirement is R24TruthValue.TRUE
+    ):
+        expected = R24GlobalBranch.NONCURRENT_CLOSED
+    elif (
+        predecessor is R24PredecessorKind.ABORTED
+        and post is R24TruthValue.FALSE
+        and job is R24TruthValue.TRUE
+        and retirement is R24TruthValue.TRUE
+    ):
+        expected = R24GlobalBranch.ABORTED_CLOSED
+    assert r24_decision(
+        predecessor=predecessor,
+        post=post,
+        job=job,
+        retirement=retirement,
+    ).branch is expected
+
+
+@pytest.mark.parametrize("continuity", list(R24PrepareContinuityContext))
+def test_r24_s1_decision_is_bound_body_free_and_effect_zero(
+    continuity: R24PrepareContinuityContext,
+) -> None:
+    decision = r24_decision(continuity=continuity)
+    assert decision.owner_acceptance_record_sha256 == R24_OWNER_ACCEPTANCE_RECORD_SHA256
+    assert decision.prepare_continuity_context is continuity
+    assert decision.fixture_only is True
+    assert decision.source_authority is False
+    assert decision.effect_authority is False
+    assert decision.canonical_runtime_type_minted is False
+    assert decision.child_created is False
+    assert decision.process_created is False
+    assert decision.private_body_present is False
+    assert decision.model_entered is False
+    assert decision.provider_entered is False
+    assert decision.audio_entered is False
+    assert decision.wav_created is False
+    assert decision.publication_current is False
+    assert decision.coordinate_sha256.startswith("sha256:")
+    assert decision.decision_sha256.startswith("sha256:")
+    assert len(decision.coordinate_sha256) == 71
+    assert len(decision.decision_sha256) == 71
+    assert R24_S1_PRODUCER_VERSION.startswith("TASK074_R24_S1_")
+    assert R24_S1_FIXTURE_SCOPE.endswith("EFFECT_ZERO")
+
+
+def test_r24_s1_rejects_wrong_acceptance_and_burns_on_rejected_input() -> None:
+    with pytest.raises(ValueError, match="exact R24 Owner acceptance"):
+        Task074R24EffectZeroProducer(owner_acceptance_record_sha256=digest("wrong"))
+    producer = r24_producer()
+    with pytest.raises(ValueError, match="exact R24PredecessorKind"):
+        producer.produce(
+            project_id="project.synthetic",
+            operation_id="operation.synthetic.1",
+            ticket_id="ticket.synthetic.1",
+            predecessor_kind="SUCCESS",  # type: ignore[arg-type]
+            post=R24TruthValue.TRUE,
+            job_terminal=R24TruthValue.TRUE,
+            retirement=R24TruthValue.TRUE,
+            prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+        )
+    with pytest.raises(RuntimeError, match="already been burned"):
+        producer.produce(
+            project_id="project.synthetic",
+            operation_id="operation.synthetic.1",
+            ticket_id="ticket.synthetic.1",
+            predecessor_kind=R24PredecessorKind.SUCCESS,
+            post=R24TruthValue.TRUE,
+            job_terminal=R24TruthValue.TRUE,
+            retirement=R24TruthValue.TRUE,
+            prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+        )
+
+
+def test_r24_s1_rejects_alternate_enums_booleans_mappings_and_bad_identifiers() -> None:
+    class AlternateTruth(str, Enum):
+        TRUE = "TRUE"
+
+    invalid_inputs = (
+        {"post": True},
+        {"post": "TRUE"},
+        {"post": AlternateTruth.TRUE},
+        {"post": {"value": "TRUE"}},
+        {"project_id": "C:/private/project"},
+        {"operation_id": "operation..fork"},
+        {"ticket_id": "ticket/foreign"},
+    )
+    base = {
+        "project_id": "project.synthetic",
+        "operation_id": "operation.synthetic.1",
+        "ticket_id": "ticket.synthetic.1",
+        "predecessor_kind": R24PredecessorKind.SUCCESS,
+        "post": R24TruthValue.TRUE,
+        "job_terminal": R24TruthValue.TRUE,
+        "retirement": R24TruthValue.TRUE,
+        "prepare_continuity_context": R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+    }
+    for mutation in invalid_inputs:
+        with pytest.raises(ValueError):
+            r24_producer().produce(**(base | mutation))  # type: ignore[arg-type]
+
+
+def test_r24_s1_concurrent_callers_have_exactly_one_winner() -> None:
+    producer = r24_producer()
+
+    def attempt(_: int) -> str:
+        try:
+            producer.produce(
+                project_id="project.synthetic",
+                operation_id="operation.synthetic.1",
+                ticket_id="ticket.synthetic.1",
+                predecessor_kind=R24PredecessorKind.SUCCESS,
+                post=R24TruthValue.TRUE,
+                job_terminal=R24TruthValue.TRUE,
+                retirement=R24TruthValue.TRUE,
+                prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+            )
+            return "winner"
+        except RuntimeError:
+            return "burned"
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        outcomes = list(executor.map(attempt, range(64)))
+    assert outcomes.count("winner") == 1
+    assert outcomes.count("burned") == 63
+
+
+def test_r24_s1_result_is_identity_only_sealed_and_nonserializable() -> None:
+    first = r24_decision()
+    second = r24_decision()
+    assert first is not second and first != second
+    assert first.coordinate_sha256 == second.coordinate_sha256
+    assert first.decision_sha256 == second.decision_sha256
+    assert not isinstance(first, Mapping)
+    assert not hasattr(first, "__dict__")
+    assert not hasattr(first, "to_dict")
+    assert not hasattr(first, "from_dict")
+    with pytest.raises(AttributeError):
+        first.branch = R24GlobalBranch.ABORTED_CLOSED  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        object.__setattr__(first, "_branch", R24GlobalBranch.ABORTED_CLOSED)
+    assert first.branch is R24GlobalBranch.SUCCESS_CLOSED
+    with pytest.raises(TypeError):
+        iter(first)
+    with pytest.raises(TypeError):
+        copy(first)
+    with pytest.raises(TypeError):
+        deepcopy(first)
+    with pytest.raises(TypeError):
+        pickle.dumps(first)
+    with pytest.raises(TypeError):
+        json.dumps(first)
+
+
+def test_r24_s1_producer_cannot_be_cloned_rearmed_or_serialized() -> None:
+    producer = r24_producer()
+    with pytest.raises(AttributeError):
+        producer._burned = False  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        object.__setattr__(producer, "_burned", False)
+    with pytest.raises(TypeError):
+        copy(producer)
+    with pytest.raises(TypeError):
+        deepcopy(producer)
+    with pytest.raises(TypeError):
+        pickle.dumps(producer)
+    with pytest.raises(TypeError):
+        json.dumps(producer)
+
+
+def test_r24_s1_types_reject_subclass_and_unissued_decision_forgery() -> None:
+    with pytest.raises(TypeError, match="producer types are sealed"):
+        class ForgedProducer(Task074R24EffectZeroProducer):
+            pass
+
+    decision = r24_decision()
+    with pytest.raises(TypeError, match="decision types are sealed"):
+        class ForgedDecision(type(decision)):
+            pass
+
+    with pytest.raises(TypeError, match="only be minted"):
+        owner_voice_authority_module._Task074R24EffectZeroDecision(
+            branch=R24GlobalBranch.SUCCESS_CLOSED,
+        )
+    unissued = object.__new__(owner_voice_authority_module._Task074R24EffectZeroDecision)
+    with pytest.raises(TypeError, match="provenance is invalid"):
+        _ = unissued.branch
+    with pytest.raises(TypeError, match="field is invalid"):
+        owner_voice_authority_module._r24_decision_field(decision, "__repr__")
+    assert decision.branch is R24GlobalBranch.SUCCESS_CLOSED
+
+
+def test_r24_s1_object_level_rearm_cannot_produce_twice() -> None:
+    producer = r24_producer()
+    first = producer.produce(
+        project_id="project.synthetic",
+        operation_id="operation.synthetic.1",
+        ticket_id="ticket.synthetic.1",
+        predecessor_kind=R24PredecessorKind.SUCCESS,
+        post=R24TruthValue.TRUE,
+        job_terminal=R24TruthValue.TRUE,
+        retirement=R24TruthValue.TRUE,
+        prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+    )
+    with pytest.raises(AttributeError):
+        object.__setattr__(producer, "_burned", False)
+    with pytest.raises(TypeError, match="already initialized"):
+        producer.__init__(
+            owner_acceptance_record_sha256=R24_OWNER_ACCEPTANCE_RECORD_SHA256
+        )
+    with pytest.raises(RuntimeError, match="already been burned"):
+        producer.produce(
+            project_id="project.synthetic",
+            operation_id="operation.synthetic.1",
+            ticket_id="ticket.synthetic.1",
+            predecessor_kind=R24PredecessorKind.SUCCESS,
+            post=R24TruthValue.TRUE,
+            job_terminal=R24TruthValue.TRUE,
+            retirement=R24TruthValue.TRUE,
+            prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+        )
+    assert first.branch is R24GlobalBranch.SUCCESS_CLOSED
+
+    unissued = object.__new__(Task074R24EffectZeroProducer)
+    with pytest.raises(TypeError, match="provenance is invalid"):
+        unissued.produce(
+            project_id="project.synthetic",
+            operation_id="operation.synthetic.1",
+            ticket_id="ticket.synthetic.1",
+            predecessor_kind=R24PredecessorKind.SUCCESS,
+            post=R24TruthValue.TRUE,
+            job_terminal=R24TruthValue.TRUE,
+            retirement=R24TruthValue.TRUE,
+            prepare_continuity_context=R24PrepareContinuityContext.NO_PREPARE_RECOVERY_EVENT,
+        )
 
 
 def test_schema_validates_authority_records_rejects_effect_and_is_mirrored() -> None:

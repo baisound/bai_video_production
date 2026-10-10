@@ -119,6 +119,88 @@ console.log('OK');
     assert completed.stdout.strip() == "OK"
 
 
+def test_central_settings_save_uses_shipped_selector_with_nonempty_workload_in_node() -> None:
+    node_executable = shutil.which("node")
+    if node_executable is None:
+        pytest.skip("Node.js is required for the central Settings save contract")
+
+    def javascript_function(name: str) -> str:
+        match = re.search(rf"(?:async )?function {re.escape(name)}\([^\r\n]+", HTML)
+        assert match is not None
+        return match.group(0)
+
+    functions = "\n".join(
+        javascript_function(name)
+        for name in ("centralPreferredRouteValue", "renderCentralModelSettings")
+    )
+    script = f"""
+const assert=require('node:assert/strict');
+const PLANNING_STATE_SAFE_ERROR='企画の状態を確認できませんでした。プロジェクトを開き直してから、もう一度確認してください。';
+const CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC']);
+function node(tag='div',text=''){{return {{tag,textContent:text,children:[],dataset:{{}},listeners:{{}},attrs:new Map(),disabled:false,value:'',append(...items){{this.children.push(...items)}},replaceChildren(...items){{this.children=[...items]}},addEventListener(name,listener){{this.listeners[name]=listener}},setAttribute(name,value){{this.attrs.set(name,value)}},removeAttribute(name){{this.attrs.delete(name)}},querySelector(selector){{const match=selector.match(/^\\[data-connection-route="([^"]+)"\\]$/);if(!match)return null;const route=match[1];const visit=current=>{{if(current.dataset?.connectionRoute===route)return current;for(const child of current.children||[]){{const found=visit(child);if(found)return found}}return null}};return visit(this)}}}}}}
+const elements={{settingsContent:node('div')}};
+const document={{createElement(tag){{return node(tag)}}}};
+function $(id){{return elements[id]}}
+function clear(host){{host.replaceChildren()}}
+function element(tag,_className,text){{return node(tag,text)}}
+function card(title,body){{const item=node('div',title);item.body=body;return item}}
+function renderOllamaRuntimeStatus(){{}}
+function renderComputeSettings(){{}}
+function settingsWorkloadName(row){{return row.workload}}
+function settingsModelLabel(route){{return route.model_id||''}}
+function settingsAvailabilityText(){{return ''}}
+const notifications=[];
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+let refreshCount=0;
+async function refreshGlobalPlanningAiStatus(){{refreshCount+=1}}
+let renderSettingsCount=0;
+async function renderSettingsView(){{renderSettingsCount+=1}}
+let currentSettingsView='models';
+const rpc=[];
+async function call(method,args={{}},publicError=null){{rpc.push({{method,args,publicError}});return {{revision:8}}}}
+{functions}
+(async()=>{{
+  const form={{available:true,revision:7,workloads:[
+    {{workload:'PLANNING',selection_mode:'MANUAL',preferred_route_id:'plan-local',routes:[{{route_id:'plan-local',model_id:'qwen3:8b',selectable:true}}]}},
+    {{workload:'IMAGE',selection_mode:'AUTOMATIC',preferred_route_id:null,routes:[]}},
+  ]}};
+  renderCentralModelSettings(form,{{}},{{}});
+  const planning=elements.settingsContent.querySelector('[data-connection-route="PLANNING"]');
+  const image=elements.settingsContent.querySelector('[data-connection-route="IMAGE"]');
+  assert.ok(planning);
+  assert.ok(image);
+  planning.value='plan-local';
+  image.value='';
+  const save=elements.settingsContent.children.find(item=>item.textContent==='AIモデル設定を保存');
+  assert.ok(save);
+  await save.listeners.click();
+  assert.equal(rpc.length,1);
+  assert.equal(rpc[0].method,'connection_settings_update');
+  assert.equal(rpc[0].publicError,PLANNING_STATE_SAFE_ERROR);
+  assert.deepEqual(rpc[0].args,{{
+    revision:7,
+    workload_modes:{{PLANNING:'MANUAL',IMAGE:'AUTOMATIC'}},
+    preferred_route_ids:{{PLANNING:'plan-local',IMAGE:null}},
+  }});
+  assert.equal(refreshCount,1);
+  assert.equal(renderSettingsCount,1);
+  assert.equal(save.disabled,false);
+  assert.equal(save.attrs.has('aria-busy'),false);
+  assert.deepEqual(notifications,[{{message:'AIモデル設定を保存しました。AIの実行・課金・生成は開始していません。',isError:false}}]);
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+"""
+    completed = subprocess.run(
+        [node_executable, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
 def test_planning_readiness_separates_settings_runtime_and_application_failures_in_node() -> None:
     node = shutil.which("node")
     if node is None:
@@ -358,7 +440,6 @@ function settingsWorkloadName(row){{return row.workload}}
 function settingsModelLabel(route){{return route.model_id||''}}
 function settingsAvailabilityText(){{return ''}}
 function centralPreferredRouteValue(){{return null}}
-function q(){{return null}}
 const notifications=[];
 function notify(message,isError=false){{notifications.push({{message,isError}})}}
 let renderSettingsCount=0;

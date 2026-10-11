@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -464,3 +464,28 @@ R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
 are preserved in `../TASK-074/design-r24-independent-review-receipt.md`. This
 closes R24-S0 only. TASK-014 owner acceptance, cross-owner amendments, source,
 runtime and every effect remain separately gated and unissued.
+
+TASK-014 then issued and independently verified its R24 owner acceptance in
+`d4-r24-owner-acceptance.json`. R24-S1 is hosted-merged and closed. The Owner
+explicitly allocated the next ordered unit, R24-S2, under
+`r24-s2-restricted-publication-store-allocation.md`. S2 is limited to a sealed
+restricted consumer, body-free synthetic POST parser/schema, append-only
+Project-scoped in-memory fake history and sealed effect-zero current read. It
+cannot use a real Project/filesystem store or mint a canonical publication
+receipt/current type. R24-S3, both coordinated amendments and every private,
+native, model, Provider, audio/WAV, Asset, publication or downstream PASS effect
+remain unallocated and blocked.
+
+R24-S2 implementation, focused/direct tests and final independent Tester/Critic
+review passed with unresolved `Critical/High/Medium/Low = 0/0/0/0`. The
+inherited R24-S1/S2 Python trusted computing boundary includes loaded package
+implementation code, function globals/closures, module-private registries,
+locks and private state objects. Ordinary caller construction, method/property
+use, subclassing, reinitialization, `object.__new__`, `object.__setattr__`,
+copying, serialization, alternate types and unissued/caller-shaped objects are
+in scope and fail closed. Deliberate mutation of function globals/closure cells,
+private registries, definitions or module state is arbitrary same-process TCB
+compromise and is outside this Atomic Unit; a future untrusted in-interpreter
+plugin requirement would need a separately authorized S1/S2 isolation Task.
+R24-S2 remains `MERGE_PENDING / SOURCE_START0 / EFFECT0` until the exact commit,
+hosted checks, merge, post-merge checks and external Evidence readback complete.

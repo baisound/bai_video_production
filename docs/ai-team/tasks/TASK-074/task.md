@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_HOSTED_CLOSED / R24_S2_HOSTED_CLOSED / R24_S3_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -292,6 +292,26 @@ Design accept後にexact branch/lock/currentnessを再確認してから次だ�
 - `docs/ai-team/tasks/TASK-074/implementation-completion-receipt.md`
 
 TASK-071、TASK-072、Product Project storeへのadapter amendmentは、producer base implementation、exact owner lock、sole-writer、追加Allowed Filesが別途確認されるまで候補にも含めない。
+
+## R24-S3 coordinated-prearm allocation — 2026-10-12
+
+R24-S1 and R24-S2 are hosted-closed. On fresh exact main
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1`, with open PR overlap `0` and
+non-closed work-lock overlap `0`, the Owner allocated only the source-only,
+effect-zero R24-S3 coordinated-prearm amendment/adapter in
+`../TASK-014/r24-s3-coordinated-prearm-allocation.md`.
+
+Its exact runtime-owner roles are TASK-014/072/075/076. The separately requested
+TASK-014/036/041/074 design-owner status amendments record allocation and
+boundaries only; they are not runtime-owner receipts. R24-S4, real external
+owner source, private/native execution and all later effects remain
+`SOURCE_START0 / EFFECT0`.
+
+The exact R24-S3 implementation then passed independent Tester, Critic and
+Judge review with unresolved `Critical/High/Medium/Low = 0/0/0/0`. It remains
+`MERGE_PENDING / SOURCE_START0 / EFFECT0` until hosted and post-main closure.
+R24-S4, runtime owner implementations and every later effect remain
+unallocated.
 
 ## Must not modify
 

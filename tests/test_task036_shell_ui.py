@@ -486,6 +486,13 @@ def test_connection_settings_bridge_projects_and_updates_exact_modes_without_exe
     assert snapshot["provider_execution_started"] is False
     assert snapshot["paid_execution_authorized"] is False
     assert "credential://" not in str(snapshot)
+    image_routes = next(
+        row for row in snapshot["workloads"] if row["workload"] == "IMAGE"
+    )["routes"]
+    assert {row["route_id"]: row["display_name_ja"] for row in image_routes} == {
+        "local-image": "workflow-v1",
+        "cloud-image": "configured-image-model",
+    }
 
     modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
     modes["IMAGE"] = "OFFLINE_ONLY"
@@ -501,6 +508,34 @@ def test_connection_settings_bridge_projects_and_updates_exact_modes_without_exe
     loaded = ConnectionSettingsStore.load(tmp_path / "ai-connection-settings.json").record
     assert loaded.profile.mode_for(AiWorkload.IMAGE) is SelectionMode.OFFLINE_ONLY
     assert loaded.profile.routes[0].route_id == "local-image"
+
+
+def test_connection_settings_model_labels_are_public_safe_and_not_ordinal() -> None:
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    projected = bridge._connection_settings_projection(
+        {
+            "revision": 0,
+            "workloads": [
+                {
+                    "workload": "PLANNING",
+                    "preferred_route_id": "safe-route",
+                    "routes": [
+                        {"route_id": "safe-route", "model_id": "qwen3:8b"},
+                        {
+                            "route_id": "unsafe-route",
+                            "model_id": "token=not-a-display-name",
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    planning = projected["workloads"][0]
+    assert {row["route_id"]: row["display_name_ja"] for row in planning["routes"]} == {
+        "safe-route": "qwen3:8b",
+        "unsafe-route": "登録済みローカルAIモデル",
+    }
+    assert planning["selected_model_display_name"] == "qwen3:8b"
 
 
 def test_central_model_settings_save_restarts_into_page_readiness_without_execution(tmp_path):
@@ -577,12 +612,32 @@ def test_central_model_settings_save_restarts_into_page_readiness_without_execut
     assert saved["provider_execution_started"] is False
     assert saved["paid_execution_authorized"] is False
     assert saved["generation_started"] is False
+    saved_planning = next(
+        row for row in saved["workloads"] if row["workload"] == "PLANNING"
+    )
+    assert saved_planning["preferred_route_id"] == "local-planning-alt"
+    assert saved_planning["selected_model_display_name"] == "qwen3-14b"
+    assert {row["route_id"]: row["display_name_ja"] for row in saved_planning["routes"]} == {
+        "local-planning-alt": "qwen3-14b",
+        "local-planning": "qwen3-8b",
+    }
 
     restarted_service = ConnectionSettingsWebService.from_paths(settings_path, None)
     restarted_bridge = Task036ShellBridge(
         ShellApplicationService(product_version="0.21.0"),
         connection_settings=restarted_service,
     )
+    restarted_settings = restarted_bridge.connection_settings_snapshot({})
+    restarted_planning = next(
+        row for row in restarted_settings["workloads"] if row["workload"] == "PLANNING"
+    )
+    assert restarted_planning["selected_model_display_name"] == "qwen3-14b"
+    assert {
+        row["route_id"]: row["display_name_ja"] for row in restarted_planning["routes"]
+    } == {
+        "local-planning-alt": "qwen3-14b",
+        "local-planning": "qwen3-8b",
+    }
     readback = restarted_bridge.model_selection_snapshot({})
     selectors = {row["page_id"]: row for row in readback["selectors"]}
     for page_id, route_id in (

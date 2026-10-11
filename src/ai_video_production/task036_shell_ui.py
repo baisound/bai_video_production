@@ -1567,11 +1567,6 @@ class Task036ShellBridge:
             return None
         return value
 
-    def _selected_model_label(self, workload_id: str) -> str:
-        # The sealed producer ABI is not present in this exact4 consumer scope.
-        # Do not turn injected/public-shaped values into a display authority.
-        return _MODEL_DISPLAY_FALLBACK
-
     def _connection_settings_projection(self, form: dict[str, object]) -> dict[str, object]:
         projected_workloads: list[dict[str, object]] = []
         workloads = form.get("workloads", [])
@@ -1581,25 +1576,30 @@ class Task036ShellBridge:
                     continue
                 projected = dict(row)
                 routes: list[dict[str, object]] = []
-                for index, route in enumerate(row.get("routes", []), start=1):
+                for route in row.get("routes", []):
                     if not isinstance(route, dict):
                         continue
+                    public_model_label = self._safe_public_model_label(route.get("model_id"))
                     routes.append(
                         {
                             **route,
-                            "display_name_ja": (
-                                _MODEL_DISPLAY_FALLBACK
-                                if len(row.get("routes", [])) == 1
-                                else f"{_MODEL_DISPLAY_FALLBACK} {index}"
-                            ),
+                            "display_name_ja": public_model_label or _MODEL_DISPLAY_FALLBACK,
                         }
                     )
                 projected["routes"] = routes
                 preferred = row.get("preferred_route_id")
+                preferred_route = next(
+                    (route for route in routes if route.get("route_id") == preferred),
+                    None,
+                )
                 projected["selected_model_display_name"] = (
                     None
                     if preferred is None
-                    else self._selected_model_label(str(row.get("workload", "")))
+                    else (
+                        preferred_route.get("display_name_ja", _MODEL_DISPLAY_FALLBACK)
+                        if preferred_route is not None
+                        else _MODEL_DISPLAY_FALLBACK
+                    )
                 )
                 projected_workloads.append(projected)
         return {

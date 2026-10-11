@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / IMC_N_D0_DESIGN_ACCEPTED / NATIVE_BLOCKED`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -87,3 +87,67 @@ Final local verification is TASK-101 focused `37 / 37 PASS`, TASK-101 plus direc
 During final verification, test caches and bytecode were disabled. Compile output was bound to the operation-specific WSL system-temp root `/tmp/bvp-task101-imci-r2-20261010-001/pycache`; final readback found that root absent, so intentional temporary residuals are zero. The final public-safe external checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-i\20261010-imc-i-final-001\` and must be written and read back after this completion record is committed.
 
 IMC-I acceptance does not complete TASK-101. IMC-N, IMC-L, private/native import, key/DACL work, protected destination creation, live capability/load/inference, consumer integration, publication, Release, Deploy, and Production remain separately blocked or unallocated. Current `origin/main` advanced to `110d595acd7802d599914823760ed622ac1983c7` after the implementation baseline; its changed paths have zero overlap with the exact-five IMC-I scope. Publication remains unauthorized, so this unit stops commit-ready without push or PR.
+
+## IMC-N-D0 native gate design allocation — 2026-10-11
+
+The Owner explicitly approved `TASK-101 / IMC-N-D0` as an effect-zero design/gate unit. Repository Allowed Files are exactly:
+
+1. `docs/ai-team/tasks/TASK-101/task.md`
+2. `docs/ai-team/tasks/TASK-101/imc-n-protected-native-import-readback-plan-r0.md`
+
+External public-safe Evidence is limited to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\<run-id>\`. The unit may create its dedicated worktree/branch, write only the exact-two documents/Evidence, run documentation/static/diff checks and obtain independent DEV-4 Critic/Tester/Judge review.
+
+This allocation does not authorize any private source access, native source handle/metadata/body read, protected destination provisioning/creation, copy/encryption, key/DPAPI/DACL operation, cleanup, live receipt/readback/capability issuance, model/runtime load, inference, audio, Provider/network use, Product/Shell connection, Release, Deploy or Production. D0 freezes the future implementation/native-run gate; it does not release it.
+
+The D0 plan is [the IMC-N protected native import/readback gate plan](imc-n-protected-native-import-readback-plan-r0.md). Its Recovery R1 separates future `IMC-N-I0` synthetic interface/port work, `IMC-N-I1` production-backend work and one exact `IMC-N-V` private/native run, preserves the accepted IMC-D ABI/failure matrix, proposes a new TASK-101-specific Windows backend/test exact-three for each later implementation allocation, and records a closed prerequisite ledger. At this freeze, the native owner/scope, TASK-046 current evidence, storage/cipher/key/principal/DACL/retention/revocation policies, source/destination issuer implementations, exact-handle binary port implementation, exact native run and cleanup authority remain explicitly blocked or unallocated.
+
+The D0 candidate now requires independent Critic and Tester review and DEV-4 Judge closure. Until that review is accepted and recorded, no follow-on implementation allocation may infer this candidate as accepted design. Even after D0 acceptance, `IMC-N-I0`, `IMC-N-I1`, `IMC-N-V`, IMC-L and all private/native/load/inference effects require separate exact Owner gates.
+
+Cycle-1 independent review of frozen R0 `821563257b6a9a54abf913a9082c15fd1234e780` recorded Critic C/H/M/L `0/2/3/0` and Tester `PASS / ACCEPT`, `0/0/0/0`. The Critic rejected premature receipt/`CURRENT` construction before handle-close/identity/zeroization confirmation and a circular implementation prerequisite that required issuers/native port to exist before the unit assigned to create them. Its Medium findings required authenticated decrypt/plaintext comparison, fresh terminal currentness/revocation/expiry checks and an immutable accepted D0 plan during implementation.
+
+Recovery R1 remains inside the same authorized exact-two D0 scope. It splits implementation into separately gated `IMC-N-I0` interface/port work and `IMC-N-I1` production-backend work, moves issuer/native-port implementation identities to I0 exit/I1 start, requires authenticated decrypt and exact plaintext digest/length reread, requires a held TASK-046 currentness reservation plus fresh terminal validation, and forbids receipt/`CURRENT` construction until every handle close/identity/zeroization check succeeds. It also removes the accepted D0 plan from future implementation Allowed Files. R1 requires fresh independent Critic/Tester review and DEV-4 Judge closure; all native/private effects remain blocked.
+
+Cycle-2 independent review of frozen R1 `ce8fefe41257634a54b966fe827a94343fe94d68` recorded Critic C/H/M/L `0/2/0/1` and Tester `PASS / ACCEPT`, `0/0/1/1`. The prior five findings were materially closed. The Critic rejected use of pre-receipt writer observations instead of the accepted receipt-reparse/distinct-native-reopen readback sequence, and rejected assigning acquisition of a live TASK-046 currentness reservation to synthetic-only I1. Critic/Tester both identified stale “three gate” wording. The Tester additionally required every post-seal decrypt/currentness/candidate failure to use the accepted `COMPLETION_UNKNOWN`, preservation and no-retry terminal rather than an ambiguous “fail closed.”
+
+Recovery R2 is the second and final bounded D0 review/fix cycle. It splits accepted `N03A` verifier/reservation contract+implementation identity from actual V-authorized `N03B` fresh evidence/reservation, freezes a non-replayable reservation lifecycle, and requires: durable seal and writer closure; internal non-issued receipt candidate construction and exact reparse; distinct pinned native reopen with authenticated decrypt/plaintext comparison; readback/key handle closure and zeroization; fresh terminal currentness; then joint live receipt/`CURRENT` issuance and terminal reservation release. Every failure after seal is explicitly `COMPLETION_UNKNOWN` with preservation, zero live receipt and no retry. R2 requires final independent Critic/Tester re-review and DEV-4 Judge closure. Any remaining Critical/High after this cycle escalates without further mutation or native work.
+
+## IMC-N-D0 design acceptance — 2026-10-11
+
+Frozen pre-record R2 HEAD `5c36f7881cefb1ec32ccbc497e51824dc786e157` on base/current main `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` received independent Critic `ACCEPT` C/H/M/L `0/0/0/1`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `ACCEPT` C/H/M/L `0/0/0/1`. The reviewed design SHA-256 is `bad9d067cf9630cd90d6d98dc459d037652792e118b6024df5076b4ce7bf75b5`; the reviewed Task-record SHA-256 is `bbb5543b78472591a45b88f26939d97dded4073ca741c52bb7e59b8947960fcd`.
+
+Final effect-zero verification is TASK-101 contract plus OSS readiness `49 / 49 PASS`, `git diff --check` `PASS`, exact-two/ASCII/relative-link checks `PASS`, accepted IMC-D/IMC-I unchanged and test residuals zero. The Windows Python route lacking `jsonschema` is recorded as environment `NOT_CONFIRMED`; no dependency was installed and the existing WSL route passed.
+
+One nonblocking Low remains: the plan says `N03B` is held “immediately before” source open while its normative protocol acquires it before the zero-importer-I/O placement preflight. The Judge accepted this as wording imprecision because exact V authority, `NO_EFFECT` preflight failure, terminal reservation handling and zero live exposure while `HELD` remain explicit. A wording clarification before the first real V-run specification is recommended; any semantic change requires a separately authorized exact-two design revision.
+
+IMC-N-D0 is accepted only as an effect-zero gate plan. The public-safe completion checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\20261011-imc-n-d0-final-001\checkpoint.json` and must be written and reread after this acceptance record is committed. D0 acceptance does not authorize publication or any follow-on implementation/native effect.
+
+TASK-101 remains active. IMC-N-I0 requires fresh `N01` readback and a new exact `N02` Owner/Allowed-Files allocation. IMC-N-I1, IMC-N-V, private model read/copy/encryption, destination/access-control/cryptographic-custody effects, cleanup, IMC-L, live capability/load/inference, Product/Shell integration, publication, Release, Deploy and Production remain separately blocked or unallocated.
+
+## IMC-N-D0 fresh-main publication reconciliation — 2026-10-12
+
+The Owner separately authorized publication of the already accepted effect-zero
+D0 exact-two payload through a dedicated branch and Japanese pull request, but
+did not authorize merging that pull request in this unit. Before mutation,
+remote `main` was read back at
+`1ba6edd590925ee527f6736c9a02d7647052bb0d`. It contains TASK-111 through merge
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1` and the R24-S3 coordinated-prearm
+unit through merge `1ba6edd590925ee527f6736c9a02d7647052bb0d`.
+
+Neither prerequisite changed either D0 Allowed File. The semantic audit also
+found no responsibility collision: TASK-111 owns only the immutable Audit Shell
+input bridge, while R24-S3 owns an effect-zero four-owner prearm adapter; neither
+owns the TASK-101 protected native import/readback gate plan. A conflict-free
+rebase preserved all four accepted patches as equivalent and left the accepted
+exact-two payload unchanged according to `git range-diff`:
+`82156325 -> 98bdee27`, `ce8fefe4 -> fb4d3f89`,
+`5c36f788 -> a508d9b7`, and `474d79d2 -> fd79e4e0`.
+
+The rebased pre-record candidate `fd79e4e0da773b5d02dcf7072e3283dbb37e491e`
+passed the effect-zero TASK-101 contract plus OSS readiness suite `49 / 49` in
+the existing Ubuntu environment. Publication requires a fresh exact-two scope
+and diff check, independent Critic and Tester acceptance with unresolved
+Critical/High zero, canonical external Evidence write/readback and green hosted
+checks. These publication checks do not reopen the accepted design or grant
+IMC-N-I0, private/native, Provider, model/audio, Release, Deploy or Production
+authority. The bound publication Evidence run is
+`C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0-publication\20261012-publication-final-001\`.

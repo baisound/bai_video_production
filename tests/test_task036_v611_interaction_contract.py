@@ -248,6 +248,7 @@ const ready=planningGenerationPresentation({{available:true,model_id:'qwen3:8b'}
 assert.equal(ready.ready,true);
 assert.equal(ready.state,'READY');
 assert.doesNotMatch(ready.message,/qwen3:8b/);
+assert.equal(settingsModelLabel({{display_name_ja:'qwen3:8b',model_id:'qwen3:8b'}},1),'qwen3:8b');
 assert.equal(settingsModelLabel({{model_id:'qwen3:8b'}},1),'登録済みローカルAIモデル');
 const host={{items:[],append(item){{this.items.push(item)}}}};
 function card(title,body){{return `${{title}}\n${{body}}`;}}

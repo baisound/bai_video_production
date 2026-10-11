@@ -271,7 +271,7 @@ def test_canonical_write_endpoints_all_have_meter_invalidation_guard():
     bridge = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Task036ShellBridge')
     actual = {node.name for node in bridge.body if isinstance(node, ast.FunctionDef)
               and any(isinstance(item, ast.Name) and item.id == '_meter_write_guarded' for item in node.decorator_list)}
-    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","verify_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","apply_faster_whisper_model_folder_update","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
+    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","verify_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","apply_faster_whisper_model_folder_update","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_record","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
     assert actual == set(expected)
 
 
@@ -973,11 +973,15 @@ def test_html_promotes_production_control_without_task038_authority_shortcut():
     assert "production_accept" not in HTML
     assert "production_reject" not in HTML
     assert "audit_snapshot" in HTML
+    assert "audit_prepare_record" in HTML
+    assert "audit_apply_record" in HTML
+    assert "audit_cancel_record" in HTML
     assert "audit_prepare_human_decision" in HTML
     assert "audit_apply_human_decision" in HTML
     assert "audit_apply_recovery" in HTML
     assert "AI /" not in HTML
     assert "LOCKは別操作です" in HTML
+    assert "採否・LOCK・Provider実行は行いません" in HTML
     assert "innerHTML" not in HTML
 
 
@@ -1141,6 +1145,87 @@ def test_audit_bridge_routes_only_exact_human_confirmation_and_recovery_contract
     assert bridge.audit_apply_recovery({"action": "COMPLETE"}) == {"recovered": "COMPLETE"}
     with pytest.raises(ProductError) as exc:
         bridge.audit_apply_human_decision({"confirmation_id": "x", "actor_id": "owner", "force": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_audit_input_bridge_routes_exact_record_and_explicit_confirmation_only(
+    tmp_path: Path,
+):
+    production_sha = "sha256:" + "a" * 64
+    audit_sha = "sha256:" + "b" * 64
+    asset_sha = "sha256:" + "c" * 64
+
+    class AuditApplicationStub:
+        def __init__(self):
+            self.recorded = None
+            self.audit_path = tmp_path / "candidate-audit.json"
+
+        def snapshot(self):
+            return {
+                "project_id": "project-1",
+                "production_snapshot_sha256": production_sha,
+                "audit_snapshot_sha256": audit_sha,
+                "recovery": {"required": False},
+                "workspace": {"candidates": [{
+                    "candidate_id": "candidate-1",
+                    "asset_id": "asset-1",
+                    "asset_sha256": asset_sha,
+                    "lifecycle_state": "READY_FOR_AUDIT",
+                    "audit_count": 0,
+                    "audit_history": [],
+                }]},
+            }
+
+        def record_audit(self, **values):
+            self.recorded = values
+            snapshot = self.snapshot()
+            row = snapshot["workspace"]["candidates"][0]
+            row["audit_count"] = 1
+            row["audit_history"] = [values["record"].to_dict()]
+            snapshot["audit_snapshot_sha256"] = "sha256:" + "d" * 64
+            return snapshot
+
+    audit = AuditApplicationStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.24.2"),
+        audit_application=audit,
+    )
+    request = {
+        "audit_id": "audit-human-1",
+        "candidate_id": "candidate-1",
+        "asset_id": "asset-1",
+        "asset_sha256": asset_sha,
+        "auditor_id": "desktop-owner",
+        "auditor_version": None,
+        "contract_refs": ["visual-contract-1"],
+        "dimension_scores": {"CONTRACT": 90},
+        "findings": [],
+        "failure_codes": [],
+        "alternate_use_proposals": [],
+        "expected_production_snapshot_sha256": production_sha,
+        "expected_audit_snapshot_sha256": audit_sha,
+    }
+    prepared = bridge.audit_prepare_record(request)
+    assert prepared["record"]["auditor_kind"] == "HUMAN"
+    assert audit.recorded is None
+    result = bridge.audit_apply_record({
+        "confirmation_id": prepared["confirmation_id"],
+        "explicit_human_confirmation": True,
+    })
+    assert result["status"] == "SAVED"
+    assert audit.recorded["record"].candidate_id == "candidate-1"
+    assert audit.recorded["expected_production_snapshot_sha256"] == production_sha
+    assert audit.recorded["expected_audit_snapshot_sha256"] == audit_sha
+    assert result["human_candidate_decision_recorded"] is False
+
+    with pytest.raises(ProductError) as exc:
+        bridge.audit_prepare_record({**request, "force": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        bridge.audit_apply_record({
+            "confirmation_id": "other",
+            "explicit_human_confirmation": False,
+        })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

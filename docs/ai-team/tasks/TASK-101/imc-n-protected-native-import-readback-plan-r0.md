@@ -267,3 +267,29 @@ The one accepted Low is wording only: section 6 says `N03B` is held “immediate
 IMC-N-D0 is therefore accepted only as an effect-zero gate plan. Its public-safe completion checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\20261011-imc-n-d0-final-001\checkpoint.json` and must be written and reread after this acceptance record is committed.
 
 This acceptance grants no implementation or native authority. IMC-N-I0 remains blocked pending fresh `N01` plus a new exact `N02` Owner allocation. I1, V, private model access, destination/key/DACL effects, cleanup, IMC-L, live capability/load/inference, Product/Shell integration, publication, Release, Deploy and Production remain separately blocked or unallocated.
+
+## 16. Fresh-main publication reconciliation
+
+On 2026-10-12 the Owner separately authorized publication of this already
+accepted effect-zero plan through a dedicated Japanese pull request, excluding
+merge authority. Canonical remote `main`
+`1ba6edd590925ee527f6736c9a02d7647052bb0d` includes TASK-111 merge
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1` and the R24-S3
+coordinated-prearm merge at that main identity.
+
+The fresh-main path audit found zero overlap with the exact-two D0 scope. The
+semantic audit found no contract displacement: TASK-111 owns Human Audit input
+bridging, and R24-S3 owns an effect-zero coordinated prearm adapter. Neither
+implements or reallocates this plan's TASK-101 native source, protected
+destination, receipt/readback or capability gates. `git range-diff` mapped each
+accepted commit to its rebased equivalent with `=`; the rebased acceptance HEAD
+before this reconciliation record is
+`fd79e4e0da773b5d02dcf7072e3283dbb37e491e`.
+
+The rebased candidate reran the effect-zero TASK-101 contract plus OSS
+readiness suite with `49 / 49 PASS`. Publication still requires exact-two scope,
+diff/link/path checks, fresh independent Critic and Tester acceptance,
+canonical external Evidence write/readback and green hosted checks. This
+reconciliation changes no normative D0 gate, does not refresh `N01` for I0 and
+does not allocate `N02`. IMC-N-I0 and every private/native, Provider,
+model/audio, Release, Deploy or Production effect remain outside this unit.

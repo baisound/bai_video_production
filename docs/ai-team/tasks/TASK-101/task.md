@@ -122,3 +122,32 @@ One nonblocking Low remains: the plan says `N03B` is held “immediately before�
 IMC-N-D0 is accepted only as an effect-zero gate plan. The public-safe completion checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\20261011-imc-n-d0-final-001\checkpoint.json` and must be written and reread after this acceptance record is committed. D0 acceptance does not authorize publication or any follow-on implementation/native effect.
 
 TASK-101 remains active. IMC-N-I0 requires fresh `N01` readback and a new exact `N02` Owner/Allowed-Files allocation. IMC-N-I1, IMC-N-V, private model read/copy/encryption, destination/key/DACL effects, cleanup, IMC-L, live capability/load/inference, Product/Shell integration, publication, Release, Deploy and Production remain separately blocked or unallocated.
+
+## IMC-N-D0 fresh-main publication reconciliation — 2026-10-12
+
+The Owner separately authorized publication of the already accepted effect-zero
+D0 exact-two payload through a dedicated branch and Japanese pull request, but
+did not authorize merging that pull request in this unit. Before mutation,
+remote `main` was read back at
+`1ba6edd590925ee527f6736c9a02d7647052bb0d`. It contains TASK-111 through merge
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1` and the R24-S3 coordinated-prearm
+unit through merge `1ba6edd590925ee527f6736c9a02d7647052bb0d`.
+
+Neither prerequisite changed either D0 Allowed File. The semantic audit also
+found no responsibility collision: TASK-111 owns only the immutable Audit Shell
+input bridge, while R24-S3 owns an effect-zero four-owner prearm adapter; neither
+owns the TASK-101 protected native import/readback gate plan. A conflict-free
+rebase preserved all four accepted patches as equivalent and left the accepted
+exact-two payload unchanged according to `git range-diff`:
+`82156325 -> 98bdee27`, `ce8fefe4 -> fb4d3f89`,
+`5c36f788 -> a508d9b7`, and `474d79d2 -> fd79e4e0`.
+
+The rebased pre-record candidate `fd79e4e0da773b5d02dcf7072e3283dbb37e491e`
+passed the effect-zero TASK-101 contract plus OSS readiness suite `49 / 49` in
+the existing Ubuntu environment. Publication requires a fresh exact-two scope
+and diff check, independent Critic and Tester acceptance with unresolved
+Critical/High zero, canonical external Evidence write/readback and green hosted
+checks. These publication checks do not reopen the accepted design or grant
+IMC-N-I0, private/native, Provider, model/audio, Release, Deploy or Production
+authority. The bound publication Evidence run is
+`C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0-publication\20261012-publication-final-001\`.

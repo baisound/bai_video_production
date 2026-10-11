@@ -1,6 +1,6 @@
 # TASK-101 IMC-N-D0 — Protected Native Import/Readback Gate Plan R0
 
-Status: `RECOVERY_R1_FROZEN_AWAITING_INDEPENDENT_DEV4_REREVIEW / EFFECT_ZERO / NATIVE_BLOCKED`
+Status: `RECOVERY_R2_FROZEN_AWAITING_FINAL_INDEPENDENT_DEV4_REREVIEW / EFFECT_ZERO / NATIVE_BLOCKED`
 
 ## 1. Outcome and non-outcome
 
@@ -76,7 +76,8 @@ Every item below must be `SATISFIED` by immutable identity and fresh readback at
 |---|---|---|---|
 | `N01_IMC_I_CURRENT` | accepted IMC-I exact contract/schema/mirror/test identities on current base | I0 start, I1 start, V start | `SATISFIED` at D0 base `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` |
 | `N02_NATIVE_OWNER_SCOPE` | named owner and exact Allowed Files for that implementation unit | I0 start, I1 start | `BLOCKED_UNALLOCATED` |
-| `N03_TASK046_CURRENTNESS` | exact current historical reconciliation, ModelArtifactBinding, H4, Consent, rights and license records; trusted verifier plus a one-operation currentness reservation held through success construction | I1 start, V start | `BLOCKED_UNSUPPLIED` |
+| `N03A_TASK046_VERIFIER` | accepted TASK-046 evidence parser/currentness-verifier and non-serializable reservation issuer contract plus implementation identity; no live reservation | I1 start, V start | `BLOCKED_UNSUPPLIED_OR_UNIMPLEMENTED` |
+| `N03B_TASK046_RUN_CURRENTNESS` | exact fresh historical reconciliation, ModelArtifactBinding, H4, Consent, rights and license evidence plus one exact V-operation currentness reservation issued only after the V gate | V pre-effect and runtime | `BLOCKED_UNAUTHORIZED_AND_UNSUPPLIED` |
 | `N04_STORAGE_POLICY` | approved protected-root class, containment, ownership, security, retention and revocation policy digests | I1 start, V start | `BLOCKED_UNSUPPLIED` |
 | `N05_CIPHER_KEY_POLICY` | approved streaming authenticated-encryption backend identity, cipher policy and key-scope identity; key custodian and zeroization/readback contract | I1 start, V start | `BLOCKED_UNSUPPLIED` |
 | `N06_PRINCIPAL_DACL_POLICY` | approved principal/access policy and trusted security-descriptor verifier; exact rule for inherited versus explicit child DACL | I1 start, V start | `BLOCKED_UNSUPPLIED` |
@@ -87,7 +88,7 @@ Every item below must be `SATISFIED` by immutable identity and fresh readback at
 | `N11_EVIDENCE_ROOT` | canonical contained public-safe Evidence root resolved to the exact run and proven non-foreign | V | `BLOCKED_UNRESOLVED` |
 | `N12_CLEANUP_POLICY` | separate exact-identity cleanup authority, if cleanup is desired | V cleanup only | `BLOCKED_UNAUTHORIZED`; preservation is default |
 
-`IMC-N-I0` may start only after fresh `N01` and a new exact `N02` allocation. Its exit requires accepted immutable `N07`, `N08` and `N09` implementation identities. `IMC-N-I1` may start only after fresh `N01` through `N09` satisfaction and its own new exact `N02` allocation. `IMC-N-V` may start only after every V-marked row is satisfied. This removes any circular claim that an implementation must already exist before the unit assigned to create and review it can start. D0 intentionally does not allocate either implementation unit or resolve the Owner/security dependencies.
+`IMC-N-I0` may start only after fresh `N01` and a new exact `N02` allocation. Its exit requires accepted immutable `N07`, `N08` and `N09` implementation identities. `IMC-N-I1` may start only after every I1-marked row is satisfied and its own new exact `N02` allocation; `N03A` supplies only accepted verifier/issuer code and creates no live reservation. `IMC-N-V` may start only after every V-marked row is satisfied, including exact `N03B` evidence/reservation acquired under that V authority. This removes any circular claim that an implementation must already exist before the unit assigned to create and review it can start, and prevents a live operation reservation from leaking into an effect-zero implementation unit. D0 intentionally does not allocate either implementation unit or resolve the Owner/security dependencies.
 
 ## 6. Private capability boundary
 
@@ -112,6 +113,16 @@ The destination capability must bind at least:
 - zero overwrite, replacement, foreign-object cleanup, root reprovisioning or generic child authority.
 
 Strings, `Path` objects, mappings, receipts, public digests, fixture sentinels, copied/subclassed capabilities and capabilities from another process/operation/intent are rejected before body access. An issuer must durably prevent duplicate live issuance for the same operation; an exact duplicate request receives body-free state only.
+
+The TASK-046 currentness reservation is a third, distinct non-serializable capability. `N03A` must freeze its exact issuer identity, purpose `EXISTING_MODEL_IMPORT_FINALIZATION`, operation/intent/evidence bindings, short issue/expiry times, verifier, replay/restart behavior and terminal release. The private lifecycle is closed:
+
+```text
+ISSUED -> HELD -> RELEASED_SUCCESS
+ISSUED | HELD -> EXPIRED | FAILED_CLOSED | COMPLETION_UNKNOWN
+RELEASED_SUCCESS | EXPIRED | FAILED_CLOSED | COMPLETION_UNKNOWN -> no transition
+```
+
+Only an exact `IMC-N-V` gate may acquire `N03B`. It is held from immediately before the first source capability open until the receipt/readback candidate pair is durably success-committed or a terminal failure is durably classified. Duplicate acquire/hold/release returns body-free state and never another capability. Expiry or verifier rejection before success prevents live issuance. Restart with `HELD` but without exact terminal release becomes `COMPLETION_UNKNOWN`, is not replayed, and blocks retry. `RELEASED_SUCCESS` is permitted only as part of one durable success commit that binds the exact canonical receipt/readback candidate digests; both the commit and reservation transition must be reread before the pair is exposed as live. Every failure path releases to its exact terminal state, and uncertain success commit/release/readback is `COMPLETION_UNKNOWN` with zero live issuance. After a confirmed success whose reply was lost, recovery may return only the exact already committed receipt/readback pair and body-free terminal state; it never reopens a capability or repeats native effects. I0/I1 may implement and test this contract only with synthetic non-production sentinels and may not acquire a live reservation.
 
 ## 7. Pre-effect placement and identity gate
 
@@ -142,17 +153,19 @@ PLANNED
 
 It must implement the following protocol without introducing a second public ABI:
 
-1. Reparse the exact intent and all current producer evidence; verify trusted time, issuer identity, policy digests, operation uniqueness, capability type and expiry. Acquire an exact one-operation TASK-046 currentness reservation whose verifier can fail closed and which remains held through success-record construction.
+1. Reparse the exact intent and all current producer evidence; verify trusted time, issuer identity, policy digests, operation uniqueness, capability type and expiry. Under the exact V gate only, acquire `N03B` from the accepted `N03A` issuer and hold it through the durable success-commit/terminal-state readback; no receipt/readback is exposed as live while the reservation remains `HELD`.
 2. Complete the pre-effect placement/collision gate. Failure is `NO_EFFECT` with all native counters zero.
 3. Burn/open the exact source capability, pin both source ancestors and objects, reject symlink/reparse, disallowed hardlink count, non-regular file, role crossing, shared identity, replacement, size/hash mismatch or close uncertainty.
 4. Revalidate the destination capability and pin the existing protected root/ancestor/security identity. Create only the exact operation-owned temporary namespace. Never create or repair the protected root opportunistically.
 5. Stream each source through the approved production cipher into operation-owned temporary objects. Bound all plaintext/ciphertext bytes; retain no full plaintext copy; zeroize bounded buffers with confirmed readback according to the approved key policy.
 6. Flush each ciphertext file and its containing directory, pin and reread its ciphertext digest, byte count, physical identity and security commitment. No plaintext body is written to scratch or Evidence.
 7. Build the closed private inventory from verified observations and publish the inventory seal last using no-replace semantics. Flush the seal and directory, then pin/reread the full sealed set.
-8. From pinned sealed ciphertext rereads, perform authenticated decrypt verification through the approved cipher/key scope. Recompute each plaintext digest and byte count in bounded buffers, compare them to the exact intent, authenticate every header/tag and confirm buffer zeroization. Wrong key, tag, header, truncation, digest, byte count or decrypt result fails closed; no plaintext body is persisted.
-9. Immediately before finalization, freshly reparse and revalidate TASK-046/H4/Consent/rights/license evidence, revocation, trusted time, intent/run/capability expiry, the held currentness reservation, destination security/policy and the exact sealed physical identities. Any mid-run change, expiry, revocation or unverifiable reservation prevents success.
-10. Close every source/destination/key handle and confirm close, final physical identity and zeroization readback. Any ambiguity at or after an attempted open maps to `COMPLETION_UNKNOWN` as required by IMC-D; no blind retry or alternate target is allowed.
-11. Only after steps 1–10 all succeed may the backend construct the accepted private receipt and pure `CURRENT` readback from the frozen observations. Receipt/readback construction before confirmed close/identity/zeroization is forbidden. A later ambiguity can therefore never coexist with previously issued live success evidence.
+8. Close every source/write/cipher handle from the copy/seal phase and confirm close, final physical identity and zeroization readback. Any ambiguity maps to `COMPLETION_UNKNOWN`; no receipt candidate is constructed.
+9. After durable seal and confirmed writer closure, construct an internal **non-issued** canonical `ExistingModelImportCustodyReceiptV1` candidate. Keep it private and non-authoritative. Canonically serialize/reparse it and recompute its exact self-digest before it can drive readback. Because the seal already exists, parse/digest failure is `COMPLETION_UNKNOWN`: preserve the sealed set/evidence, issue no live receipt and prohibit retry.
+10. Using the exact reparsed candidate, distinctly reopen the protected sealed inventory through the accepted native backend with fresh pinned readback/key handles. Revalidate root/ancestor/member/security identities and the sealed inventory, then perform authenticated decrypt verification. Recompute each plaintext digest and byte count in bounded buffers, compare them to the exact intent, authenticate every header/tag and confirm buffer zeroization. Because the seal already exists, wrong key, tag, header, truncation, digest, byte count or decrypt result is `COMPLETION_UNKNOWN`: preserve evidence, issue no live receipt and prohibit retry. No plaintext body is persisted.
+11. Close every distinct readback/key handle and confirm close, final physical identity and zeroization readback. Any ambiguity is `COMPLETION_UNKNOWN`; the internal receipt candidate is discarded without live issuance.
+12. Immediately before finalization, freshly reparse and revalidate TASK-046/H4/Consent/rights/license evidence, revocation, trusted time, intent/run/capability expiry, held `N03B`, destination security/policy, the exact reparsed receipt candidate and the independently reopened physical observations. Because the seal already exists, any mid-run change, expiry, revocation or unverifiable reservation is `COMPLETION_UNKNOWN`: preserve evidence, issue no live receipt and prohibit retry.
+13. Only after steps 1–12 all succeed may the backend construct and canonically reparse an internal non-live pure `CURRENT` readback candidate from the exact receipt candidate and independently reopened observations. It then performs one durable success commit binding both candidate digests and `N03B -> RELEASED_SUCCESS`, and rereads the commit plus terminal reservation state. Only that confirmed reread exposes the exact receipt/readback pair as live. Receipt/readback live issuance before distinct reopen, authenticated decrypt, confirmed readback-handle close/identity/zeroization, fresh terminal currentness and confirmed success-commit/reservation readback is forbidden. Commit/release/readback ambiguity is `COMPLETION_UNKNOWN` with zero live issuance; a confirmed commit with a lost reply is recovered only by exact pair readback without repeating effects.
 
 The private on-disk envelope and operation journal are implementation details but security-critical. `IMC-N-I0` must freeze and independently accept their version, exact fields, bounds, abstract authenticated-cipher metadata, append-only transition semantics, recovery parser and publication order before `IMC-N-I1` may start. The journal may not use same-path mutable phase authority. If a durable transition cannot be represented without changing the accepted IMC-D failure semantics, implementation stops for a separately authorized design revision.
 
@@ -207,8 +220,10 @@ Synthetic tests must use a run-unique directory beneath the OS temporary root su
 - security-descriptor/principal/policy mismatch and post-create/post-seal change tests;
 - bounded memory/bytes/count and zeroization confirmation/failure tests;
 - private/path/key/account/SID/exception leakage probes for result, log, repr and public Evidence;
+- wrong TASK-046 reservation issuer/purpose/operation/intent/evidence, duplicate acquire/release, expiry, replay and restart from `HELD`; live acquisition remains impossible in I0/I1;
 - mid-run H4/Consent/rights/license/custody revocation, trusted-time advance, intent/run/capability expiry and currentness-reservation loss before finalization;
-- receipt only after seal, authenticated decrypt/plaintext comparison, fresh terminal currentness and confirmed handle close/identity/zeroization; every other terminal outcome produces zero live receipt/readback;
+- no readback from writer observations: exact internal receipt candidate reparse followed by distinct pinned reopen, authenticated decrypt/plaintext comparison, fresh terminal currentness and confirmed readback-handle close/identity/zeroization; every other terminal outcome produces zero live receipt/readback;
+- every failure after inventory seal, including candidate parse, decrypt/authentication/plaintext mismatch and terminal currentness failure, is exactly `COMPLETION_UNKNOWN` with preserved evidence and no retry;
 - exact-file scope, schema/mirror unchanged, direct TASK-101/TASK-100/TASK-084 regression and static import/compile checks.
 
 `IMC-N-V` additionally requires a pre-run readback of every V gate, exact resolved output roots, independent preflight review, and post-run public-safe Evidence readback. Technical result is `PASS`, `FAIL` or `NOT_CONFIRMED`; observation/execution status is recorded separately.
@@ -234,7 +249,7 @@ D0 may be accepted when:
 
 - the exact-two diff and effect-zero boundary pass;
 - this plan does not change the accepted public ABI/failure matrix;
-- the three distinct gates, closed prerequisites and future exact-file proposal are unambiguous;
+- the four distinct gates, closed prerequisites and future exact-file proposal are unambiguous;
 - independent Critic and Tester report Critical/High zero;
 - the DEV-4 Judge accepts the gate plan;
 - public-safe external Evidence is written and reread.

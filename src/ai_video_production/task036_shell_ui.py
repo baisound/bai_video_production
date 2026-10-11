@@ -57,6 +57,7 @@ from .errors import ProductError, ProductErrorCategory
 from .export_queue import ExportPreparation
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
+from .task111_audit_input_controller import Task111AuditInputController
 from .planning_application import Task027PlanningApplication
 from .task036_planning_generation_application import Task036PlanningGenerationApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
@@ -324,6 +325,11 @@ class Task036ShellBridge:
         self._workflow_runtime_factory = workflow_runtime_factory
         self._production_control = production_control
         self._audit_application = audit_application
+        self._audit_input_controller = (
+            None
+            if audit_application is None
+            else Task111AuditInputController(audit_application)
+        )
         self._planning_application = planning_application
         if planning_generation_application is not None and (
             planning_application is None
@@ -2096,6 +2102,69 @@ class Task036ShellBridge:
         if self._audit_application is None:
             return {"available": False}
         return {"available": True, **self._audit_application.snapshot()}
+
+    def _require_audit_input_controller(self) -> Task111AuditInputController:
+        if self._audit_input_controller is None:
+            raise ProductError(
+                "ERR_TASK111_AUDIT_INPUT_NOT_BOUND",
+                "Audit input is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._audit_input_controller
+
+    def audit_prepare_record(self, args: Any) -> dict[str, Any]:
+        required = {
+            "audit_id",
+            "candidate_id",
+            "asset_id",
+            "asset_sha256",
+            "auditor_id",
+            "auditor_version",
+            "contract_refs",
+            "dimension_scores",
+            "findings",
+            "failure_codes",
+            "alternate_use_proposals",
+            "expected_production_snapshot_sha256",
+            "expected_audit_snapshot_sha256",
+        }
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Audit input preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_audit_input_controller().prepare(
+            **{key: args[key] for key in required}
+        )
+
+    @_meter_write_guarded
+    def audit_apply_record(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id", "explicit_human_confirmation"}
+            or args.get("explicit_human_confirmation") is not True
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Audit input apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_audit_input_controller().apply(
+            confirmation_id=args["confirmation_id"],
+            explicit_human_confirmation=True,
+        )
+
+    def audit_cancel_record(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Audit input cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_audit_input_controller().cancel(
+            confirmation_id=args["confirmation_id"]
+        )
 
     def audit_prepare_human_decision(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "decision", "expected_production_snapshot_sha256", "expected_audit_snapshot_sha256"}

@@ -14,6 +14,18 @@ from ai_video_production.task036_shell_v611 import HTML
 NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 110
 
 
+def test_audit_input_endpoints_are_declared_in_production_bridge_contract() -> None:
+    match = re.search(r"production:\[(?P<methods>[^\]]+)\]", HTML)
+    assert match is not None
+    methods = match.group("methods")
+    for method in (
+        "audit_prepare_record",
+        "audit_apply_record",
+        "audit_cancel_record",
+    ):
+        assert f"'{method}'" in methods
+
+
 @pytest.mark.parametrize("observation,expected", [
     ({"system": {"comfyui_version": "test"}, "devices": []}, "READY"),
     ({"system": {}, "devices": [{"name": "private-device"}]}, "READY"),
@@ -267,6 +279,44 @@ const renderSettingsView=async()=>{readbacks++;};
 """
     completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
                                text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_audit_input_rpc_rejections_never_render_private_backend_errors_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Audit input RPC error contract")
+    call_match = re.search(
+        r"async function call\(method,args=\{\},publicError=null\)\{[^\r\n]+",
+        HTML,
+    )
+    assert call_match is not None
+    script = f"""
+const assert=require('node:assert/strict');
+const notifications=[];
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+const privateError='C:'+String.fromCharCode(92)+'Users'+String.fromCharCode(92)+'owner'+String.fromCharCode(92)+'private-audit.json';
+const methods=['audit_prepare_record','audit_apply_record','audit_cancel_record'];
+const api=Object.fromEntries(methods.map(method=>[method,async()=>{{throw new Error(privateError)}}]));
+const window={{pywebview:{{api}}}};
+{call_match.group(0)}
+(async()=>{{
+  const publicError='監査記録を保存できませんでした。監査画面を更新して、入力内容を確認してください。自動では再実行しません。';
+  for(const method of methods)assert.equal(await call(method,{{}},publicError),null);
+  assert.equal(notifications.length,3);
+  assert.ok(notifications.every(item=>item.message===publicError&&item.isError===true));
+  assert.doesNotMatch(notifications.map(item=>item.message).join('\\n'),/Users|owner|private-audit/);
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == "OK"
 
@@ -610,7 +660,10 @@ def test_asset_review_preserves_exact_decision_recovery_and_missing_audit_projec
     if node is None:
         pytest.skip("Node.js is required for the Asset Review interaction contract")
     functions = []
-    for name in ("decideAssetReview", "recoverAssetReview", "renderAssetReview"):
+    for name in (
+        "auditJsonInput", "prepareAssetAuditRecord", "decideAssetReview",
+        "recoverAssetReview", "renderAssetReview",
+    ):
         match = re.search(rf"(?:async )?function {name}\([^\r\n]+", HTML)
         assert match is not None
         functions.append(match.group(0))
@@ -625,19 +678,28 @@ const host=new Node('host'),$=()=>host,clear=n=>{n.children=[];},
   element=(tag,cls,text)=>Object.assign(new Node(tag),{textContent:text}),
   card=(title,body)=>element('card','',title+' '+body),
   walk=n=>n.children.flatMap(c=>[c,...walk(c)]);
-const missingAuditLabel='\u76e3\u67fb\u8a18\u9332\u304c\u307e\u3060\u3042\u308a\u307e\u305b\u3093\u3002\u63a1\u5426\u5224\u65ad\u306b\u306f\u76e3\u67fb\u8a18\u9332\u304c\u5fc5\u8981\u3067\u3059\u3002\u3053\u306e\u753b\u9762\u306e\u76e3\u67fb\u8a18\u9332\u5165\u529b\u306f\u672a\u63a5\u7d9a\u3067\u3059\u3002';
+const missingAuditLabel='\u76e3\u67fb\u8a18\u9332\u304c\u307e\u3060\u3042\u308a\u307e\u305b\u3093\u3002\u63a1\u5426\u5224\u65ad\u306b\u306f\u5148\u306bimmutable Audit\u3092\u4fdd\u5b58\u3057\u3066\u304f\u3060\u3055\u3044\u3002';
 const hasMissingAuditLabel=()=>walk(host).some(n=>n.textContent===missingAuditLabel);
-let calls=[],promptValues=[],confirmed=true,prepareFailed=false,applyNull=false,
-  refreshed=0,confirmCalls=0;
-const window={prompt:()=>promptValues.shift(),confirm:()=>{confirmCalls++;return confirmed;}};
+let calls=[],publicErrors=[],promptValues=[],confirmed=true,prepareFailed=false,applyNull=false,
+  refreshed=0,confirmCalls=0,promptCalls=0;
+const AUDIT_INPUT_PUBLIC_ERROR='public-safe-audit-input-error';
+const window={prompt:()=>{promptCalls++;return promptValues.shift();},confirm:()=>{confirmCalls++;return confirmed;}};
 const refreshProduction=async()=>{refreshed++;};
-async function call(method,args){
+async function call(method,args,publicError=null){
   calls.push([method,args]);
+  publicErrors.push(publicError);
   if(method==='audit_prepare_human_decision')return prepareFailed?null:{
     confirmation_id:'confirm-'+args.candidate_id,candidate_id:args.candidate_id,
     asset_sha256:'sha-'+args.candidate_id,audit_refs:['audit-'+args.candidate_id],
     critical_violation_present:false,decision:args.decision};
   if(method==='audit_apply_human_decision')return applyNull?null:{saved:true};
+  if(method==='audit_prepare_record')return {
+    confirmation_id:'audit-record-confirm',candidate_id:args.candidate_id,
+    asset_id:args.asset_id,asset_sha256:args.asset_sha256,
+    record:{audit_id:args.audit_id,auditor_id:args.auditor_id,
+      auditor_version:args.auditor_version,record_sha256:'record-exact'}};
+  if(method==='audit_apply_record')return {saved:true};
+  if(method==='audit_cancel_record')return {status:'CANCELLED'};
   if(method==='audit_apply_recovery')return null;
   throw Error('unexpected effect '+method);
 }
@@ -653,8 +715,8 @@ function fixture(){
     workspace:{candidates:[candidate('A'),candidate('B')]}};
 }
 function reset(){
-  calls=[];promptValues=[' owner ','memo'];confirmed=true;prepareFailed=false;
-  applyNull=false;refreshed=0;confirmCalls=0;host.children=[];
+  calls=[];publicErrors=[];promptValues=[' owner ','memo'];confirmed=true;prepareFailed=false;
+  applyNull=false;refreshed=0;confirmCalls=0;promptCalls=0;host.children=[];
 }
 let passed=0;
 async function scenario(name,fn){reset();await fn();passed++;}
@@ -717,9 +779,54 @@ __FUNCTIONS__
   await scenario('zero audit no actions plus explanation',async()=>{
     const audit=fixture();audit.workspace.candidates=[{...candidate('Z',[]),audit_count:0,ai_audit_count:0}];
     renderAssetReview(audit);
-    assert.equal(walk(host).filter(n=>n.tag==='button').length,0);
+    assert.deepEqual(walk(host).filter(n=>n.tag==='button').map(n=>n.textContent),['\u76e3\u67fb\u8a18\u9332\u3092\u5165\u529b']);
     assert.ok(walk(host).some(n=>n.textContent.includes('Audit: 0')));
     assert.ok(hasMissingAuditLabel());assert.equal(calls.length,0);
+  });
+  await scenario('zero audit explicit input and confirmation',async()=>{
+    const audit=fixture(),row={...candidate('Z',[]),audit_count:0,ai_audit_count:0};
+    audit.workspace.candidates=[row];renderAssetReview(audit);
+    promptValues=['audit-human-Z',' owner ','','["visual-contract-1"]','{"CONTRACT":95}',
+      '[]','[]','[]'];
+    const input=walk(host).find(n=>n.tag==='button'&&n.textContent==='\u76e3\u67fb\u8a18\u9332\u3092\u5165\u529b');
+    await input.listeners.click();
+    assert.deepEqual(calls[0],['audit_prepare_record',{
+      audit_id:'audit-human-Z',candidate_id:'Z',asset_id:'asset-Z',asset_sha256:'sha-Z',
+      auditor_id:'owner',auditor_version:null,contract_refs:['visual-contract-1'],
+      dimension_scores:{CONTRACT:95},findings:[],failure_codes:[],alternate_use_proposals:[],
+      expected_production_snapshot_sha256:'production-exact',
+      expected_audit_snapshot_sha256:'audit-exact'}]);
+    assert.deepEqual(calls[1],['audit_apply_record',{
+      confirmation_id:'audit-record-confirm',explicit_human_confirmation:true}]);
+    assert.deepEqual(publicErrors,[AUDIT_INPUT_PUBLIC_ERROR,AUDIT_INPUT_PUBLIC_ERROR]);
+    assert.equal(refreshed,1);
+  });
+  await scenario('audit input confirmation cancel consumes preparation without write',async()=>{
+    const audit=fixture(),row={...candidate('Z',[]),audit_count:0,ai_audit_count:0};
+    audit.workspace.candidates=[row];renderAssetReview(audit);confirmed=false;
+    promptValues=['audit-human-Z','owner','','[]','{"CONTRACT":90}','[]','[]','[]'];
+    const input=walk(host).find(n=>n.tag==='button'&&n.textContent==='\u76e3\u67fb\u8a18\u9332\u3092\u5165\u529b');
+    await input.listeners.click();
+    assert.equal(calls[0][0],'audit_prepare_record');
+    assert.deepEqual(calls[1],['audit_cancel_record',{confirmation_id:'audit-record-confirm'}]);
+    assert.deepEqual(publicErrors,[AUDIT_INPUT_PUBLIC_ERROR,AUDIT_INPUT_PUBLIC_ERROR]);
+    assert.equal(calls.filter(c=>c[0]==='audit_apply_record').length,0);assert.equal(refreshed,0);
+  });
+  await scenario('invalid audit JSON is effect zero and public safe',async()=>{
+    const audit=fixture(),row={...candidate('Z',[]),audit_count:0,ai_audit_count:0};
+    audit.workspace.candidates=[row];renderAssetReview(audit);
+    promptValues=['audit-human-Z','owner','','not-json'];
+    const input=walk(host).find(n=>n.tag==='button'&&n.textContent==='\u76e3\u67fb\u8a18\u9332\u3092\u5165\u529b');
+    await input.listeners.click();assert.equal(calls.length,0);assert.equal(refreshed,0);
+    assert.equal(promptCalls,4);
+  });
+  await scenario('cancelled first audit JSON stops later prompts',async()=>{
+    const audit=fixture(),row={...candidate('Z',[]),audit_count:0,ai_audit_count:0};
+    audit.workspace.candidates=[row];renderAssetReview(audit);
+    promptValues=['audit-human-Z','owner','',null,'should-not-be-read'];
+    const input=walk(host).find(n=>n.tag==='button'&&n.textContent==='\u76e3\u67fb\u8a18\u9332\u3092\u5165\u529b');
+    await input.listeners.click();assert.equal(calls.length,0);assert.equal(refreshed,0);
+    assert.equal(promptCalls,4);assert.equal(promptValues.length,1);
   });
   await scenario('saved decision reopen no redecision',async()=>{
     const audit=fixture();audit.workspace.candidates=[{...candidate('B',[]),
@@ -747,7 +854,7 @@ __FUNCTIONS__
     const audit=fixture();audit.workspace.candidates=[{...candidate('Z',[]),lifecycle_state:'ACCEPTED',audit_count:0,ai_audit_count:0}];
     renderAssetReview(audit);assert.equal(hasMissingAuditLabel(),false);assert.equal(calls.length,0);
   });
-  console.log(JSON.stringify({result:'PASS',scenarios:passed,actual_functions:3,real_store_writes:0}));
+  console.log(JSON.stringify({result:'PASS',scenarios:passed,actual_functions:5,real_store_writes:0}));
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """.replace("__FUNCTIONS__", "\n".join(functions))
     completed = subprocess.run(
@@ -756,7 +863,7 @@ __FUNCTIONS__
     )
     assert completed.returncode == 0, completed.stderr or completed.stdout
     assert json.loads(completed.stdout) == {
-        "result": "PASS", "scenarios": 19, "actual_functions": 3, "real_store_writes": 0,
+        "result": "PASS", "scenarios": 23, "actual_functions": 5, "real_store_writes": 0,
     }
 
 

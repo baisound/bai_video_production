@@ -229,7 +229,7 @@ def test_settings_and_planning_project_public_safe_ollama_readiness() -> None:
         "無料AIの準備状態（Ollama local runtime）",
         "企画の要望を入力して候補を作成してください。",
         "Provider実行・課金・生成は開始していません。",
-        "renderOllamaRuntimeStatus($('settingsContent'),runtime)",
+        "renderRequiredRuntimeWarnings(warningHost,[route],runtime,comfyRuntime)",
     ):
         assert marker in SHELL_HTML
 

@@ -264,6 +264,7 @@ class Task036ShellBridge:
         model_label_provider: object | None = None,
         model_selection_context_provider: Callable[[str], object | None] | None = None,
         ollama_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
+        comfyui_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
         owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
         final_review_external_gate_provider: Callable[
@@ -354,6 +355,9 @@ class Task036ShellBridge:
         if ollama_runtime_snapshot_provider is not None and not callable(ollama_runtime_snapshot_provider):
             raise ValueError("Ollama runtime snapshot provider is invalid")
         self._ollama_runtime_snapshot_provider = ollama_runtime_snapshot_provider
+        if comfyui_runtime_snapshot_provider is not None and not callable(comfyui_runtime_snapshot_provider):
+            raise ValueError("ComfyUI runtime snapshot provider is invalid")
+        self._comfyui_runtime_snapshot_provider = comfyui_runtime_snapshot_provider
         self._owner_signing_key_import = owner_signing_key_import
         self._final_review_application = final_review_application
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
@@ -1847,6 +1851,41 @@ class Task036ShellBridge:
             "provider_execution_started": False,
             "paid_execution_authorized": False,
             "generation_started": False,
+        }
+
+    def comfyui_runtime_snapshot(self, args: Any = None) -> dict[str, object]:
+        """Project connection observation only, never generation admission."""
+        self._empty_args(args, "ComfyUI runtime snapshot")
+        state = "UNKNOWN"
+        reason_code = "COMFYUI_RUNTIME_NOT_BOUND"
+        provider = self._comfyui_runtime_snapshot_provider
+        if provider is not None:
+            try:
+                raw = provider()
+            except (OSError, ValueError, ProductError):
+                raw = None
+            if (
+                isinstance(raw, dict)
+                and set(raw) == {"state"}
+                and isinstance(raw["state"], str)
+                and raw["state"] in {"READY", "UNREACHABLE", "UNKNOWN"}
+            ):
+                state = raw["state"]
+                reason_code = {
+                    "READY": "COMFYUI_CONNECTION_READY",
+                    "UNREACHABLE": "COMFYUI_CONNECTION_UNAVAILABLE",
+                    "UNKNOWN": "COMFYUI_STATUS_UNKNOWN",
+                }[state]
+            else:
+                reason_code = "COMFYUI_RUNTIME_SNAPSHOT_INVALID"
+        return {
+            "available": state != "UNKNOWN",
+            "state": state,
+            "reason_code": reason_code,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+            "execution_authorized": False,
         }
 
     def connection_settings_snapshot(self, args: Any = None) -> dict[str, object]:

@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_OWNER_ALLOCATED / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -475,3 +475,17 @@ cannot use a real Project/filesystem store or mint a canonical publication
 receipt/current type. R24-S3, both coordinated amendments and every private,
 native, model, Provider, audio/WAV, Asset, publication or downstream PASS effect
 remain unallocated and blocked.
+
+R24-S2 implementation, focused/direct tests and final independent Tester/Critic
+review passed with unresolved `Critical/High/Medium/Low = 0/0/0/0`. The
+inherited R24-S1/S2 Python trusted computing boundary includes loaded package
+implementation code, function globals/closures, module-private registries,
+locks and private state objects. Ordinary caller construction, method/property
+use, subclassing, reinitialization, `object.__new__`, `object.__setattr__`,
+copying, serialization, alternate types and unissued/caller-shaped objects are
+in scope and fail closed. Deliberate mutation of function globals/closure cells,
+private registries, definitions or module state is arbitrary same-process TCB
+compromise and is outside this Atomic Unit; a future untrusted in-interpreter
+plugin requirement would need a separately authorized S1/S2 isolation Task.
+R24-S2 remains `MERGE_PENDING / SOURCE_START0 / EFFECT0` until the exact commit,
+hosted checks, merge, post-merge checks and external Evidence readback complete.

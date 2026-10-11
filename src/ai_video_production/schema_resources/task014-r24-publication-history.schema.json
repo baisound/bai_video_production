@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/task014-r24-publication-history.schema.json",
+  "title": "TASK-014 R24-S2 effect-zero publication candidate history",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "record_type",
+    "owner_task",
+    "fixture_scope",
+    "project_id",
+    "store_revision",
+    "entries",
+    "fake_persistence_only",
+    "body_embedded",
+    "source_authority",
+    "effect_authority",
+    "filesystem_write_authority",
+    "publication_authority",
+    "snapshot_sha256"
+  ],
+  "properties": {
+    "version": {"const": 1},
+    "record_type": {"const": "TASK014_R24_POST_HISTORY_V1"},
+    "owner_task": {"const": "TASK-014"},
+    "fixture_scope": {"const": "TASK014_R24_S2_SYNTHETIC_EFFECT_ZERO"},
+    "project_id": {"$ref": "#/$defs/id"},
+    "store_revision": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {"$ref": "#/$defs/postCandidate"}
+    },
+    "fake_persistence_only": {"const": true},
+    "body_embedded": {"const": false},
+    "source_authority": {"const": false},
+    "effect_authority": {"const": false},
+    "filesystem_write_authority": {"const": false},
+    "publication_authority": {"const": false},
+    "snapshot_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "ownerAcceptanceSha256": {
+      "type": "string",
+      "pattern": "^[0-9A-F]{64}$"
+    },
+    "postCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "record_type",
+        "owner_task",
+        "fixture_scope",
+        "project_id",
+        "operation_id",
+        "ticket_id",
+        "candidate_id",
+        "revision",
+        "parent_record_sha256",
+        "call_sha256",
+        "sink_sha256",
+        "result_sha256",
+        "publication_readback_sha256",
+        "task014_owner_acceptance_record_sha256",
+        "task074_owner_acceptance_record_sha256",
+        "task074_s1_coordinate_sha256",
+        "task074_s1_decision_sha256",
+        "publication_state",
+        "fixture_only",
+        "body_embedded",
+        "source_authority",
+        "effect_authority",
+        "canonical_publication_type_minted",
+        "private_body_present",
+        "model_entered",
+        "provider_entered",
+        "audio_entered",
+        "wav_created",
+        "asset_created",
+        "publication_current",
+        "record_sha256"
+      ],
+      "properties": {
+        "version": {"const": 1},
+        "record_type": {"const": "TASK014_LOCAL_PRIMARY_NARRATION_POST_RECEIPT_V1"},
+        "owner_task": {"const": "TASK-014"},
+        "fixture_scope": {"const": "TASK014_R24_S2_SYNTHETIC_EFFECT_ZERO"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "operation_id": {"$ref": "#/$defs/id"},
+        "ticket_id": {"$ref": "#/$defs/id"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "parent_record_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "call_sha256": {"$ref": "#/$defs/sha256"},
+        "sink_sha256": {"$ref": "#/$defs/sha256"},
+        "result_sha256": {"$ref": "#/$defs/sha256"},
+        "publication_readback_sha256": {"$ref": "#/$defs/sha256"},
+        "task014_owner_acceptance_record_sha256": {
+          "const": "A398A9FE13F886DC6A4783B2AB3EEAB61721598F20F27ABAC2C0EB2811CBB06B"
+        },
+        "task074_owner_acceptance_record_sha256": {
+          "const": "8EDDD5E86CD21A779ADBCF889A9478E67520F4E0E48748983D7ABE6F2D710BB0"
+        },
+        "task074_s1_coordinate_sha256": {"$ref": "#/$defs/sha256"},
+        "task074_s1_decision_sha256": {"$ref": "#/$defs/sha256"},
+        "publication_state": {"const": "NOT_MINTED_EFFECT_ZERO"},
+        "fixture_only": {"const": true},
+        "body_embedded": {"const": false},
+        "source_authority": {"const": false},
+        "effect_authority": {"const": false},
+        "canonical_publication_type_minted": {"const": false},
+        "private_body_present": {"const": false},
+        "model_entered": {"const": false},
+        "provider_entered": {"const": false},
+        "audio_entered": {"const": false},
+        "wav_created": {"const": false},
+        "asset_created": {"const": false},
+        "publication_current": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

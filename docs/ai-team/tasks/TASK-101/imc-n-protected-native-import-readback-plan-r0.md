@@ -1,6 +1,6 @@
 # TASK-101 IMC-N-D0 — Protected Native Import/Readback Gate Plan R0
 
-Status: `RECOVERY_R2_FROZEN_AWAITING_FINAL_INDEPENDENT_DEV4_REREVIEW / EFFECT_ZERO / NATIVE_BLOCKED`
+Status: `R2_DESIGN_ACCEPTED / EFFECT_ZERO / NATIVE_BLOCKED`
 
 ## 1. Outcome and non-outcome
 
@@ -255,3 +255,15 @@ D0 may be accepted when:
 - public-safe external Evidence is written and reread.
 
 D0 acceptance leaves TASK-101 active with `NATIVE_BLOCKED`. The next action is not native execution. It is an exact Owner decision allocating `IMC-N-I0` after fresh `N01` readback and an exact `N02` owner/scope, or a deliberate pause with the prerequisite ledger preserved. I1 and V remain later separate gates.
+
+## 15. Recovery R2 acceptance
+
+Frozen pre-record R2 HEAD `5c36f7881cefb1ec32ccbc497e51824dc786e157` on base/current main `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` received independent Critic `ACCEPT` C/H/M/L `0/0/0/1`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `ACCEPT` C/H/M/L `0/0/0/1`. The reviewed design SHA-256 is `bad9d067cf9630cd90d6d98dc459d037652792e118b6024df5076b4ce7bf75b5`; the reviewed Task-record SHA-256 is `bbb5543b78472591a45b88f26939d97dded4073ca741c52bb7e59b8947960fcd`.
+
+Final effect-zero verification is TASK-101 contract plus OSS readiness `49 / 49 PASS`, `git diff --check` `PASS`, exact-two scope `PASS`, ASCII documentation paths `PASS`, relative links `PASS`, accepted IMC-D/IMC-I content unchanged and all run-specific test residuals zero. The initial Windows Python route was `NOT_CONFIRMED` because that interpreter lacked `jsonschema`; no dependency was installed, and the same checks passed in the existing WSL environment.
+
+The one accepted Low is wording only: section 6 says `N03B` is held “immediately before” source open while protocol step 1 acquires it before the zero-importer-I/O placement preflight in step 2. The numbered protocol is normative and safe: exact V authority is required, preflight failure is `NO_EFFECT`, reservation failure terminalizes, and no live result is exposed while `HELD`. This Low does not block D0 or I0. Clarifying it before the first real V-run specification is recommended; any semantic change requires a separately authorized exact-two design revision.
+
+IMC-N-D0 is therefore accepted only as an effect-zero gate plan. Its public-safe completion checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\20261011-imc-n-d0-final-001\checkpoint.json` and must be written and reread after this acceptance record is committed.
+
+This acceptance grants no implementation or native authority. IMC-N-I0 remains blocked pending fresh `N01` plus a new exact `N02` Owner allocation. I1, V, private model access, destination/key/DACL effects, cleanup, IMC-L, live capability/load/inference, Product/Shell integration, publication, Release, Deploy and Production remain separately blocked or unallocated.

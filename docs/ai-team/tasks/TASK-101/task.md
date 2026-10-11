@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / IMC_N_D0_RECOVERY_R2_AWAITING_FINAL_DEV4_REREVIEW / NATIVE_BLOCKED`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / IMC_N_D0_DESIGN_ACCEPTED / NATIVE_BLOCKED`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -110,3 +110,15 @@ Recovery R1 remains inside the same authorized exact-two D0 scope. It splits imp
 Cycle-2 independent review of frozen R1 `ce8fefe41257634a54b966fe827a94343fe94d68` recorded Critic C/H/M/L `0/2/0/1` and Tester `PASS / ACCEPT`, `0/0/1/1`. The prior five findings were materially closed. The Critic rejected use of pre-receipt writer observations instead of the accepted receipt-reparse/distinct-native-reopen readback sequence, and rejected assigning acquisition of a live TASK-046 currentness reservation to synthetic-only I1. Critic/Tester both identified stale “three gate” wording. The Tester additionally required every post-seal decrypt/currentness/candidate failure to use the accepted `COMPLETION_UNKNOWN`, preservation and no-retry terminal rather than an ambiguous “fail closed.”
 
 Recovery R2 is the second and final bounded D0 review/fix cycle. It splits accepted `N03A` verifier/reservation contract+implementation identity from actual V-authorized `N03B` fresh evidence/reservation, freezes a non-replayable reservation lifecycle, and requires: durable seal and writer closure; internal non-issued receipt candidate construction and exact reparse; distinct pinned native reopen with authenticated decrypt/plaintext comparison; readback/key handle closure and zeroization; fresh terminal currentness; then joint live receipt/`CURRENT` issuance and terminal reservation release. Every failure after seal is explicitly `COMPLETION_UNKNOWN` with preservation, zero live receipt and no retry. R2 requires final independent Critic/Tester re-review and DEV-4 Judge closure. Any remaining Critical/High after this cycle escalates without further mutation or native work.
+
+## IMC-N-D0 design acceptance — 2026-10-11
+
+Frozen pre-record R2 HEAD `5c36f7881cefb1ec32ccbc497e51824dc786e157` on base/current main `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` received independent Critic `ACCEPT` C/H/M/L `0/0/0/1`, Tester `PASS / ACCEPT` C/H/M/L `0/0/0/0`, and DEV-4 Judge `ACCEPT` C/H/M/L `0/0/0/1`. The reviewed design SHA-256 is `bad9d067cf9630cd90d6d98dc459d037652792e118b6024df5076b4ce7bf75b5`; the reviewed Task-record SHA-256 is `bbb5543b78472591a45b88f26939d97dded4073ca741c52bb7e59b8947960fcd`.
+
+Final effect-zero verification is TASK-101 contract plus OSS readiness `49 / 49 PASS`, `git diff --check` `PASS`, exact-two/ASCII/relative-link checks `PASS`, accepted IMC-D/IMC-I unchanged and test residuals zero. The Windows Python route lacking `jsonschema` is recorded as environment `NOT_CONFIRMED`; no dependency was installed and the existing WSL route passed.
+
+One nonblocking Low remains: the plan says `N03B` is held “immediately before” source open while its normative protocol acquires it before the zero-importer-I/O placement preflight. The Judge accepted this as wording imprecision because exact V authority, `NO_EFFECT` preflight failure, terminal reservation handling and zero live exposure while `HELD` remain explicit. A wording clarification before the first real V-run specification is recommended; any semantic change requires a separately authorized exact-two design revision.
+
+IMC-N-D0 is accepted only as an effect-zero gate plan. The public-safe completion checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\20261011-imc-n-d0-final-001\checkpoint.json` and must be written and reread after this acceptance record is committed. D0 acceptance does not authorize publication or any follow-on implementation/native effect.
+
+TASK-101 remains active. IMC-N-I0 requires fresh `N01` readback and a new exact `N02` Owner/Allowed-Files allocation. IMC-N-I1, IMC-N-V, private model read/copy/encryption, destination/key/DACL effects, cleanup, IMC-L, live capability/load/inference, Product/Shell integration, publication, Release, Deploy and Production remain separately blocked or unallocated.

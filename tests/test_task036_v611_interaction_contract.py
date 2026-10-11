@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -11,6 +12,810 @@ from ai_video_production.task036_shell_v611 import HTML
 # Node startup exceeded 90 seconds under a contended Windows xdist worker.
 # Keep this below the outer 120-second pytest timeout while preserving all assertions and bounded failure.
 NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 110
+
+
+@pytest.mark.parametrize("observation,expected", [
+    ({"system": {"comfyui_version": "test"}, "devices": []}, "READY"),
+    ({"system": {}, "devices": [{"name": "private-device"}]}, "READY"),
+    ({}, "UNKNOWN"),
+    ({"system": {}, "devices": ["invalid"]}, "UNKNOWN"),
+    ([], "UNKNOWN"),
+    ("unreachable", "UNREACHABLE"),
+    ("http-error", "UNKNOWN"),
+    ("invalid-json", "UNKNOWN"),
+    ("oversize", "UNKNOWN"),
+])
+def test_trusted_comfyui_warning_binding_is_lazy_bounded_and_read_only(
+    tmp_path, monkeypatch, observation, expected,
+) -> None:
+    from urllib.error import HTTPError, URLError
+    from ai_video_production import comfyui
+    from ai_video_production.errors import ProductError
+    from ai_video_production.task036_native_dialog import Task036NativeDialogService
+    from ai_video_production.task036_trusted_launcher import (
+        Task036LaunchConfiguration, build_trusted_launch,
+    )
+    from test_task036_trusted_launcher import (
+        AsrProvider, ComfyClient, DialogBackend, ResolveAdapter, config_document,
+    )
+
+    path, raw = config_document(tmp_path)
+    project = path.parent
+    roots = {name: project / name for name in (
+        "comfy-output", "generation-output", "generation-stage", "generation-journal",
+    )}
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.1.0"
+    raw["local_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(roots["comfy-output"]),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["generation-stage"]),
+        "dispatch_journal_root": str(roots["generation-journal"]),
+        "route_id": "local-video", "provider_id": "comfy",
+        "model_id": "minimax-h3-native", "width": 832, "height": 480,
+        "length": 124, "steps": 20, "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600, "max_output_bytes": 16 * 1024**3,
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    calls = []
+    reads = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def read(self, size):
+            reads.append(size)
+            if observation == "invalid-json":
+                return b"not-json"
+            if observation == "oversize":
+                return b"x" * size
+            return json.dumps(observation).encode()
+
+    def read_only_get(request, *, timeout):
+        calls.append((request.full_url, request.get_method(), request.data, timeout))
+        if observation == "unreachable":
+            raise URLError("private diagnostic")
+        if observation == "http-error":
+            raise HTTPError(request.full_url, 500, "private diagnostic", {}, None)
+        return Response()
+
+    monkeypatch.setattr(comfyui, "urlopen", read_only_get)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(), meter_host_factory=lambda *_: None,
+    )
+    try:
+        assert calls == []  # Constructing the app does not probe or queue.
+        files_before = {p for p in project.rglob("*") if p.is_file()}
+        # Windows intentionally locks the live lease file against byte reads.
+        before = {p: p.read_bytes() for p in files_before if p.name != ".task036-runtime.lock"}
+        with pytest.raises(ProductError) as invalid:
+            launch.bridge.comfyui_runtime_snapshot({"start": True})
+        assert invalid.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+        assert calls == []
+        result = launch.bridge.comfyui_runtime_snapshot({})
+        assert result["state"] == expected
+        assert calls == [("http://127.0.0.1:8188/system_stats", "GET", None, 2)]
+        assert reads in ([], [65537])
+        assert all(result[key] is False for key in (
+            "provider_execution_started", "paid_execution_authorized",
+            "generation_started", "execution_authorized",
+        ))
+        assert "private" not in json.dumps(result)
+        assert "127.0.0.1" not in json.dumps(result)
+        assert {p for p in project.rglob("*") if p.is_file()} == files_before
+        assert {p: p.read_bytes() for p in files_before if p.name != ".task036-runtime.lock"} == before
+    finally:
+        launch.close()
+    count = len(calls)
+    assert launch.bridge.comfyui_runtime_snapshot({})["state"] == "UNKNOWN"
+    assert len(calls) == count  # Closed app cannot retain a live health callback.
+
+
+def test_trusted_launch_without_comfyui_config_does_not_probe(tmp_path, monkeypatch) -> None:
+    from ai_video_production import comfyui
+    from ai_video_production.task036_native_dialog import Task036NativeDialogService
+    from ai_video_production.task036_trusted_launcher import Task036LaunchConfiguration, build_trusted_launch
+    from test_task036_trusted_launcher import AsrProvider, DialogBackend, ResolveAdapter, config_document
+
+    path, _ = config_document(tmp_path)
+    def deny_probe(*args, **kwargs):
+        raise AssertionError("Unconfigured ComfyUI must not be contacted")
+    monkeypatch.setattr(comfyui, "urlopen", deny_probe)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+        meter_host_factory=lambda *_: None,
+    )
+    try:
+        assert launch.bridge.comfyui_runtime_snapshot({})["reason_code"] == "COMFYUI_RUNTIME_NOT_BOUND"
+    finally:
+        launch.close()
+
+
+@pytest.mark.parametrize("state", ["READY", "UNREACHABLE", "UNKNOWN"])
+def test_comfyui_status_bridge_projects_read_only_observation(state: str) -> None:
+    from ai_video_production.desktop_shell import ShellApplicationService
+    from ai_video_production.task036_shell_ui import Task036ShellBridge
+
+    calls = []
+
+    def observe():
+        calls.append("observe")
+        return {"state": state}
+
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"),
+                               comfyui_runtime_snapshot_provider=observe)
+    result = bridge.comfyui_runtime_snapshot({})
+    assert result["state"] == state
+    assert calls == ["observe"]
+    assert all(result[key] is False for key in (
+        "provider_execution_started", "paid_execution_authorized",
+        "generation_started", "execution_authorized"))
+
+
+@pytest.mark.parametrize("raw", [None, {}, {"state": "READY", "path": "private"},
+                                 {"state": ["READY"]}, {"state": "STOPPED"}])
+def test_comfyui_status_bridge_does_not_promote_invalid_or_unbound_state(raw) -> None:
+    from ai_video_production.desktop_shell import ShellApplicationService
+    from ai_video_production.errors import ProductError
+    from ai_video_production.task036_shell_ui import Task036ShellBridge
+
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"),
+                               comfyui_runtime_snapshot_provider=lambda: raw)
+    result = bridge.comfyui_runtime_snapshot({})
+    assert result["state"] == "UNKNOWN"
+    assert result["available"] is False
+    assert "private" not in str(result)
+    with pytest.raises(ProductError):
+        bridge.comfyui_runtime_snapshot({"start": True})
+    unbound = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    assert unbound.comfyui_runtime_snapshot({})["reason_code"] == "COMFYUI_RUNTIME_NOT_BOUND"
+
+
+def test_central_model_selection_change_save_failure_and_reopen_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the central Settings behavior contract")
+    names = ("settingsWorkloadName", "settingsModelLabel", "settingsAvailabilityText",
+             "centralPreferredRouteValue", "requiredLocalRuntimeNames",
+             "localRuntimeWarning", "renderRequiredRuntimeWarnings",
+             "renderCentralModelSettings")
+    functions = []
+    for name in names:
+        match = re.search(rf"function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+class Node {
+  constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.listeners={};this.attributes={};this.style={};this.disabled=false;this._value='';}
+  append(...items){this.children.push(...items);}
+  addEventListener(name,fn){this.listeners[name]=fn;}
+  setAttribute(name,value){this.attributes[name]=value;}
+  removeAttribute(name){delete this.attributes[name];}
+  get value(){if(this.tag==='select')return (this.children.find(item=>item.selected)||this.children[0])?.value||'';return this._value;}
+  set value(value){this._value=value;if(this.tag==='select')this.children.forEach(item=>item.selected=item.value===value);}
+}
+const document={createElement:tag=>new Node(tag)},host=new Node('host');
+const $=()=>host,clear=node=>{node.children=[];},element=(tag,cls,text)=>{const n=new Node(tag);n.textContent=text;return n;};
+const card=(title,body)=>element('card','',body);
+function walk(node){return node.children.flatMap(child=>[child,...walk(child)]);}
+const q=(selector,node)=>walk(node).find(item=>item.dataset.connectionRoute===selector.match(/="([^"]+)"/)[1]);
+host.querySelector=selector=>q(selector,host);
+const PLANNING_STATE_SAFE_ERROR='safe planning state';
+let headerRefreshes=0;
+const refreshGlobalPlanningAiStatus=async()=>{headerRefreshes++;};
+const CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC']);
+const renderOllamaRuntimeStatus=()=>{throw new Error('stale saved-route runtime card');},renderComputeSettings=()=>{};
+let currentSettingsView='models',readbacks=0,saveResult=null,payload=null,calls=[],notices=[];
+const notify=(...args)=>notices.push(args);
+const call=async(method,args)=>{calls.push(method);payload=args;return saveResult;};
+const renderSettingsView=async()=>{readbacks++;};
+""" + "\n".join(functions) + r"""
+(async()=>{
+  const form={available:true,revision:7,workloads:[{workload:'PLANNING',selection_mode:'AUTO',preferred_route_id:'plan-1',routes:[
+    {route_id:'plan-1',model_id:'qwen3:8b',provider_id:'ollama',selectable:true},
+    {route_id:'plan-2',model_id:'gemma3:12b',local:false,cost_class:'CLOUD_PAID_AI',selectable:true},
+    {route_id:'plan-3',model_id:'missing-model',selectable:false}
+  ]}]};
+  renderCentralModelSettings(form,{},{});
+  let select=walk(host).find(item=>item.tag==='select'),button=walk(host).find(item=>item.tag==='button');
+  assert.equal(select.value,'plan-1');
+  assert.equal(walk(host).filter(item=>item.attributes.role==='alert').length,1);
+  assert.match(select.children.find(item=>item.value==='plan-2').textContent,/gemma3:12b/);
+  assert.equal(select.children.find(item=>item.value==='plan-3').disabled,true);
+  const availability=walk(host).find(item=>item.textContent===settingsAvailabilityText(form.workloads[0].routes[0]));
+  select.value='';select.listeners.change();
+  assert.equal(walk(host).filter(item=>item.attributes.role==='alert').length,0);
+  assert.equal(availability.textContent,settingsAvailabilityText(undefined));
+  select.value='plan-2';select.listeners.change();
+  assert.equal(walk(host).filter(item=>item.attributes.role==='alert').length,0);
+  assert.equal(availability.textContent,settingsAvailabilityText(form.workloads[0].routes[1]));
+  await button.listeners.click();
+  assert.equal(payload.preferred_route_ids.PLANNING,'plan-2');
+  assert.equal(payload.revision,7);
+  assert.equal(readbacks,0);assert.equal(notices.length,0);
+  assert.equal(headerRefreshes,0);
+  assert.equal(select.value,'plan-2');assert.equal(button.disabled,false);
+  saveResult={revision:8};await button.listeners.click();
+  assert.equal(readbacks,1);assert.equal(notices.length,1);
+  assert.equal(headerRefreshes,1);
+  assert.deepEqual(calls,['connection_settings_update','connection_settings_update']);
+  // Later opening uses the saved canonical form, not a browser-side store.
+  const reopened=structuredClone(form);reopened.revision=8;reopened.workloads[0].preferred_route_id=payload.preferred_route_ids.PLANNING;
+  renderCentralModelSettings(reopened,{},{});
+  assert.equal(walk(host).find(item=>item.tag==='select').value,'plan-2');
+  reopened.workloads[0].preferred_route_id='plan-3';renderCentralModelSettings(reopened,{},{});
+  select=walk(host).find(item=>item.tag==='select');button=walk(host).find(item=>item.tag==='button');
+  assert.equal(select.value,'plan-3');assert.match(select.children.find(item=>item.selected).textContent,/missing-model/);
+  assert.equal(select.dataset.preserveUnavailablePreferred,'true');
+  await button.listeners.click();assert.equal(Object.hasOwn(payload.preferred_route_ids,'PLANNING'),false);
+  select.value='plan-2';select.listeners.change();await button.listeners.click();
+  assert.equal(payload.preferred_route_ids.PLANNING,'plan-2');
+  console.log('OK');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+    completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
+                               text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_required_local_runtime_warnings_are_truthful_and_route_scoped_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for local runtime warning behavior")
+    functions = []
+    for name in ("requiredLocalRuntimeNames", "localRuntimeWarning", "renderRequiredRuntimeWarnings"):
+        match = re.search(rf"function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+const host={children:[],append(node){this.children.push(node);}};
+const card=(title,message)=>({title,message,style:{},attributes:{},setAttribute(name,value){this.attributes[name]=value;}});
+""" + "\n".join(functions) + r"""
+const ollama={provider_id:'ollama',cost_class:'LOCAL_FREE_AI'};
+const comfy={provider_family:'COMFYUI',cost_class:'LOCAL_FREE_AI'};
+assert.deepEqual(requiredLocalRuntimeNames([ollama,comfy,comfy]),['Ollama','ComfyUI']);
+assert.deepEqual(requiredLocalRuntimeNames([undefined,{provider_id:'cloud'}, {...comfy,cost_class:'CLOUD_PAID_AI'}]),[]);
+for(const name of ['Ollama','ComfyUI']) {
+  assert.equal(localRuntimeWarning(name,{state:'READY'}),null);
+  assert.equal(localRuntimeWarning(name,{state:'NO_MODEL'}),null);
+  assert.match(localRuntimeWarning(name,{state:'UNREACHABLE'}).message,/起動していないか、接続できません/);
+  const unknown=localRuntimeWarning(name,null);
+  assert.match(unknown.message,/起動状態を確認できません/);
+  assert.doesNotMatch(unknown.message,/起動していません/);
+}
+assert.match(localRuntimeWarning('Ollama',{state:'FAILED',reason_code:'OLLAMA_NOT_RUNNING'}).message,/接続できません/);
+assert.match(localRuntimeWarning('Ollama',{state:'STARTING'}).message,/起動中/);
+assert.match(localRuntimeWarning('Ollama',{state:'NOT_INSTALLED'}).message,/導入されていません/);
+renderRequiredRuntimeWarnings(host,[ollama,comfy],{state:'FAILED',reason_code:'OLLAMA_NOT_RUNNING'},{state:'UNREACHABLE'});
+assert.equal(host.children.length,2);
+assert.equal(host.children[0].attributes.role,'alert');
+assert.equal(host.children[0].style.borderColor,'#c9953f');
+host.children=[];
+renderRequiredRuntimeWarnings(host,[{provider_id:'cloud'}],{state:'FAILED'},{state:'UNREACHABLE'});
+assert.equal(host.children.length,0);
+renderRequiredRuntimeWarnings(host,[ollama,comfy],{state:'READY'},{state:'READY'});
+assert.equal(host.children.length,0);
+renderRequiredRuntimeWarnings(host,[comfy],{state:'FAILED'},null);
+assert.equal(host.children.length,1);assert.match(host.children[0].message,/確認できません/);
+console.log('OK');
+"""
+    completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
+                               text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+    assert "call('comfyui_runtime_snapshot',{})" in HTML
+    assert "page==='planning'&&required.includes('Ollama')" in HTML
+
+
+def test_planning_generated_target_selection_refresh_and_saved_reopen_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Planning selection behavior contract")
+    names = ("renderPlanningProposalSelection", "renderPlanning", "renderSceneDetail",
+             "renderScenes", "refreshPlanning", "generatePlanning", "finalizeScenes")
+    functions = []
+    for name in names:
+        match = re.search(rf"(?:async )?function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+class Node {
+  constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.attributes={};this.value='';this.textContent='';}
+  append(...items){this.children.push(...items);}
+  addEventListener(name,fn){this.listeners[name]=fn;}
+  setAttribute(name,value){this.attributes[name]=value;}
+}
+const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,new Node(id));return nodes.get(id);};
+const clear=n=>{n.children=[];n.textContent='';},element=(tag,cls,text)=>{const n=new Node(tag);n.textContent=text;return n;};
+const card=(title,body)=>element('card','',body),walk=n=>n.children.flatMap(c=>[c,...walk(c)]);
+const qa=(selector,n)=>walk(n).filter(c=>c.tag===selector),renderModel=()=>{};
+const renderFeatureModelReadiness=()=>({}),renderPlanningGenerationStatus=()=>{};
+let currentPlanningModel=null,currentPlanningGeneration={available:true},currentSceneId=null;
+let currentPlanningReadiness=null,planningGenerationInFlight=false;
+const PLANNING_GENERATION_SAFE_ERROR='safe generation',PLANNING_STATE_SAFE_ERROR='safe state';
+let calls=[],notices=[],approveTargets=[],confirmDecision=true,scenario='success';
+const notify=(...args)=>notices.push(args),approvePlanning=(model,workspace)=>approveTargets.push(workspace.proposal_id);
+const revisePlanning=()=>{},installPlanning=()=>{};
+const window={confirm:()=>confirmDecision,prompt:()=> 'owner'};
+function fixture(id){return {available:true,proposal_ids:['PROPOSAL-A','PROPOSAL-Z'],selected_proposal_id:id,snapshot_sha256:'snapshot-'+id,
+  workspace:{proposal_id:id,latest_revision:1,go_status:'GO_REQUIRED',creation_intent:{},provider_policy:{},
+    estimated_cost_range:{min:0,max:0,currency:'JPY'},sections:[],rights_warnings:[],
+    blueprint:{blueprint_id:'blueprint-'+id,title:id,timeline_rate:{numerator:24,denominator:1},target_duration_frames:24,
+      scenes:[{scene_id:'scene-'+id,narrative_role:id,range_frames:{start:0,end_exclusive:24},source_strategy:'REAL_CAPTURE',audio:{}}]}},
+  installation:{status:'NOT_INSTALLED'},scene_contract:{status:'GO_REQUIRED',snapshot_sha256:'scene-snapshot-'+id}};}
+const saved=new Map(['PROPOSAL-A','PROPOSAL-Z'].map(id=>[id,fixture(id)]));
+async function call(method,args={}){
+  calls.push([method,args]);
+  if(method==='planning_snapshot')return structuredClone(saved.get(args.proposal_id||'PROPOSAL-A'));
+  if(method==='planning_generation_prepare')return scenario==='prepare-fail'?null:{confirmation_id:'generate-confirm',already_generated:scenario==='idempotent'};
+  if(method==='planning_generation_apply')return scenario==='apply-fail'?null:{proposal_id:'PROPOSAL-Z',application:structuredClone(saved.get('PROPOSAL-Z')),idempotent:scenario==='idempotent',apply_recovery_state:scenario==='recovered'?'COMMITTED_READBACK':null};
+  if(method==='planning_generation_cancel')return {cancelled:true};
+  if(method==='planning_prepare_scene_finalization')return {confirmation_id:'final-confirm',receipt:{proposal_id:args.proposal_id}};
+  if(method==='planning_apply_scene_finalization')return {applied:true};
+  if(method==='planning_generation_status')return {available:true};
+  if(['model_selection_snapshot','ollama_runtime_snapshot','desktop_compute_settings_snapshot','comfyui_runtime_snapshot'].includes(method))return {};
+  throw new Error('unexpected method '+method);
+}
+__FUNCTIONS__
+function selector(){return walk($('planningContent')).find(n=>n.tag==='select');}
+function assertTarget(id){
+  assert.equal(currentPlanningModel.selected_proposal_id,id);
+  assert.equal(currentSceneId,'scene-'+id);
+  assert.equal(selector().children.find(n=>n.selected).value,id);
+  assert.match($('sceneDetail').textContent,new RegExp('scene-'+id));
+}
+(async()=>{
+  await refreshPlanning();assertTarget('PROPOSAL-A');
+  $('planningRequest').value='new request';await generatePlanning();assertTarget('PROPOSAL-Z');
+  assert.equal($('planningRequest').value,'');
+  assert.equal(calls.findLast(c=>c[0]==='planning_snapshot')[1].proposal_id,'PROPOSAL-Z');
+  const generatedCount=calls.filter(c=>c[0].startsWith('planning_generation_')&&c[0]!=='planning_generation_status').length;
+  await refreshPlanning();assertTarget('PROPOSAL-Z');
+  const go=walk($('planningContent')).find(n=>n.tag==='button'&&n.textContent.includes('GO'));
+  go.listeners.click();assert.deepEqual(approveTargets,['PROPOSAL-Z']);
+  selector().value='PROPOSAL-A';await selector().listeners.change();assertTarget('PROPOSAL-A');
+  assert.equal(calls.filter(c=>c[0].startsWith('planning_generation_')&&c[0]!=='planning_generation_status').length,generatedCount);
+  // Fresh UI session can explicitly reopen the existing canonical Proposal/Scene; no browser-side canonical store.
+  currentPlanningModel=null;currentSceneId=null;await refreshPlanning();assertTarget('PROPOSAL-A');
+  selector().value='PROPOSAL-Z';await selector().listeners.change();assertTarget('PROPOSAL-Z');
+  saved.get('PROPOSAL-Z').workspace.go_status='APPROVED';saved.get('PROPOSAL-Z').scene_contract.status='READY_TO_FINALIZE';
+  await refreshPlanning();await finalizeScenes();assertTarget('PROPOSAL-Z');
+  const finalArgs=calls.find(c=>c[0]==='planning_prepare_scene_finalization')[1];
+  assert.equal(finalArgs.proposal_id,'PROPOSAL-Z');assert.equal(finalArgs.expected_proposal_snapshot_sha256,'snapshot-PROPOSAL-Z');
+  for(const failed of ['prepare-fail','apply-fail','cancel']){
+    scenario=failed;confirmDecision=failed!=='cancel';$('planningRequest').value='keep my request';const before=calls.length;
+    await generatePlanning();assertTarget('PROPOSAL-Z');assert.equal($('planningRequest').value,'keep my request');
+    const methods=calls.slice(before).map(c=>c[0]);assert.ok(methods.includes('planning_snapshot'));
+    assert.equal(calls.findLast(c=>c[0]==='planning_snapshot')[1].proposal_id,'PROPOSAL-Z');
+    if(failed==='cancel'){assert.ok(methods.includes('planning_generation_cancel'));assert.ok(!methods.includes('planning_generation_apply'));}
+  }
+  scenario='idempotent';confirmDecision=true;await generatePlanning();assertTarget('PROPOSAL-Z');
+  await refreshPlanning('PROPOSAL-A');scenario='recovered';$('planningRequest').value='recover';
+  await generatePlanning();assertTarget('PROPOSAL-Z');
+  saved.get('PROPOSAL-Z').proposal_ids=['PROPOSAL-Z'];await refreshPlanning();assert.equal(selector(),undefined);
+  console.log('OK');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+""".replace("__FUNCTIONS__", "\n".join(functions))
+    completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
+                               text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_generation_runtime_recheck_invalidates_controls_and_ignores_old_response_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the generation readiness behavior contract")
+    names = ("generationReadinessCoordinate", "preflightLocalGeneration",
+             "prepareLocalGenerationExecution", "renderGenerationQueue", "refreshQueue")
+    functions = []
+    for name in names:
+        match = re.search(rf"(?:async )?function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+class Node {
+  constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.attributes={};this.dataset={};this.disabled=false;this.textContent='';}
+  append(...items){this.children.push(...items);}
+  addEventListener(name,fn){this.listeners[name]=fn;}
+  setAttribute(name,value){this.attributes[name]=value;}
+}
+const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,new Node(id));return nodes.get(id);};
+const clear=n=>{n.children=[];n.textContent='';},element=(tag,cls,text)=>{const n=new Node(tag);n.textContent=text;return n;};
+const card=(title,body)=>element('card','',title+' '+body),renderModel=()=>{};
+const walk=n=>n.children.flatMap(c=>[c,...walk(c)]);
+const generationRuntimeReadiness=new Map(),generationRuntimePreflights=new Map();
+let calls=[],notices=[],pending=null,queuePending=null,scenario='pass',model;
+const notify=(...args)=>notices.push(args),window={confirm:()=>false};
+const entry={queue_entry_id:'queue-image',scene_id:'scene-1',slot_id:'slot-start',input_bindings:[]};
+function fixture(revision){return {available:true,entry_count:1,queue_snapshot_sha256:'queue-'+revision,entries:[entry],
+  execution_control:{available:true,queue_snapshot_sha256:'queue-'+revision,execution_snapshot_sha256:'execution-'+revision,
+    available_queue_entries:[entry],latest_executions:[],recovery:{required:false}},output_adoption_control:{available:false}};}
+const pass={result:'SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED',route_id:'route-image',provider_id:'comfy',model_id:'image-model',workflow_sha256:'workflow'};
+async function call(method,args={}){
+  calls.push([method,args]);
+  if(method==='generation_execution_preflight'){
+    if(scenario==='pending')return await new Promise(resolve=>{pending=resolve;});
+    if(scenario==='failure')return null;
+    if(scenario==='blocked')return {result:'BLOCKED'};
+    return pass;
+  }
+  if(method==='generation_queue_snapshot')return scenario==='queue-pending'?await new Promise(resolve=>{queuePending=resolve;}):model;
+  if(method==='generation_execution_prepare')return {confirmation_id:'confirm-image',scene_id:'scene-1',slot_id:'slot-start'};
+  if(method==='generation_execution_cancel')return {cancelled:true};
+  throw new Error('unexpected effect '+method);
+}
+__FUNCTIONS__
+const button=label=>walk($('generationQueueContent')).find(n=>n.tag==='button'&&n.textContent===label);
+const execute=()=>button('この1件を確認して生成'),check=()=>button('Runtimeを確認');
+(async()=>{
+  model=fixture('1');await refreshQueue();assert.equal(execute().disabled,true);
+  await preflightLocalGeneration(model,entry);assert.equal(execute().disabled,false);
+  assert.deepEqual(calls.findLast(c=>c[0]==='generation_execution_preflight')[1],{queue_entry_id:'queue-image'});
+  scenario='pending';const recheck=preflightLocalGeneration(model,entry);
+  assert.equal(execute().disabled,true);assert.equal(check().disabled,true);assert.equal(check().attributes['aria-busy'],'true');
+  const count=calls.filter(c=>c[0]==='generation_execution_preflight').length;
+  await preflightLocalGeneration(model,entry);assert.equal(calls.filter(c=>c[0]==='generation_execution_preflight').length,count);
+  pending(null);await recheck;assert.equal(execute().disabled,true);assert.equal(check().disabled,false);
+  assert.equal(generationRuntimeReadiness.has(entry.queue_entry_id),false);
+  assert.ok(notices.some(n=>n[1]===true&&n[0].includes('再確認')));
+  for(const failure of ['failure','blocked']){
+    scenario='pass';await preflightLocalGeneration(model,entry);assert.equal(execute().disabled,false);
+    scenario=failure;await preflightLocalGeneration(model,entry);assert.equal(execute().disabled,true);
+  }
+  scenario='pass';await preflightLocalGeneration(model,entry);await prepareLocalGenerationExecution(model,entry);
+  assert.equal(calls.filter(c=>c[0]==='generation_execution_prepare').length,1);
+  assert.equal(calls.filter(c=>c[0]==='generation_execution_cancel').length,1);
+  assert.equal(execute().disabled,true);
+  scenario='pending';const oldModel=model,oldCheck=preflightLocalGeneration(oldModel,entry);
+  model=fixture('2');await refreshQueue();pending(pass);await oldCheck;
+  assert.equal(execute().disabled,true);assert.equal(generationRuntimeReadiness.size,0);assert.equal(generationRuntimePreflights.size,0);
+  // Refresh removes old controls immediately, and also invalidates checks started during its snapshot wait.
+  scenario='queue-pending';const refreshing=refreshQueue();assert.equal(execute(),undefined);assert.equal(check(),undefined);
+  scenario='pending';const staleCheck=preflightLocalGeneration(model,entry);
+  model=fixture('3');queuePending(model);await refreshing;pending(pass);await staleCheck;
+  assert.equal(execute().disabled,true);assert.equal(generationRuntimeReadiness.size,0);assert.equal(generationRuntimePreflights.size,0);
+  await prepareLocalGenerationExecution(model,entry);
+  assert.equal(calls.filter(c=>c[0]==='generation_execution_prepare').length,1);
+  assert.equal(calls.filter(c=>c[0]==='generation_execution_apply').length,0);
+  console.log('OK');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+""".replace("__FUNCTIONS__", "\n".join(functions))
+    completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
+                               text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_output_adoption_refreshes_exact_visual_lineage_and_keeps_human_review_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the output-adoption handoff contract")
+    names = ("refreshGenerationAdoptionHandoff", "prepareGenerationOutputAdoption",
+             "recoverGenerationOutputAdoption", "visualHandoffTarget", "renderVisualGenerationHandoff")
+    functions = []
+    for name in names:
+        match = re.search(rf"(?:async )?function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+class Node {
+  constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.textContent='';}
+  append(...items){this.children.push(...items);}
+  addEventListener(name,fn){this.listeners[name]=fn;}
+}
+const panels=new Map(),q=selector=>{if(!panels.has(selector))panels.set(selector,new Node('panel'));return panels.get(selector);};
+const clear=n=>{n.children=[];n.textContent='';},element=(tag,cls,text)=>{const n=new Node(tag);n.textContent=text;return n;};
+const card=(title,body)=>element('card','',title+' '+body),walk=n=>n.children.flatMap(c=>[c,...walk(c)]);
+const panel=page=>q(`[data-visual-handoff="${page}"]`);
+let calls=[],navigation=[],approve=true,mode='success',queueReads=[],projectionRead=0;
+const window={confirm:()=>approve},navigate=target=>navigation.push(target);
+const prepared={confirmation_id:'confirmation-1',execution_id:'execution-1',candidate_id:'candidate-1',slot_id:'slot-1'};
+const recovery={adoption_id:'adoption-1',execution_id:'execution-1',candidate_id:'candidate-1',state:'ASSET_REGISTERED'};
+const model={execution_control:{execution_snapshot_sha256:'execution-snapshot'},queue_snapshot_sha256:'queue-snapshot',
+  output_adoption_control:{adoption_snapshot_sha256:'adoption-snapshot'}};
+function row(kind,state){return {scene_id:'scene-1',slot_id:'slot-'+kind,slot_kind:kind,state,blockers:[],stale_prompt_count:0,
+  execution_id:'execution-1',adoption_id:state==='READY_FOR_AUDIT'?'adoption-1':null};}
+function visual(state){return {available:true,required_blocker_count:2,all_required_visual_slots_adopted:false,
+  projection_sha256:'projection-'+state,delegated_audio_owner:'DEVELOPER2',audio_slot_counted:0,
+  rows:[row('START_FRAME',state),row('VIDEO',state)]};}
+function result(){
+  if(mode==='null')return null;
+  const latest={...recovery,state:'READY_FOR_AUDIT'};
+  if(mode==='partial')latest.state='ASSET_REGISTERED';
+  if(mode==='wrong-execution')latest.execution_id='other-execution';
+  if(mode==='wrong-candidate')latest.candidate_id='other-candidate';
+  if(mode==='wrong-adoption')latest.adoption_id='other-adoption';
+  return {latest_adoptions:[latest],candidate_accepted:false,candidate_locked:false};
+}
+async function call(method,args={}){
+  calls.push([method,args]);
+  if(method==='production_snapshot')return {snapshot_sha256:'production-snapshot'};
+  if(method==='prompt_evidence_snapshot')return {prompt_snapshot_sha256:'prompt-snapshot'};
+  if(method==='generation_output_adoption_prepare')return mode==='prepare-fail'?null:prepared;
+  if(['generation_output_adoption_apply','generation_output_adoption_recover'].includes(method))return result();
+  if(method==='generation_queue_snapshot')return {output_adoption_control:{recovery:{required:mode==='partial'||mode==='null'}}};
+  if(method==='visual_generation_handoff_snapshot'){projectionRead++;return mode==='projection-fail'?null:visual('READY_FOR_AUDIT');}
+  throw new Error('unexpected effect '+method);
+}
+async function refreshQueue(){queueReads.push(await call('generation_queue_snapshot'));}
+__FUNCTIONS__
+function reset(next){mode=next;approve=true;calls=[];navigation=[];queueReads=[];projectionRead=0;
+  renderVisualGenerationHandoff(visual('OUTPUT_READY_FOR_ADOPTION'),'imageGen');
+  renderVisualGenerationHandoff(visual('OUTPUT_READY_FOR_ADOPTION'),'videoGen');}
+function assertStale(){assert.equal(projectionRead,0);assert.ok(walk(panel('video')).some(n=>n.textContent.includes('OUTPUT_READY_FOR_ADOPTION')));assert.deepEqual(navigation,[]);}
+(async()=>{
+  for(const action of ['apply','recovery']){
+    reset('success');
+    if(action==='apply')await prepareGenerationOutputAdoption(model,{execution_id:'execution-1'});
+    else await recoverGenerationOutputAdoption(recovery);
+    assert.equal(projectionRead,1);assert.equal(queueReads.length,1);assert.deepEqual(navigation,[]);
+    for(const kind of ['image','video']){
+      assert.ok(walk(panel(kind)).some(n=>n.textContent.includes('READY_FOR_AUDIT')));
+      assert.ok(!walk(panel(kind)).some(n=>n.textContent.includes('OUTPUT_READY_FOR_ADOPTION')));
+      const button=walk(panel(kind)).find(n=>n.tag==='button');assert.ok(button);button.listeners.click();
+    }
+    assert.deepEqual(navigation,['assetReview','assetReview']);
+    const effects=calls.filter(c=>c[0].endsWith('_apply')||c[0].endsWith('_recover'));
+    assert.equal(effects.length,1);
+    assert.deepEqual(effects[0],action==='apply'?['generation_output_adoption_apply',{confirmation_id:'confirmation-1'}]:['generation_output_adoption_recover',{adoption_id:'adoption-1'}]);
+  }
+  reset('success');approve=false;await prepareGenerationOutputAdoption(model,{execution_id:'execution-1'});assertStale();assert.equal(queueReads.length,0);
+  assert.equal(calls.filter(c=>c[0]==='generation_output_adoption_apply').length,0);
+  reset('success');approve=false;await recoverGenerationOutputAdoption(recovery);assertStale();assert.equal(calls.length,0);
+  reset('prepare-fail');await prepareGenerationOutputAdoption(model,{execution_id:'execution-1'});assertStale();assert.equal(queueReads.length,0);
+  for(const failure of ['null','partial','wrong-execution','wrong-candidate']){
+    for(const action of ['apply','recovery']){
+      reset(failure);
+      if(action==='apply')await prepareGenerationOutputAdoption(model,{execution_id:'execution-1'});
+      else await recoverGenerationOutputAdoption(recovery);
+      assertStale();assert.equal(queueReads.length,1);
+      if(['null','partial'].includes(failure))assert.equal(queueReads[0].output_adoption_control.recovery.required,true);
+    }
+  }
+  reset('wrong-adoption');await recoverGenerationOutputAdoption(recovery);assertStale();
+  reset('success');await refreshGenerationAdoptionHandoff(result(),{execution_id:'',candidate_id:'candidate-1'});assertStale();
+  await refreshGenerationAdoptionHandoff(result(),{execution_id:'execution-1',candidate_id:'candidate-1',adoption_id:''});assertStale();
+  reset('projection-fail');await prepareGenerationOutputAdoption(model,{execution_id:'execution-1'});
+  assert.equal(projectionRead,1);assert.deepEqual(navigation,[]);
+  for(const kind of ['image','video'])assert.equal(walk(panel(kind)).filter(n=>n.tag==='button').length,0);
+  console.log('OK');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+""".replace("__FUNCTIONS__", "\n".join(functions))
+    completed = subprocess.run([node, "-e", script], check=False, capture_output=True,
+                               text=True, timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_asset_review_preserves_exact_decision_recovery_and_missing_audit_projection_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Asset Review interaction contract")
+    functions = []
+    for name in ("decideAssetReview", "recoverAssetReview", "renderAssetReview"):
+        match = re.search(rf"(?:async )?function {name}\([^\r\n]+", HTML)
+        assert match is not None
+        functions.append(match.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+class Node {
+  constructor(tag){this.tag=tag;this.children=[];this.listeners={};this.textContent='';}
+  append(...items){this.children.push(...items);}
+  addEventListener(name,fn){this.listeners[name]=fn;}
+}
+const host=new Node('host'),$=()=>host,clear=n=>{n.children=[];},
+  element=(tag,cls,text)=>Object.assign(new Node(tag),{textContent:text}),
+  card=(title,body)=>element('card','',title+' '+body),
+  walk=n=>n.children.flatMap(c=>[c,...walk(c)]);
+const missingAuditLabel='\u76e3\u67fb\u8a18\u9332\u304c\u307e\u3060\u3042\u308a\u307e\u305b\u3093\u3002\u63a1\u5426\u5224\u65ad\u306b\u306f\u76e3\u67fb\u8a18\u9332\u304c\u5fc5\u8981\u3067\u3059\u3002\u3053\u306e\u753b\u9762\u306e\u76e3\u67fb\u8a18\u9332\u5165\u529b\u306f\u672a\u63a5\u7d9a\u3067\u3059\u3002';
+const hasMissingAuditLabel=()=>walk(host).some(n=>n.textContent===missingAuditLabel);
+let calls=[],promptValues=[],confirmed=true,prepareFailed=false,applyNull=false,
+  refreshed=0,confirmCalls=0;
+const window={prompt:()=>promptValues.shift(),confirm:()=>{confirmCalls++;return confirmed;}};
+const refreshProduction=async()=>{refreshed++;};
+async function call(method,args){
+  calls.push([method,args]);
+  if(method==='audit_prepare_human_decision')return prepareFailed?null:{
+    confirmation_id:'confirm-'+args.candidate_id,candidate_id:args.candidate_id,
+    asset_sha256:'sha-'+args.candidate_id,audit_refs:['audit-'+args.candidate_id],
+    critical_violation_present:false,decision:args.decision};
+  if(method==='audit_apply_human_decision')return applyNull?null:{saved:true};
+  if(method==='audit_apply_recovery')return null;
+  throw Error('unexpected effect '+method);
+}
+function candidate(id,actions=['ACCEPT','REJECT']){
+  return {candidate_id:id,scene_id:'scene-'+id,slot_id:'slot-'+id,
+    lifecycle_state:'READY_FOR_AUDIT',asset_id:'asset-'+id,asset_sha256:'sha-'+id,
+    audit_count:1,ai_audit_count:1,human_audit_count:0,audit_history:[],
+    available_human_actions:actions};
+}
+function fixture(){
+  return {available:true,production_snapshot_sha256:'production-exact',
+    audit_snapshot_sha256:'audit-exact',recovery:{required:false},
+    workspace:{candidates:[candidate('A'),candidate('B')]}};
+}
+function reset(){
+  calls=[];promptValues=[' owner ','memo'];confirmed=true;prepareFailed=false;
+  applyNull=false;refreshed=0;confirmCalls=0;host.children=[];
+}
+let passed=0;
+async function scenario(name,fn){reset();await fn();passed++;}
+__FUNCTIONS__
+(async()=>{
+  await scenario('exact multiple candidate target',async()=>{
+    const audit=fixture();renderAssetReview(audit);
+    const b=host.children.find(n=>n.textContent.includes('B \u00b7'));assert.ok(b);
+    const accept=walk(b).find(n=>n.tag==='button'&&n.textContent==='ACCEPT');
+    await accept.listeners.click();
+    assert.deepEqual(calls[0],['audit_prepare_human_decision',{
+      candidate_id:'B',decision:'ACCEPT',
+      expected_production_snapshot_sha256:'production-exact',
+      expected_audit_snapshot_sha256:'audit-exact'}]);
+    assert.deepEqual(calls[1],['audit_apply_human_decision',{
+      confirmation_id:'confirm-B',actor_id:'owner',notes:'memo'}]);
+    assert.equal(refreshed,1);
+  });
+  for(const actor of [null,'   '])await scenario('actor cancel/blank',async()=>{
+    promptValues=[actor,'memo'];await decideAssetReview(fixture(),candidate('B'),'REJECT');
+    assert.equal(calls.length,0);assert.equal(refreshed,0);
+  });
+  await scenario('notes cancel',async()=>{
+    promptValues=['owner',null];await decideAssetReview(fixture(),candidate('B'),'ACCEPT');
+    assert.equal(calls.length,0);
+  });
+  await scenario('confirm cancel',async()=>{
+    confirmed=false;await decideAssetReview(fixture(),candidate('B'),'REJECT');
+    assert.equal(calls.length,1);assert.equal(refreshed,0);
+  });
+  await scenario('prepare failure',async()=>{
+    prepareFailed=true;await decideAssetReview(fixture(),candidate('B'),'ACCEPT');
+    assert.equal(calls.length,1);assert.equal(confirmCalls,0);assert.equal(refreshed,0);
+  });
+  await scenario('apply null canonical reread',async()=>{
+    applyNull=true;promptValues=['owner',''];
+    await decideAssetReview(fixture(),candidate('B'),'ACCEPT');
+    assert.equal(calls.length,2);assert.equal(calls[1][1].notes,null);assert.equal(refreshed,1);
+  });
+  await scenario('required recovery prevents decision',async()=>{
+    const audit=fixture();audit.recovery.required=true;
+    await decideAssetReview(audit,candidate('A'),'ACCEPT');
+    assert.equal(calls.length,0);assert.equal(promptValues.length,2);
+  });
+  for(const action of ['COMPLETE','ABANDON','FINALIZE'])await scenario('recovery exact '+action,async()=>{
+    await recoverAssetReview({recovery:{required:true,available_actions:[action],
+      transaction_id:'tx',candidate_id:'B'}},action);
+    assert.deepEqual(calls,[['audit_apply_recovery',{action}]]);assert.equal(refreshed,1);
+  });
+  await scenario('closed recovery guards',async()=>{
+    await recoverAssetReview({recovery:{required:true,available_actions:['DELETE']}},'DELETE');
+    await recoverAssetReview({recovery:{required:true,available_actions:['COMPLETE']}},'FINALIZE');
+    await recoverAssetReview({recovery:{required:false,available_actions:['COMPLETE']}},'COMPLETE');
+    assert.equal(calls.length,0);assert.equal(confirmCalls,0);
+  });
+  await scenario('recovery cancel',async()=>{
+    confirmed=false;await recoverAssetReview({recovery:{required:true,available_actions:['COMPLETE']}},'COMPLETE');
+    assert.equal(calls.length,0);assert.equal(refreshed,0);
+  });
+  await scenario('zero audit no actions plus explanation',async()=>{
+    const audit=fixture();audit.workspace.candidates=[{...candidate('Z',[]),audit_count:0,ai_audit_count:0}];
+    renderAssetReview(audit);
+    assert.equal(walk(host).filter(n=>n.tag==='button').length,0);
+    assert.ok(walk(host).some(n=>n.textContent.includes('Audit: 0')));
+    assert.ok(hasMissingAuditLabel());assert.equal(calls.length,0);
+  });
+  await scenario('saved decision reopen no redecision',async()=>{
+    const audit=fixture();audit.workspace.candidates=[{...candidate('B',[]),
+      lifecycle_state:'ACCEPTED',human_decision_record:{decision:'ACCEPT',actor_id:'owner',decision_id:'decision-B'}}];
+    renderAssetReview(audit);
+    assert.equal(walk(host).filter(n=>n.tag==='button').length,0);
+    assert.ok(walk(host).some(n=>n.textContent.includes('Human Decision: ACCEPT')&&n.textContent.includes('Decision ID: decision-B')));
+    assert.equal(calls.length,0);assert.equal(hasMissingAuditLabel(),false);
+  });
+  await scenario('recovery render suppresses decisions and invalid actions',async()=>{
+    const audit=fixture();audit.recovery={required:true,available_actions:['COMPLETE','DELETE','FINALIZE'],state:'RECOVERY',candidate_id:'B'};
+    renderAssetReview(audit);
+    assert.deepEqual(walk(host).filter(n=>n.tag==='button').map(n=>n.textContent),['COMPLETE','FINALIZE']);
+  });
+  await scenario('audited ready omits missing audit explanation',async()=>{
+    renderAssetReview(fixture());assert.equal(hasMissingAuditLabel(),false);assert.equal(calls.length,0);
+  });
+  await scenario('recovery zero audit omits missing audit explanation',async()=>{
+    const audit=fixture();audit.recovery={required:true,available_actions:[],state:'RECOVERY'};
+    audit.workspace.candidates=[{...candidate('Z',[]),audit_count:0,ai_audit_count:0}];
+    renderAssetReview(audit);assert.equal(hasMissingAuditLabel(),false);
+    assert.equal(walk(host).filter(n=>n.tag==='button').length,0);assert.equal(calls.length,0);
+  });
+  await scenario('non ready zero audit omits missing audit explanation',async()=>{
+    const audit=fixture();audit.workspace.candidates=[{...candidate('Z',[]),lifecycle_state:'ACCEPTED',audit_count:0,ai_audit_count:0}];
+    renderAssetReview(audit);assert.equal(hasMissingAuditLabel(),false);assert.equal(calls.length,0);
+  });
+  console.log(JSON.stringify({result:'PASS',scenarios:passed,actual_functions:3,real_store_writes:0}));
+})().catch(error=>{console.error(error);process.exitCode=1;});
+""".replace("__FUNCTIONS__", "\n".join(functions))
+    completed = subprocess.run(
+        [node, "-e", script], check=False, capture_output=True, text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    assert json.loads(completed.stdout) == {
+        "result": "PASS", "scenarios": 19, "actual_functions": 3, "real_store_writes": 0,
+    }
+
+
+def test_export_unbound_actions_are_disabled_with_public_safe_reasons_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Export binding behavior contract")
+    helpers = "\n".join(
+        re.search(rf"(?:async )?function {name}\(.*?\r?\n\}}", HTML, re.DOTALL).group(0)
+        for name in (
+            "exportBindingReason", "exportPreparationBindingMessage",
+            "bindExportActionAvailability", "exportJourneyState", "refreshExport",
+        )
+    )
+    script = f"""
+const assert=require('node:assert/strict');
+const EXPORT_SAFE_ERROR='safe',EXPORT_STAGE_COPY={{}},EXPORT_STAGE_PROGRESS={{}};
+const view={{project:{{project_id:'project-1'}}}},review={{readiness:{{available:true}},approval:{{approval_current:true}}}};
+const n=tag=>({{tag,children:[],dataset:{{}},style:{{}},append(...v){{this.children.push(...v)}},setAttribute(){{}},addEventListener(){{}}}});
+const nodes=new Map(),$=id=>{{if(!nodes.has(id))nodes.set(id,n('div'));return nodes.get(id)}};
+const document={{createElement:n}},element=(tag,cls,text)=>Object.assign(n(tag),{{className:cls,textContent:text}});
+const clear=host=>host.children=[];const renderExportJourney=()=>{{}},scheduleExportRefresh=()=>{{}};
+let model,prep;const call=async method=>({{export_queue_snapshot:model,final_review_export_snapshot:prep,snapshot:view,workflow_status:{{}},final_review_snapshot:review}})[method];
+{helpers}
+const all=host=>host.children.flatMap(child=>[child,...all(child)]);
+(async()=>{{
+  const cases=[['QUEUED','事前確認を開始','preflight_available'],['READY','書き出しを開始','dispatch_available'],['HUMAN_REQUIRED','設定を確認して再試行','preflight_available'],['SUCCEEDED','保存先を開く','destination_open_available']];
+  for(const [stage,label,field] of cases){{
+    for(const available of [false,true,undefined,'true',1]){{
+      const row={{job_id:'job-1',stage,individual_confirmation_required:stage==='READY',recovery_actions:stage==='HUMAN_REQUIRED'?['RESUME_PREFLIGHT']:[],binding_blockers:['PREPARATION_UNBOUND'],[field]:available}};
+      model={{available:true,rows:[row]}};prep={{available:true}};await refreshExport();
+      const button=all($('exportContent')).find(v=>v.tag==='button'&&v.textContent===label);
+      assert.ok(button,label);assert.equal(button.disabled,available!==true);
+      assert.equal(!!button.dataset.disabledReason,available!==true);
+      if(available!==true)assert.match(button.title,/未接続/);
+      if(stage==='READY'&&available!==true)assert.equal(all($('exportContent')).find(v=>v.tag==='h3').textContent,'事前確認済み／実行接続待ち');
+    }}
+  }}
+  for(const value of [undefined,null,{{}},{{dispatch_available:'true'}},{{dispatch_available:true}}]){{
+    const button=n('button');bindExportActionAvailability(button,value,'dispatch_available');
+    assert.equal(button.disabled,value?.dispatch_available!==true);
+  }}
+  model={{available:true,rows:[]}};prep={{available:false,state:'PRIVATE_EXPORT_PREPARATION_UNBOUND'}};await refreshExport();
+  assert.equal($('exportPreparationState').textContent,'書き出し接続待ち');
+  assert.equal($('addExportQueueButton').disabled,true);
+  assert.match($('exportPreparationContent').textContent,/最終承認だけでは解消しません/);
+  const pending=exportJourneyState(view,{{}},review,prep,[]);assert.equal(pending.blocked,true);assert.match(pending.message,/未実装/);
+  const ready=exportJourneyState(view,{{}},review,{{}},[{{stage:'READY',binding_blockers:['DISPATCHER_UNBOUND'],dispatch_available:false}}]);
+  assert.equal(ready.blocked,true);assert.doesNotMatch(ready.message,/開始できます/);
+  const unknown=exportJourneyState(view,{{}},review,prep,[{{stage:'UNKNOWN'}}]);assert.match(unknown.message,/自動再試行せず/);
+  console.log('OK');
+}})().catch(err=>{{console.error(err);process.exit(1)}});
+"""
+    completed = subprocess.run(
+        [node, "-e", script], check=False, capture_output=True, text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
 
 
 def test_top_menu_uses_explicit_command_registry_and_focus_contract() -> None:
@@ -131,7 +936,9 @@ def test_central_settings_save_uses_shipped_selector_with_nonempty_workload_in_n
 
     functions = "\n".join(
         javascript_function(name)
-        for name in ("centralPreferredRouteValue", "renderCentralModelSettings")
+        for name in ("centralPreferredRouteValue", "requiredLocalRuntimeNames",
+                     "localRuntimeWarning", "renderRequiredRuntimeWarnings",
+                     "renderCentralModelSettings")
     )
     script = f"""
 const assert=require('node:assert/strict');
@@ -249,7 +1056,11 @@ assert.equal(ready.ready,true);
 assert.equal(ready.state,'READY');
 assert.doesNotMatch(ready.message,/qwen3:8b/);
 assert.equal(settingsModelLabel({{display_name_ja:'qwen3:8b',model_id:'qwen3:8b'}},1),'qwen3:8b');
-assert.equal(settingsModelLabel({{model_id:'qwen3:8b'}},1),'登録済みローカルAIモデル');
+assert.equal(settingsModelLabel({{model_id:'qwen3:8b'}},1),'qwen3:8b');
+assert.equal(settingsModelLabel({{display_name_ja:'Planning AI',model_id:'qwen3:8b'}},1),'Planning AI / qwen3:8b');
+for(const unsafe of ['private/model','C:\\\\private','user@host','https://host','token=value','SECRET','api_key=value','apikey=value','x'.repeat(81),'x'+String.fromCharCode(0),'x'+String.fromCharCode(127),'e'+String.fromCharCode(769),'😀'.repeat(65),'ſecret-model']){{
+  assert.equal(settingsModelLabel({{display_name_ja:'登録済みローカルAIモデル',model_id:unsafe}},1),'登録済みローカルAIモデル');
+}}
 const host={{items:[],append(item){{this.items.push(item)}}}};
 function card(title,body){{return `${{title}}\n${{body}}`;}}
 renderOllamaRuntimeStatus(host,{{state:'FAILED',message_ja:'ERR_TASK036_SECRET C:\\Users\\owner\\token.txt'}});
@@ -660,8 +1471,13 @@ def test_export_journey_projects_each_user_visible_state_in_node() -> None:
         re.DOTALL,
     )
     assert match is not None
+    helpers = "\n".join(
+        re.search(rf"function {name}\(.*?\r?\n\}}", HTML, re.DOTALL).group(0)
+        for name in ("exportBindingReason", "exportPreparationBindingMessage")
+    )
     script = f"""
 const assert=require('node:assert/strict');
+{helpers}
 {match.group(0)}
 const project={{project:{{project_id:'project-1'}}}};
 const editing={{next_recommended_action:'edit_plan.approve'}};
@@ -677,10 +1493,10 @@ assert.equal(exportJourneyState(project,editing,approved,preparation,[{{stage:'R
 const running=exportJourneyState(project,editing,approved,preparation,[{{stage:'RUNNING'}}]);
 assert.equal(running.current,'render');
 assert.match(running.message,/書き出し中/);
-const succeeded=exportJourneyState(project,editing,approved,preparation,[{{stage:'SUCCEEDED'}}]);
+const succeeded=exportJourneyState(project,editing,approved,preparation,[{{stage:'SUCCEEDED',destination_open_available:true}}]);
 assert.equal(succeeded.done.result,true);
 assert.match(succeeded.message,/保存先を開けます/);
-const retry=exportJourneyState(project,editing,approved,preparation,[{{stage:'HUMAN_REQUIRED'}}]);
+const retry=exportJourneyState(project,editing,approved,preparation,[{{stage:'HUMAN_REQUIRED',preflight_available:true}}]);
 assert.equal(retry.current,'preflight');
 assert.equal(retry.blocked,true);
 assert.match(retry.message,/再試行/);

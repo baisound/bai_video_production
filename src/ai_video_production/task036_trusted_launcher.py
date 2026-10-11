@@ -1108,6 +1108,30 @@ def _bootstrap_missing_product_manifest(
 
 
 
+def _comfyui_runtime_observer(endpoint: str) -> Callable[[], dict[str, object]]:
+    """Bind a bounded, read-only connection observation, not admission."""
+    client = ComfyUIClient(endpoint, timeout_seconds=2, max_response_bytes=64 * 1024)
+
+    def observe() -> dict[str, object]:
+        try:
+            stats = client.system_stats()
+        except ProductError as exc:
+            return {"state": (
+                "UNREACHABLE" if exc.code == "ERR_PROVIDER_COMFY_UNREACHABLE" else "UNKNOWN"
+            )}
+        except (OSError, ValueError):
+            return {"state": "UNKNOWN"}
+        valid = (
+            isinstance(stats, dict)
+            and isinstance(stats.get("system"), dict)
+            and isinstance(stats.get("devices"), list)
+            and all(isinstance(device, dict) for device in stats["devices"])
+        )
+        return {"state": "READY" if valid else "UNKNOWN"}
+
+    return observe
+
+
 def _build_trusted_launch(
     configuration: Task036LaunchConfiguration,
     *,
@@ -1520,10 +1544,12 @@ def _build_trusted_launch(
         )
     generation_execution_application = None
     generation_output_adoption_application = None
+    comfyui_runtime_observer = None
     if configuration.local_generation is not None or configuration.local_image_generation is not None:
         runtime_config = configuration.local_image_generation or configuration.local_generation
         assert runtime_config is not None
         local_client = comfy_client or ComfyUIClient(runtime_config.endpoint)
+        comfyui_runtime_observer = _comfyui_runtime_observer(runtime_config.endpoint)
         video_port = None
         image_port = None
         if configuration.local_generation is not None:
@@ -1678,6 +1704,16 @@ def _build_trusted_launch(
                 planning_application=planning_application,
                 connection_provider=connection_settings.current_connection,
             )
+        comfyui_snapshot_provider = None
+        if comfyui_runtime_observer is not None:
+            def comfyui_snapshot_provider():
+                guard = (
+                    runtime_lease.operation if runtime_lease is not None
+                    else local_operation_lifetime.operation
+                )
+                with guard():
+                    return comfyui_runtime_observer()
+
         bridge = Task036ShellBridge(
             coordinator.shell,
             native_dialog=dialog,
@@ -1700,6 +1736,7 @@ def _build_trusted_launch(
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
             ollama_runtime_snapshot_provider=lambda: managed_ollama_runtime.probe().as_dict(),
+            comfyui_runtime_snapshot_provider=comfyui_snapshot_provider,
             owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,

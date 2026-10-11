@@ -695,6 +695,12 @@ class Task044NleShellController:
             raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
         if not isinstance(args, dict) or set(args) != {"job_id"}:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export preparation request is invalid", ProductErrorCategory.VALIDATION)
+        if not callable(self.export_destination_provider) or not callable(self.export_dispatcher):
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DISPATCH_NOT_BOUND",
+                "Private Export destination or dispatcher is unavailable",
+                ProductErrorCategory.STATE,
+            )
         job_id = str(args["job_id"])
         preparation = self._export_preparation(job_id)
         confirmation = self.export_application.prepare_dispatch(
@@ -890,18 +896,45 @@ class Task044NleShellController:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export snapshot request is invalid", ProductErrorCategory.VALIDATION)
         if self.export_application is None:
             return {"available": False, "rows": []}
+        # Composition availability is not Gate authority or runtime readiness.
+        # Merely inspect references: snapshots must never re-prepare, allocate
+        # a confirmation, resolve a host path, or call the renderer.
+        destination_bound = callable(self.export_destination_provider)
+        dispatcher_bound = callable(self.export_dispatcher)
+        binding = {
+            "preparation_provider_bound": callable(self.export_preparation_provider),
+            "destination_provider_bound": destination_bound,
+            "dispatcher_bound": dispatcher_bound,
+            "execution_authorized": False,
+        }
         path = DurableProductJobStore.path(self.export_application.project_root)
         if not path.exists():
-            return {"available": True, "rows": [], "blanket_execute_all_authorized": False}
+            return {"available": True, "rows": [], "execution_binding": binding,
+                    "blanket_execute_all_authorized": False}
         collection = DurableProductJobStore.load(self.export_application.project_root)
         rows = []
         for job in collection.jobs:
             shell = durable_job_shell_projection(job).to_dict()
+            preparation_bound = callable(self.export_preparation_provider) or isinstance(
+                self.export_preparations.get(job.job_id), ExportPreparation
+            )
+            blockers = []
+            if not preparation_bound:
+                blockers.append("PREPARATION_UNBOUND")
+            if not destination_bound:
+                blockers.append("DESTINATION_UNBOUND")
+            if not dispatcher_bound:
+                blockers.append("DISPATCHER_UNBOUND")
             rows.append({**shell, "operation_identity": job.operation_identity,
                          "state_version": job.state_version,
                          "recovery_actions": list(job.recovery_actions),
+                         "preflight_available": preparation_bound,
+                         "dispatch_available": not blockers,
+                         "destination_open_available": preparation_bound and destination_bound,
+                         "binding_blockers": blockers,
                          "individual_confirmation_required": job.state is DurableProductJobState.READY})
         return {"available": True, "rows": rows,
+                "execution_binding": binding,
                 "blanket_execute_all_authorized": False,
                 "host_output_path_persisted": False}
 

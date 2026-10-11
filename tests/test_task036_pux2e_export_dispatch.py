@@ -123,6 +123,105 @@ def shell_for(
     return Task036ShellBridge(service, nle_controller=controller)
 
 
+@pytest.mark.parametrize("preparation_bound", [False, True])
+@pytest.mark.parametrize("destination_bound", [False, True])
+@pytest.mark.parametrize("dispatcher_bound", [False, True])
+def test_export_binding_snapshot_is_read_only_and_not_execution_authority(
+    tmp_path: Path, preparation_bound: bool, destination_bound: bool, dispatcher_bound: bool,
+) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    path = DurableProductJobStore.path(application.project_root)
+    before = path.read_bytes()
+
+    def must_not_call(*_args):
+        pytest.fail("A binding snapshot must not invoke a private provider")
+
+    controller = Task044NleShellController(
+        timeline=timeline, export_application=application,
+        export_preparation_provider=must_not_call if preparation_bound else None,
+        export_destination_provider=must_not_call if destination_bound else None,
+        export_dispatcher=must_not_call if dispatcher_bound else None,
+    )
+    snapshot = controller.export_snapshot()
+    row = snapshot["rows"][0]
+    assert row["job_id"] == queued.job_id
+    assert row["preflight_available"] is preparation_bound
+    assert row["dispatch_available"] is (preparation_bound and destination_bound and dispatcher_bound)
+    assert row["destination_open_available"] is (preparation_bound and destination_bound)
+    assert row["binding_blockers"] == [
+        code for bound, code in (
+            (preparation_bound, "PREPARATION_UNBOUND"),
+            (destination_bound, "DESTINATION_UNBOUND"),
+            (dispatcher_bound, "DISPATCHER_UNBOUND"),
+        ) if not bound
+    ]
+    assert snapshot["execution_binding"]["execution_authorized"] is False
+    assert controller._pending_dispatch_preparations == {}
+    assert path.read_bytes() == before
+    assert str(tmp_path) not in str(snapshot)
+
+
+def test_export_static_preparation_binding_is_job_specific(tmp_path: Path) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    other = replace(
+        preparation, output_target_identity="export:other",
+        final_approval=replace(preparation.final_approval, receipt_id="FINAL-EXPORT-OTHER"),
+    )
+    other_job = application.enqueue(other)
+    controller = Task044NleShellController(
+        timeline=timeline, export_application=application,
+        export_preparations={queued.job_id: preparation},
+    )
+    rows = {row["job_id"]: row for row in controller.export_snapshot()["rows"]}
+    assert rows[queued.job_id]["preflight_available"] is True
+    assert rows[other_job.job_id]["preflight_available"] is False
+    assert all(row["dispatch_available"] is False for row in rows.values())
+
+
+@pytest.mark.parametrize("missing", ["destination", "dispatcher"])
+def test_missing_dispatch_binding_rejects_before_preparation_or_confirmation(
+    tmp_path: Path, missing: str,
+) -> None:
+    application, preparation, queued, timeline = setup(tmp_path / "project")
+    path = DurableProductJobStore.path(application.project_root)
+    before = path.read_bytes()
+
+    def must_not_call(*_args):
+        pytest.fail("Missing composition must reject before calling providers")
+
+    controller = Task044NleShellController(
+        timeline=timeline, export_application=application,
+        export_preparation_provider=must_not_call,
+        export_destination_provider=None if missing == "destination" else must_not_call,
+        export_dispatcher=None if missing == "dispatcher" else must_not_call,
+    )
+    with pytest.raises(ProductError) as exc:
+        controller.export_prepare_dispatch({"job_id": queued.job_id})
+    assert exc.value.code == "ERR_NLE_SHELL_EXPORT_DISPATCH_NOT_BOUND"
+    assert controller._pending_dispatch_preparations == {}
+    assert path.read_bytes() == before
+
+
+def test_export_empty_queue_reports_unbound_composition_without_creating_store(tmp_path: Path) -> None:
+    application, _preparation, _queued, timeline = setup(tmp_path / "project")
+    empty_root = tmp_path / "empty-project"
+    empty_root.mkdir()
+    ProductProjectManifestStore.save(
+        empty_root, ProductProjectManifestStore.load(application.project_root)
+    )
+    before = sorted(str(path.relative_to(empty_root)) for path in empty_root.rglob("*"))
+    empty = ExportQueueApplication(project_root=empty_root, project_id=application.project_id)
+    controller = Task044NleShellController(timeline=timeline, export_application=empty)
+    assert controller.export_snapshot()["execution_binding"] == {
+        "preparation_provider_bound": False,
+        "destination_provider_bound": False,
+        "dispatcher_bound": False,
+        "execution_authorized": False,
+    }
+    assert not DurableProductJobStore.path(empty_root).exists()
+    assert sorted(str(path.relative_to(empty_root)) for path in empty_root.rglob("*")) == before
+
+
 def test_shell_preflight_confirmation_and_dispatch_update_same_job_without_path(tmp_path: Path) -> None:
     application, preparation, queued, timeline = setup(tmp_path / "project")
     observed = []

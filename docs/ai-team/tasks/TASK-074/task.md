@@ -1,6 +1,6 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R13 / R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S1_HOSTED_CLOSED / R24_S2_HOSTED_CLOSED / R24_S3_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
@@ -306,6 +306,12 @@ TASK-014/036/041/074 design-owner status amendments record allocation and
 boundaries only; they are not runtime-owner receipts. R24-S4, real external
 owner source, private/native execution and all later effects remain
 `SOURCE_START0 / EFFECT0`.
+
+The exact R24-S3 implementation then passed independent Tester, Critic and
+Judge review with unresolved `Critical/High/Medium/Low = 0/0/0/0`. It remains
+`MERGE_PENDING / SOURCE_START0 / EFFECT0` until hosted and post-main closure.
+R24-S4, runtime owner implementations and every later effect remain
+unallocated.
 
 ## Must not modify
 

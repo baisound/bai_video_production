@@ -1,6 +1,6 @@
 # TASK-101 — Existing Owner Model Import Custody
 
-- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / NATIVE_BLOCKED / CANONICAL_INTEGRATION_PENDING`.
+- Status: `IMC_D_R3_DESIGN_ACCEPTED / IMC_I_IMPLEMENTATION_ACCEPTED / IMC_N_D0_FROZEN_AWAITING_DEV4_REVIEW / NATIVE_BLOCKED`.
 - Governance: DEV-4 FOUNDATION CRITICAL.
 - Design intent: Owner's 2026-09-27 formal remaining-Task/detail-design request; independent Critic requires a separate import entrypoint rather than expanding TASK-084's training-terminal scope.
 - Responsibility predecessor/dependency: TASK-084 protected training artifact custody design; its training branches/source/history are preserved, not reopened or aliased.
@@ -87,3 +87,18 @@ Final local verification is TASK-101 focused `37 / 37 PASS`, TASK-101 plus direc
 During final verification, test caches and bytecode were disabled. Compile output was bound to the operation-specific WSL system-temp root `/tmp/bvp-task101-imci-r2-20261010-001/pycache`; final readback found that root absent, so intentional temporary residuals are zero. The final public-safe external checkpoint is bound to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-i\20261010-imc-i-final-001\` and must be written and read back after this completion record is committed.
 
 IMC-I acceptance does not complete TASK-101. IMC-N, IMC-L, private/native import, key/DACL work, protected destination creation, live capability/load/inference, consumer integration, publication, Release, Deploy, and Production remain separately blocked or unallocated. Current `origin/main` advanced to `110d595acd7802d599914823760ed622ac1983c7` after the implementation baseline; its changed paths have zero overlap with the exact-five IMC-I scope. Publication remains unauthorized, so this unit stops commit-ready without push or PR.
+
+## IMC-N-D0 native gate design allocation — 2026-10-11
+
+The Owner explicitly approved `TASK-101 / IMC-N-D0` as an effect-zero design/gate unit. Repository Allowed Files are exactly:
+
+1. `docs/ai-team/tasks/TASK-101/task.md`
+2. `docs/ai-team/tasks/TASK-101/imc-n-protected-native-import-readback-plan-r0.md`
+
+External public-safe Evidence is limited to `C:\home\baisound\evidence\bai-video-production\TASK-101\imc-n-d0\<run-id>\`. The unit may create its dedicated worktree/branch, write only the exact-two documents/Evidence, run documentation/static/diff checks and obtain independent DEV-4 Critic/Tester/Judge review.
+
+This allocation does not authorize any private source access, native source handle/metadata/body read, protected destination provisioning/creation, copy/encryption, key/DPAPI/DACL operation, cleanup, live receipt/readback/capability issuance, model/runtime load, inference, audio, Provider/network use, Product/Shell connection, Release, Deploy or Production. D0 freezes the future implementation/native-run gate; it does not release it.
+
+The frozen R0 candidate is [the IMC-N protected native import/readback gate plan](imc-n-protected-native-import-readback-plan-r0.md). It separates future `IMC-N-I` synthetic implementation from one exact `IMC-N-V` private/native run, preserves the accepted IMC-D ABI/failure matrix, proposes a new TASK-101-specific Windows backend/test exact-four for later allocation, and records a closed prerequisite ledger. At this freeze, the native owner/scope, TASK-046 current evidence, storage/cipher/key/principal/DACL/retention/revocation policies, source/destination issuers, exact-handle binary port, exact native run and cleanup authority remain explicitly blocked or unallocated.
+
+The D0 candidate now requires independent Critic and Tester review and DEV-4 Judge closure. Until that review is accepted and recorded, no follow-on implementation allocation may infer this candidate as accepted design. Even after D0 acceptance, `IMC-N-I`, `IMC-N-V`, IMC-L and all private/native/load/inference effects require separate exact Owner gates.

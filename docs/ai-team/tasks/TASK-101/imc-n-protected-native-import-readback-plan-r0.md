@@ -1,6 +1,6 @@
 # TASK-101 IMC-N-D0 — Protected Native Import/Readback Gate Plan R0
 
-Status: `FROZEN_R0_AWAITING_INDEPENDENT_DEV4_REVIEW / EFFECT_ZERO / NATIVE_BLOCKED`
+Status: `RECOVERY_R1_FROZEN_AWAITING_INDEPENDENT_DEV4_REREVIEW / EFFECT_ZERO / NATIVE_BLOCKED`
 
 ## 1. Outcome and non-outcome
 
@@ -55,38 +55,39 @@ The following effects are explicitly outside D0:
 
 A future implementation may import unchanged shared primitives only for operations their accepted contracts actually provide. If binary no-replace publication, directory durability, handle pinning or security-descriptor verification requires a new shared primitive, implementation must stop and obtain a separately scoped design/Allowed Files review rather than silently extending a shared owner.
 
-## 4. Three distinct gates
+## 4. Four distinct gates
 
 Acceptance of one row never implies another.
 
 | unit | permitted work | prohibited work | exit |
 |---|---|---|---|
 | `IMC-N-D0` | exact-two design/Evidence only | all source, test, private and native effects | accepted gate plan; native remains blocked |
-| future `IMC-N-I` | separately authorized exact source/test files; synthetic bytes only beneath unique OS temp; no private roots | private source, protected destination, production cipher/key/DACL, live receipt | accepted backend candidate with DEV-4 negative/recovery tests |
+| future `IMC-N-I0` | separately authorized exact source/test files; private capability interfaces, exact-handle port and synthetic fault harness only beneath unique OS temp | private source, protected destination, production cipher/key/DACL, production construction, live receipt | accepted interface/port candidate with DEV-4 negative/recovery tests |
+| future `IMC-N-I1` | separately authorized production-backend implementation against accepted I0 identities and approved policies; synthetic bytes only | private source/root, live key use, live receipt or native run | accepted production-disabled-by-authority backend candidate |
 | future `IMC-N-V` | one separately authorized operation with exact issuers, roots, policies and effect list | every effect not named by that gate; load/inference; destructive cleanup | exact pair sealed, durably reread, public-safe Evidence reread, or a terminal fail-closed/unknown result |
 
 Publication/PR authority, cleanup authority and native-run authority are also distinct. Implementation acceptance cannot be used to run the backend. A native-run approval cannot expand repository Allowed Files.
 
 ## 5. Closed prerequisite ledger
 
-Every item below must be `SATISFIED` by immutable identity and fresh readback before the corresponding future unit starts. `PRESENT`, configured, previously approved, self-hashed, inferred or `NOT_CONFIRMED` is not `SATISFIED`.
+Every item below must be `SATISFIED` by immutable identity and fresh readback at the indicated start or exit gate. `PRESENT`, configured, previously approved, self-hashed, inferred or `NOT_CONFIRMED` is not `SATISFIED`.
 
 | gate | required evidence | required for | D0 state |
 |---|---|---|---|
-| `N01_IMC_I_CURRENT` | accepted IMC-I exact contract/schema/mirror/test identities on current base | I, V | `SATISFIED` at D0 base `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` |
-| `N02_NATIVE_OWNER_SCOPE` | named implementation owner and exact future Allowed Files | I | `BLOCKED_UNALLOCATED` |
-| `N03_TASK046_CURRENTNESS` | exact current historical reconciliation, ModelArtifactBinding, H4, Consent, rights and license records and their trusted verifiers | V | `BLOCKED_UNSUPPLIED` |
-| `N04_STORAGE_POLICY` | approved protected-root class, containment, ownership, security, retention and revocation policy digests | I, V | `BLOCKED_UNSUPPLIED` |
-| `N05_CIPHER_KEY_POLICY` | approved streaming/binary cipher backend identity, cipher policy and key-scope identity; key custodian and zeroization/readback contract | I, V | `BLOCKED_UNSUPPLIED` |
-| `N06_PRINCIPAL_DACL_POLICY` | approved principal/access policy and trusted security-descriptor verifier; exact rule for inherited versus explicit child DACL | I, V | `BLOCKED_UNSUPPLIED` |
-| `N07_SOURCE_ISSUER` | reviewed non-serializable source-capability issuer and currentness/physical-identity verifier | I, V | `BLOCKED_UNALLOCATED` |
-| `N08_DESTINATION_ISSUER` | reviewed non-serializable destination-capability issuer, root binding and collision/currentness verifier | I, V | `BLOCKED_UNALLOCATED` |
-| `N09_NATIVE_PORT` | exact-handle binary read/write, no-replace, file+directory durability and pinned reread port with Windows support and synthetic fault injection | I, V | `BLOCKED_UNDESIGNED` |
+| `N01_IMC_I_CURRENT` | accepted IMC-I exact contract/schema/mirror/test identities on current base | I0 start, I1 start, V start | `SATISFIED` at D0 base `5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04` |
+| `N02_NATIVE_OWNER_SCOPE` | named owner and exact Allowed Files for that implementation unit | I0 start, I1 start | `BLOCKED_UNALLOCATED` |
+| `N03_TASK046_CURRENTNESS` | exact current historical reconciliation, ModelArtifactBinding, H4, Consent, rights and license records; trusted verifier plus a one-operation currentness reservation held through success construction | I1 start, V start | `BLOCKED_UNSUPPLIED` |
+| `N04_STORAGE_POLICY` | approved protected-root class, containment, ownership, security, retention and revocation policy digests | I1 start, V start | `BLOCKED_UNSUPPLIED` |
+| `N05_CIPHER_KEY_POLICY` | approved streaming authenticated-encryption backend identity, cipher policy and key-scope identity; key custodian and zeroization/readback contract | I1 start, V start | `BLOCKED_UNSUPPLIED` |
+| `N06_PRINCIPAL_DACL_POLICY` | approved principal/access policy and trusted security-descriptor verifier; exact rule for inherited versus explicit child DACL | I1 start, V start | `BLOCKED_UNSUPPLIED` |
+| `N07_SOURCE_ISSUER` | accepted exact non-serializable source-capability issuer and currentness/physical-identity verifier implementation identity | I0 exit, I1 start, V start | `DESIGN_BOUNDARY_FROZEN / IMPLEMENTATION_ABSENT` |
+| `N08_DESTINATION_ISSUER` | accepted exact non-serializable destination-capability issuer, root binding and collision/currentness verifier implementation identity | I0 exit, I1 start, V start | `DESIGN_BOUNDARY_FROZEN / IMPLEMENTATION_ABSENT` |
+| `N09_NATIVE_PORT` | accepted exact-handle binary read/write, no-replace, file+directory durability, authenticated decrypt/reread port with Windows support and synthetic fault injection | I0 exit, I1 start, V start | `DESIGN_BOUNDARY_FROZEN / IMPLEMENTATION_ABSENT` |
 | `N10_EXACT_RUN_GATE` | one operation ID, exact intent, exact source/destination capability identities, exact allowed effects, run ID and expiry | V | `BLOCKED_UNAUTHORIZED` |
 | `N11_EVIDENCE_ROOT` | canonical contained public-safe Evidence root resolved to the exact run and proven non-foreign | V | `BLOCKED_UNRESOLVED` |
 | `N12_CLEANUP_POLICY` | separate exact-identity cleanup authority, if cleanup is desired | V cleanup only | `BLOCKED_UNAUTHORIZED`; preservation is default |
 
-`IMC-N-I` must not start while any I-marked row is blocked. `IMC-N-V` must not start while any V-marked row is blocked. D0 intentionally does not resolve these Owner/security dependencies.
+`IMC-N-I0` may start only after fresh `N01` and a new exact `N02` allocation. Its exit requires accepted immutable `N07`, `N08` and `N09` implementation identities. `IMC-N-I1` may start only after fresh `N01` through `N09` satisfaction and its own new exact `N02` allocation. `IMC-N-V` may start only after every V-marked row is satisfied. This removes any circular claim that an implementation must already exist before the unit assigned to create and review it can start. D0 intentionally does not allocate either implementation unit or resolve the Owner/security dependencies.
 
 ## 6. Private capability boundary
 
@@ -141,17 +142,19 @@ PLANNED
 
 It must implement the following protocol without introducing a second public ABI:
 
-1. Reparse the exact intent and all current producer evidence; verify trusted time, issuer identity, policy digests, operation uniqueness, capability type and expiry.
+1. Reparse the exact intent and all current producer evidence; verify trusted time, issuer identity, policy digests, operation uniqueness, capability type and expiry. Acquire an exact one-operation TASK-046 currentness reservation whose verifier can fail closed and which remains held through success-record construction.
 2. Complete the pre-effect placement/collision gate. Failure is `NO_EFFECT` with all native counters zero.
 3. Burn/open the exact source capability, pin both source ancestors and objects, reject symlink/reparse, disallowed hardlink count, non-regular file, role crossing, shared identity, replacement, size/hash mismatch or close uncertainty.
 4. Revalidate the destination capability and pin the existing protected root/ancestor/security identity. Create only the exact operation-owned temporary namespace. Never create or repair the protected root opportunistically.
 5. Stream each source through the approved production cipher into operation-owned temporary objects. Bound all plaintext/ciphertext bytes; retain no full plaintext copy; zeroize bounded buffers with confirmed readback according to the approved key policy.
 6. Flush each ciphertext file and its containing directory, pin and reread its ciphertext digest, byte count, physical identity and security commitment. No plaintext body is written to scratch or Evidence.
 7. Build the closed private inventory from verified observations and publish the inventory seal last using no-replace semantics. Flush the seal and directory, then pin/reread the full sealed set.
-8. Only after exact two-file membership, all content/ciphertext identities, policies, durability and physical reread agree may the backend construct the accepted private receipt and pure `CURRENT` readback.
-9. Close every source/destination/key handle and confirm close/identity/zeroization. Any ambiguity at or after an attempted open maps to `COMPLETION_UNKNOWN` as required by IMC-D; no blind retry or alternate target is allowed.
+8. From pinned sealed ciphertext rereads, perform authenticated decrypt verification through the approved cipher/key scope. Recompute each plaintext digest and byte count in bounded buffers, compare them to the exact intent, authenticate every header/tag and confirm buffer zeroization. Wrong key, tag, header, truncation, digest, byte count or decrypt result fails closed; no plaintext body is persisted.
+9. Immediately before finalization, freshly reparse and revalidate TASK-046/H4/Consent/rights/license evidence, revocation, trusted time, intent/run/capability expiry, the held currentness reservation, destination security/policy and the exact sealed physical identities. Any mid-run change, expiry, revocation or unverifiable reservation prevents success.
+10. Close every source/destination/key handle and confirm close, final physical identity and zeroization readback. Any ambiguity at or after an attempted open maps to `COMPLETION_UNKNOWN` as required by IMC-D; no blind retry or alternate target is allowed.
+11. Only after steps 1–10 all succeed may the backend construct the accepted private receipt and pure `CURRENT` readback from the frozen observations. Receipt/readback construction before confirmed close/identity/zeroization is forbidden. A later ambiguity can therefore never coexist with previously issued live success evidence.
 
-The private on-disk envelope and operation journal are implementation details but security-critical. `IMC-N-I` must freeze their version, exact fields, bounds, cipher metadata, append-only transition semantics, recovery parser and publication order before production construction is enabled. The journal may not use same-path mutable phase authority. If a durable transition cannot be represented without changing the accepted IMC-D failure semantics, implementation stops for design revision.
+The private on-disk envelope and operation journal are implementation details but security-critical. `IMC-N-I0` must freeze and independently accept their version, exact fields, bounds, abstract authenticated-cipher metadata, append-only transition semantics, recovery parser and publication order before `IMC-N-I1` may start. The journal may not use same-path mutable phase authority. If a durable transition cannot be represented without changing the accepted IMC-D failure semantics, implementation stops for a separately authorized design revision.
 
 ## 9. DACL, key and destination provisioning split
 
@@ -180,32 +183,32 @@ A `COMPLETION_UNKNOWN` result blocks reissue and import of the same operation/in
 
 ## 11. Future implementation exact-file proposal
 
-Subject to satisfaction of all I-marked gates and a new Owner allocation, the narrow default `IMC-N-I` repository proposal is:
+Subject to the exact start/exit gates above and a new Owner allocation for each unit, the narrow default `IMC-N-I0` repository proposal is:
 
 1. `docs/ai-team/tasks/TASK-101/task.md`
-2. `docs/ai-team/tasks/TASK-101/imc-n-protected-native-import-readback-plan-r0.md`
-3. `src/ai_video_production/task101_existing_model_import_custody_windows.py` (new)
-4. `tests/test_task101_existing_model_import_custody_windows.py` (new)
+2. `src/ai_video_production/task101_existing_model_import_custody_windows.py` (new)
+3. `tests/test_task101_existing_model_import_custody_windows.py` (new)
 
-The accepted IMC-I source/schema/mirror/test exact-five, TASK-082, TASK-084 and `secure_authority_io.py` remain read-only dependencies. If implementation cannot be completed within this exact-four boundary, it stops and requests an explicit scope/design amendment. The proposal is not current mutation authority.
+After accepted I0 identities and policy gates exist, the default `IMC-N-I1` proposal is the same exact-three paths under a separate Owner allocation. The accepted D0 plan, IMC-I source/schema/mirror/test exact-five, TASK-082, TASK-084 and `secure_authority_io.py` remain read-only dependencies. Implementation status may be appended only to `task.md`; this accepted plan is not writable implementation status. A semantic design correction requires a separately authorized exact-two D0 revision and fresh DEV-4 review. If either implementation unit cannot be completed within its exact-three boundary, it stops and requests an explicit scope/design amendment. Neither proposal is current mutation authority.
 
 Synthetic tests must use a run-unique directory beneath the OS temporary root supplied by the test framework and a cipher whose identity is provably non-production. No test path may be a drive root/direct child, repository, worktree, canonical Evidence root or existing foreign path. Tests must record their resolved temp root and intentional residuals; default residuals are zero.
 
 ## 12. Required verification matrix
 
-`IMC-N-I` requires independent DEV-4 Critic/Tester/Judge and, at minimum:
+`IMC-N-I0` and `IMC-N-I1` each require independent DEV-4 Critic/Tester/Judge appropriate to their boundary. Across the accepted implementation sequence, verification includes at minimum:
 
 - exact source/destination capability type, issuer, operation, intent, expiry and one-use tests;
 - pre-effect zero-count tests for malformed/currentness/authority/containment/collision failures;
 - exact-two role/order, size/hash, pair identity and runtime identity tests;
 - symlink/reparse, hardlink, ancestor/root/object replacement, same-bytes/different-identity and shared-identity tests;
 - foreign/unknown target, target-appears race, temp replacement and no-replace loser tests;
-- short write/read, cipher failure, key rejection, file flush, directory flush, seal-last and pinned-reread fault injection at every boundary;
+- short write/read, cipher failure, wrong key, wrong/missing authentication tag, header corruption, ciphertext truncation, plaintext digest/length mismatch, file flush, directory flush, seal-last and pinned-reread fault injection at every boundary;
 - crash/restart at every state and durable `COMPLETION_UNKNOWN`/no-retry proof;
 - security-descriptor/principal/policy mismatch and post-create/post-seal change tests;
 - bounded memory/bytes/count and zeroization confirmation/failure tests;
 - private/path/key/account/SID/exception leakage probes for result, log, repr and public Evidence;
-- receipt only after seal and full reread; every other terminal outcome produces zero live receipt/readback;
+- mid-run H4/Consent/rights/license/custody revocation, trusted-time advance, intent/run/capability expiry and currentness-reservation loss before finalization;
+- receipt only after seal, authenticated decrypt/plaintext comparison, fresh terminal currentness and confirmed handle close/identity/zeroization; every other terminal outcome produces zero live receipt/readback;
 - exact-file scope, schema/mirror unchanged, direct TASK-101/TASK-100/TASK-084 regression and static import/compile checks.
 
 `IMC-N-V` additionally requires a pre-run readback of every V gate, exact resolved output roots, independent preflight review, and post-run public-safe Evidence readback. Technical result is `PASS`, `FAIL` or `NOT_CONFIRMED`; observation/execution status is recorded separately.
@@ -236,4 +239,4 @@ D0 may be accepted when:
 - the DEV-4 Judge accepts the gate plan;
 - public-safe external Evidence is written and reread.
 
-D0 acceptance leaves TASK-101 active with `NATIVE_BLOCKED`. The next action is not native execution. It is an exact Owner decision resolving the blocked I prerequisites and allocating `IMC-N-I`, or a deliberate pause with the prerequisite ledger preserved.
+D0 acceptance leaves TASK-101 active with `NATIVE_BLOCKED`. The next action is not native execution. It is an exact Owner decision allocating `IMC-N-I0` after fresh `N01` readback and an exact `N02` owner/scope, or a deliberate pause with the prerequisite ledger preserved. I1 and V remain later separate gates.

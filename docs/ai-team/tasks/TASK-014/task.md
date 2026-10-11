@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_REVIEW_PASSED / MERGE_PENDING / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_HOSTED_CLOSED / R24_S3_OWNER_ALLOCATED / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -489,3 +489,15 @@ compromise and is outside this Atomic Unit; a future untrusted in-interpreter
 plugin requirement would need a separately authorized S1/S2 isolation Task.
 R24-S2 remains `MERGE_PENDING / SOURCE_START0 / EFFECT0` until the exact commit,
 hosted checks, merge, post-merge checks and external Evidence readback complete.
+
+R24-S2 then hosted-closed through PR `#614`, exact merge
+`5748203d4e61a6b8c3c3695af0ea4a78e5e1aa04`, post-main checks and external
+Evidence readback. After the serialized TASK-036 exact8 and TASK-111 source
+dependencies also reached exact green main
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1`, the Owner allocated only R24-S3
+in `r24-s3-coordinated-prearm-allocation.md`. S3 is the source-only,
+effect-zero prearm amendment/adapter for exact runtime owner roles
+TASK-014/072/075/076. The coordinated TASK-014/036/041/074 documents are
+design-owner status amendments only and cannot substitute for those runtime
+roles. R24-S4 and every private, native, model, Provider, audio/WAV, Asset,
+publication or downstream PASS effect remain unallocated.

@@ -293,6 +293,20 @@ Design accept後にexact branch/lock/currentnessを再確認してから次だ�
 
 TASK-071、TASK-072、Product Project storeへのadapter amendmentは、producer base implementation、exact owner lock、sole-writer、追加Allowed Filesが別途確認されるまで候補にも含めない。
 
+## R24-S3 coordinated-prearm allocation — 2026-10-12
+
+R24-S1 and R24-S2 are hosted-closed. On fresh exact main
+`9fb74ff88b07597f8d9b06eb7289ef0c2b05d9c1`, with open PR overlap `0` and
+non-closed work-lock overlap `0`, the Owner allocated only the source-only,
+effect-zero R24-S3 coordinated-prearm amendment/adapter in
+`../TASK-014/r24-s3-coordinated-prearm-allocation.md`.
+
+Its exact runtime-owner roles are TASK-014/072/075/076. The separately requested
+TASK-014/036/041/074 design-owner status amendments record allocation and
+boundaries only; they are not runtime-owner receipts. R24-S4, real external
+owner source, private/native execution and all later effects remain
+`SOURCE_START0 / EFFECT0`.
+
 ## Must not modify
 
 - `src/ai_video_production/task036_*`

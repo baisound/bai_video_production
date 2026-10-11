@@ -1,6 +1,6 @@
 # TASK-014 — Voice TTS / Owner Narration
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / SOURCE_START0 / EFFECT0`
+- Status: `PROPOSED / OWNER-DIRECTED DESIGN / D4_R24_DESIGN_REVIEW_PASSED / R24_OWNER_ACCEPTANCE_ISSUED / R24_S2_OWNER_ALLOCATED / SOURCE_START0 / EFFECT0`
 - Governance candidate: `DEV-4` because voice identity, paid API, consent and external egress are involved
 - Provider baseline: ElevenLabs adapter foundation exists since package `0.6.2`
 - Owner capability: ElevenLabs Pro account with an already trained approximately two-hour clone of the owner's own voice
@@ -464,3 +464,14 @@ R24 exact-byte review passed. Tester, Critic and Judge each returned `PASS` with
 are preserved in `../TASK-074/design-r24-independent-review-receipt.md`. This
 closes R24-S0 only. TASK-014 owner acceptance, cross-owner amendments, source,
 runtime and every effect remain separately gated and unissued.
+
+TASK-014 then issued and independently verified its R24 owner acceptance in
+`d4-r24-owner-acceptance.json`. R24-S1 is hosted-merged and closed. The Owner
+explicitly allocated the next ordered unit, R24-S2, under
+`r24-s2-restricted-publication-store-allocation.md`. S2 is limited to a sealed
+restricted consumer, body-free synthetic POST parser/schema, append-only
+Project-scoped in-memory fake history and sealed effect-zero current read. It
+cannot use a real Project/filesystem store or mint a canonical publication
+receipt/current type. R24-S3, both coordinated amendments and every private,
+native, model, Provider, audio/WAV, Asset, publication or downstream PASS effect
+remain unallocated and blocked.

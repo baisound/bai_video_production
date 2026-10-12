@@ -1,16 +1,15 @@
 # TASK-072 — Product Operation Ticket and Child Containment
 
-- Status: `OWNER_ALLOCATED / ODCR-D0 CURRENTNESS_RECONCILIATION / SOURCE_BLOCKED`.
-- Atomic Unit: `OPERATION-DESIGN-CURRENTNESS-RECONCILIATION-D0`.
+- Status: `OWNER_ALLOCATED / FRESH_DETAILED_DESIGN_R0_ACCEPTED / SOURCE_I1_ADMITTED_AFTER_HOSTED_CLOSURE / HOSTED_CLOSURE_PENDING / LIVE_SOURCE_BLOCKED`.
+- Atomic Unit: `OPERATION-TICKET-FRESH-DETAILED-DESIGN-R0`.
 - Profile: `DEV-4 FOUNDATION CRITICAL`.
-- Allocation: 2026-10-12 JST, direct Owner authorization to reconcile the
-  historical TASK-072 responsibility from exact current main without building,
-  adopting historical source, or starting broker implementation.
-- Base: `7d1ae8a809c4e603b4e02cf701b5c71437e5fbdb`, exact remote main supplied by
-  the Owner and verified at worktree creation.
-- Branch: `codex/task-072-currentness-reconciliation-r0`.
+- Allocation: 2026-10-12 JST, direct Owner instruction `次へ` after the D0
+  currentness gate reached hosted closure.
+- Base: `4c68ad6d852a0c618eb35fe0b92649d9f8ac77df`, exact remote main verified
+  before the dedicated worktree was created.
+- Branch: `codex/task-072-fresh-detailed-design-owner-r0`.
 - Product effects: source/schema/test/native/build/install/private/provider/
-  download/Release/Deploy/Production effects are all `0`.
+  download/Release/Deploy/Production effects are all `0` in this unit.
 
 ## Responsibility
 
@@ -19,123 +18,142 @@ TASK-072 owns the Product-private one-shot machine-operation authority boundary:
 - live nonserializable operation/ticket state;
 - authenticated Product-to-broker and exact-child channels;
 - exact process, build, user/session and one-use budget binding;
-- operation-specific immutable config only where the selected mode requires it;
+- operation-specific immutable config only for a mode that requires it;
 - serialized child create/contain/start/abort ownership;
 - one dedicated non-inheritable Windows Job containment handle where a child is
   created;
 - exact known/unknown terminal classification and body-free public projection.
 
 TASK-072 does not own immutable secure I/O (TASK-068), Project/Job currentness
-or durable Job events (TASK-043/TASK-076), installer authority or terminal
-handoff (TASK-063/TASK-070), Human authorization (TASK-071), consumer operation
-semantics (including TASK-075), compute/network admission policy (TASK-066),
-private model/reference custody, Product release, or cleanup.
+or durable Job events (TASK-043/TASK-099/TASK-076), installer authority or
+terminal handoff (TASK-063/TASK-070), Human authorization (TASK-071), consumer
+operation semantics (including TASK-075), compute/network admission policy
+(TASK-066), private model/reference custody, Product release, or cleanup.
 
-Current-main references to TASK-072 are dependency contracts only. They do not
-materialize TASK-072 source, create a live capability, or make an unmerged draft
-canonical.
+## D0 prerequisite closure
+
+The prior [operation-ticket currentness reconciliation](operation-ticket-currentness-reconciliation-r0.md)
+closed through PR #622 and normal merge commit
+`4c68ad6d852a0c618eb35fe0b92649d9f8ac77df`. The exact PR head passed `9 / 9`
+checks; post-main CI passed `6 / 6` and Security passed `2 / 2`. D0 preserved
+the dirty R7 packet as `PARKED`, rejected historical A1 source adoption, and
+required a fresh detailed design before any source admission.
+
+This unit satisfies only that next design gate. It does not reopen, normalize,
+copy, amend, reset, clean, or delete any historical branch, worktree, packet,
+Evidence, or source candidate.
 
 ## Allowed Files — exactly two repository paths
 
 1. `docs/ai-team/tasks/TASK-072/task.md`
-2. `docs/ai-team/tasks/TASK-072/operation-ticket-currentness-reconciliation-r0.md`
+2. `docs/ai-team/tasks/TASK-072/operation-ticket-fresh-detailed-design-r0.md`
 
 External public-safe Evidence only:
-`C:\home\baisound\evidence\bai-video-production\TASK-072\operation-ticket-currentness-reconciliation\<unique-run-id>\`.
+`C:\home\baisound\evidence\bai-video-production\TASK-072\operation-ticket-fresh-detailed-design\<unique-run-id>\`.
 
 No shared current-state, roadmap, index, lock registry, CHANGELOG, source,
-schema, test, fixture, packaging, installer, historical branch/worktree or
+schema, test, fixture, packaging, installer, historical branch/worktree, or
 foreign Task path is writable under this unit. Documentation paths are ASCII.
 
-## Historical classification
+## Detailed-design decision
 
-The detailed classifications and exact identities are frozen in the linked
-[currentness reconciliation](operation-ticket-currentness-reconciliation-r0.md).
+The linked [fresh detailed design](operation-ticket-fresh-detailed-design-r0.md)
+keeps every live/native route blocked and admits only, after this exact design
+reaches hosted closure:
 
-- The user-owned dirty R7 file is **PARKED**. Its own independent review rejected
-  it with unresolved High findings. It is not copied, reset, committed, amended
-  or used as source-start authority.
-- Closed draft PR #475 and clean historical design commits are evidence inputs,
-  not canonical main content.
-- Closed draft PR #515 and its source/schema/test payload are rejected for
-  adoption into this unit. Their historical hashes remain evidence; source must
-  be redesigned and freshly implemented only after a canonical gate admits it.
+`SOURCE_ADMISSION = ADMITTED_EFFECT_ZERO_PURE_CORE_I1`.
+
+That candidate is a pure, fixture-only parser/state-machine/public-projection
+slice. It creates no machine authority, selects no current record, opens no
+path, creates no process/channel/Job Object, and composes no live producer.
+
+The future I1 candidate may modify exactly:
+
+1. `src/ai_video_production/task072_operation_ticket.py`
+2. `schemas/task072-operation-ticket.schema.json`
+3. `src/ai_video_production/schema_resources/task072-operation-ticket.schema.json`
+4. `tests/test_task072_operation_ticket.py`
+5. `tests/test_task072_operation_ticket_faults.py`
+6. `docs/ai-team/tasks/TASK-072/task.md`
+
+This list is a bounded future source allocation only after this design receives
+final DEV-4 acceptance and hosted closure. It is not source authority in this
+design unit. `CHANGELOG.md` remains excluded.
+
+## Live dependency status
+
+Live broker, Product integration, native child containment, installer/profile
+binding, Owner-voice execution, compute/network admission, and Production
+effects remain blocked. Current dependencies include source/native gaps in
+TASK-063/070/071/075/076, TASK-099 JCV-N/canonical-consumer integration,
+TASK-102 Product enrollment, accepted exact-child network isolation and the
+owner amendments required for local-voice route admission.
+
+No old design reference, public receipt, equal hash, fixture PASS, or historical
+test may satisfy those live dependencies.
 
 ## Context scope
 
-MUST READ: this Task record; the reconciliation; relevant current-main
-TASK-063/066/068/070/071/075/076 responsibility and TASK-072 dependency
-sections; exact PR/commit/worktree receipts named by the reconciliation.
-
-READ IF REQUIRED: a named historical file or current owner contract needed to
-resolve one exact contradiction. DO NOT READ BY DEFAULT: private media/model
-bodies, unrelated completed Tasks, all repository history, full OS
-Architecture, native runtime state or historical Evidence unrelated to the
-named receipts. MAY MODIFY: exact-two only. MUST NOT MODIFY: every other path,
-especially historical worktrees and implementation candidates.
+MUST READ: this Task record; D0 reconciliation; the fresh detailed design;
+current TASK-043/063/066/068/070/071/075/076 and TASK-099/102 exact dependency
+sections named by the design. READ IF REQUIRED: one exact owner contract needed
+to resolve a contradiction. DO NOT READ BY DEFAULT: private media/model bodies,
+unrelated completed Tasks, all repository history, full OS Architecture, or
+native runtime state. MAY MODIFY: exact-two only. MUST NOT MODIFY: every other
+path, especially historical worktrees and implementation candidates.
 
 Escalate an unexpected main/head change, exact-two overlap, unknown dirty state,
-new Critical/High design finding after the bounded correction budget, or any
+new Critical/High design finding after two bounded correction cycles, or any
 request to start source/native/build effects.
 
-## D0 plan and completion
+## Design verification and completion
 
-1. Reconcile responsibility and current dependency contracts from current main.
-2. Preserve exact historical identities and classify every candidate without
-   copying it.
-3. Freeze the source-admission decision and the minimum next-design criteria.
-4. Obtain independent Critic, Tester and Judge review. At most two bounded
-   correction cycles are allowed.
-5. Run exact-two, ASCII-path, relative-link, secret-text and documentation
-   consistency checks; persist and read back canonical external Evidence.
-6. Commit, push and open a Japanese PR. Merge normally only after the exact head
-   receives green hosted checks and current-main reconciliation remains clean.
+1. Verify fresh remote main, dedicated worktree, branch and clean pre-edit state.
+2. Resolve every D0 section 6 contradiction against current owner contracts.
+3. Freeze disjoint execution modes, exhaustive predecessor/terminal rules,
+   authority-zero fixture fields, and exact future I1 Allowed Files.
+4. Obtain independent Critic and Tester results on the same candidate hashes.
+5. Apply at most two bounded exact-two correction cycles, then obtain a separate
+   Judge decision on the final hashes.
+6. Run exact-two, ASCII-path, relative-link, secret-text, whitespace and OSS
+   documentation-readiness checks.
+7. Persist and read back external Evidence; commit exact-two, push the task
+   branch, open a Japanese PR, and merge normally only after exact-head hosted
+   checks are green.
 
-D0 completes only when Critic/Tester/Judge accept the same frozen payload with
-unresolved Critical/High `0/0`, the exact-two checks pass, Evidence is read back,
-and the hosted PR is merged normally. D0 is a canonical currentness gate, not a
-source implementation.
+Completion of this unit admits at most the separately implemented pure I1
+candidate. It does not complete TASK-072 and does not admit a live broker.
 
-## D0 independent review receipt
+## Recovery R3 final review receipt
 
-The initial frozen candidate was reviewed independently at these exact SHA-256
-identities:
+The direct Owner-authorized one-finding Recovery R3 added exactly one missing
+`OWNER_EXTERNAL_INPUT_RECOVERY_REVOKE_V1` inventory entry and did not reopen any
+other contract. The contract candidate reviewed by all three independent roles
+had these frozen hashes:
 
-- `task.md`: `4399AEB77A16AF7FDA7CC48FA136F149311B916EA2CBE4FEEF8AFEB5017A701C`
-- `operation-ticket-currentness-reconciliation-r0.md`:
-  `FF6E90E50BE874B9031B1CDF1EF4ABE617DFA377D6E530598527DB8AC040EC6F`
+- `task.md`: `55190C52E519CD63FE5AC567BECDE38C06FD9AA60F4E869CE60092F5E949DE42`
+- detailed design: `708C3FD413EB85E3C1BEF6614A770B51090D5D87E42E2EA876DC7D8EB70FE3E0`
 
-Critic result: `ACCEPT`, unresolved `C0/H0/M0/L0`. Tester result: `PASS`,
-unresolved `C0/H0/M0/L0`. Both reviews independently confirmed the exact-two
-scope, current responsibility boundaries, historical PR/blob identities, the
-unchanged dirty-R7 identity and `PARKED` classification, rejection of historical
-A1 source adoption, relative link validity, ASCII documentation paths and the
-absence of implementation, native or external effects. Neither reviewer edited
-the candidate. This administrative receipt does not alter the frozen design;
-the final `task.md` hash is re-fixed after this insertion for confirmation and
-Judge review.
+Final results on those identical bytes were:
 
-## Source-admission decision
+- Critic: `ACCEPT`, Critical/High/Medium/Low `0/0/0/0`;
+- Tester: `ACCEPT`, Critical/High/Medium/Low `0/0/0/0`, OSS readiness
+  `12 passed`, exact-two/scope/link/secret/whitespace/ABI-count checks `PASS`;
+- Judge: `ACCEPT`, Critical/High/Medium/Low `0/0/0/0`, with
+  `ADMITTED_EFFECT_ZERO_PURE_CORE_I1` established and every live/native route
+  still blocked.
 
-`SOURCE_ADMISSION = BLOCKED_PENDING_FRESH_DETAILED_DESIGN`.
-
-Neither the dirty R7 packet nor the closed A1 implementation is admitted. A
-future source unit requires a separately frozen detailed design that resolves
-the current TASK-076 V2/V3 sequencing and terminal predecessor contracts,
-mode-specific field/IPC rules, exact current owner ABI versions, and a new
-source/schema/test Allowed-Files allocation. That design must receive fresh
-DEV-4 acceptance before any broker source mutation.
-
-This decision does not block independent TASK-063 or TASK-066 work that is
-already authorized by their own owners, but it creates no authority for those
-lanes. The observed TASK-063 terminal-receipt and TASK-066 GF-E source gaps
-remain external dependencies, not reasons to weaken TASK-072.
+This paragraph and the accepted/pending status are administrative closure only.
+They do not change the reviewed contract or authorize I1 before exact-head
+hosted closure.
 
 ## Prohibited effects and next action
 
-No native preflight retry, build, install, Product launch, private data access,
-provider call, dependency/model download, Release, Deploy, Production,
-historical worktree cleanup, branch deletion, force push or direct-main push.
+No broker source/schema/test mutation in this unit; no native preflight retry,
+build, install, Product launch, private data access, provider call, dependency
+or model download, Release, Deploy, Production, historical cleanup, branch
+deletion, force push, or direct-main push.
 
-Next authorized action inside D0 is independent review and bounded correction of
-the exact-two documentation candidate. Broker implementation stays parked.
+The next action is external Evidence readback, exact-two commit/publication, and
+exact-head hosted closure. Only the accepted design after that hosted closure
+may allocate I1 implementation.
